@@ -38,7 +38,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
           )}
           <button
             onClick={exportCsv}
-            className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-400 dark:bg-indigo-800 dark:hover:bg-indigo-700"
+            className="hidden items-center gap-1.5 rounded-lg bg-indigo-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-400 sm:flex dark:bg-indigo-800 dark:hover:bg-indigo-700"
           >
             <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
               <path d="M8 1a.75.75 0 0 1 .75.75v6.69l1.97-1.97a.75.75 0 1 1 1.06 1.06L8.53 10.78a.75.75 0 0 1-1.06 0L4.22 7.53a.75.75 0 0 1 1.06-1.06L7.25 8.44V1.75A.75.75 0 0 1 8 1ZM1.5 13.25a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 0 1.5H2.25a.75.75 0 0 1-.75-.75Z" />
