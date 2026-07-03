@@ -181,7 +181,7 @@ export default function HistoryTab() {
               <div className="flex items-center bg-indigo-600 dark:bg-indigo-900 px-6 py-4">
                 <h2 className="text-sm font-bold text-white">Category Breakdown</h2>
               </div>
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[720px] table-fixed text-sm">
                 <colgroup>
                   <col className="w-56" />
@@ -239,6 +239,46 @@ export default function HistoryTab() {
                 </tfoot>
               </table>
               </div>
+
+              {/* Mobile cards */}
+              <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+                {rows.map((row, i) => {
+                  const rem = row["Remaining (£)"];
+                  const pct = row["Budget (£)"] > 0
+                    ? (row["Spent (£)"] / row["Budget (£)"]) * 100
+                    : row["Spent (£)"] > 0 ? 999 : 0;
+                  return (
+                    <li key={i} className="px-4 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{row.Category}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{gbp(row["Budget (£)"])}</span>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2 text-xs">
+                        <span className="text-gray-500 dark:text-gray-400">Spent {gbp(row["Spent (£)"])}</span>
+                        <span className={`font-semibold ${rem < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                          {gbp(rem)} left
+                        </span>
+                        <div className="ml-auto flex w-24 shrink-0 items-center gap-1.5">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                            <div
+                              className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                              style={{ width: `${Math.min(pct, 100)}%` }}
+                            />
+                          </div>
+                          <span className="w-6 text-right text-[10px] text-gray-400">{pct > 999 ? "—" : `${pct.toFixed(0)}%`}</span>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+                <li className="flex items-center justify-between border-t-2 border-gray-200 px-4 py-3 text-sm font-bold dark:border-gray-700">
+                  <span className="uppercase tracking-wider text-gray-900 dark:text-white">Total</span>
+                  <span className="flex items-center gap-3">
+                    <span className="text-gray-500 dark:text-gray-400">Spent {gbp(totalSpent)}</span>
+                    <span className={totalRemaining < 0 ? "text-red-600" : "text-emerald-600"}>{gbp(totalRemaining)}</span>
+                  </span>
+                </li>
+              </ul>
             </Card>
           </>
         )}

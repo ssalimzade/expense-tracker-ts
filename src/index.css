@@ -6,6 +6,12 @@
   color-scheme: light dark;
 }
 
+/* Slightly denser typography + spacing on phones — scales all rem-based
+   Tailwind sizes down together. Bump toward 16px if it feels too small. */
+@media (max-width: 767px) {
+  :root { font-size: 14px; }
+}
+
 body {
   @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
   margin: 0;

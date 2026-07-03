@@ -47,7 +47,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
       <table className="w-full min-w-[720px] table-fixed text-sm">
         <colgroup>
           <col className="w-56" />
@@ -103,6 +103,47 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
         </tbody>
       </table>
       </div>
+
+      {/* Mobile cards */}
+      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+        {MAIN_CATEGORIES.map((cat) => {
+          const budget = draft[cat] ?? 0;
+          const spent = spentByCategory[cat] ?? 0;
+          const remaining = budget - spent;
+          const pct = budget > 0 ? (spent / budget) * 100 : spent > 0 ? 999 : 0;
+          return (
+            <li key={cat} className="px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-gray-700 dark:text-gray-300">{cat}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase tracking-wide text-gray-400">Budget</span>
+                  <CurrencyInput
+                    value={budget}
+                    onLiveChange={(n) => onChange(cat, n)}
+                    onCommit={(n) => onCommit(cat, n ?? 0)}
+                    className="w-16 rounded-lg border border-gray-200 bg-transparent px-1.5 py-0.5 text-right font-semibold text-gray-900 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <span className="text-gray-500 dark:text-gray-400">Spent {gbp(spent)}</span>
+                <span className={`font-semibold ${remaining < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                  {gbp(remaining)} left
+                </span>
+                <div className="ml-auto flex w-24 shrink-0 items-center gap-1.5">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                    <div
+                      className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                      style={{ width: `${Math.min(pct, 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-6 text-right text-[10px] text-gray-400">{pct > 999 ? "—" : `${pct.toFixed(0)}%`}</span>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </Card>
   );
 }

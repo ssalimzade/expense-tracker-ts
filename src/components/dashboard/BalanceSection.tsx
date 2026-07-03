@@ -62,16 +62,16 @@ export default function BalanceSection({ month }: { month: string }) {
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Balances
       </p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-7">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-7">
         {ITEMS.map(({ key, label }) => {
           const val = draft[key];
           const { text, bg, border } = cardStyle(val);
           return (
             <div
               key={key}
-              className={`rounded-2xl border ${border} ${bg} px-3 py-3 text-center sm:px-4 sm:py-4`}
+              className={`rounded-2xl border ${border} ${bg} px-2 py-2.5 text-center sm:px-4 sm:py-4`}
             >
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                 {label}
               </p>
               <div className="mt-1.5 flex justify-center">
@@ -80,7 +80,7 @@ export default function BalanceSection({ month }: { month: string }) {
                   onCommit={(v) => commit(key, v)}
                   allowNegative
                   pound
-                  className={`!w-full !text-xl !font-bold !tracking-tight sm:!text-2xl ${text}`}
+                  className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
                 />
               </div>
             </div>
@@ -88,7 +88,7 @@ export default function BalanceSection({ month }: { month: string }) {
         })}
 
         {/* Read-only sum of all balances above */}
-        <div className={`rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-3 py-3 text-center sm:px-4 sm:py-4`}>
+        <div className={`col-span-3 rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-3 py-3 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
           <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Total Balance
           </p>

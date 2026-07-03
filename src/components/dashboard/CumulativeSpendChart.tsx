@@ -58,7 +58,7 @@ export default function CumulativeSpendChart({ transactions, month, totalBudget 
           )}
         </div>
       </div>
-      <div className="h-56">
+      <div className="h-44 sm:h-56">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
             <defs>
