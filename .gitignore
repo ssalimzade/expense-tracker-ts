@@ -1,0 +1,15 @@
+# Dependencies / build
+node_modules/
+dist/
+
+# Wrangler / Cloudflare local state
+.wrangler/
+
+# Local secrets — never commit (holds DATABASE_URL for local dev)
+.dev.vars
+*.env
+.env
+
+# OS / editor
+.DS_Store
+*.log

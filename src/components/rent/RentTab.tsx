@@ -1,0 +1,117 @@
+import { useState } from "react";
+import { useRent } from "../../hooks/useRent";
+import { useRemuneration } from "../../hooks/useRemuneration";
+import { QueryState } from "../common";
+import type { RentData, RentLineItem } from "../../types/rent";
+import { gbp0 } from "../../lib/format";
+import RentTable from "./RentTable";
+import { CostBreakdownChart, PaidProgressChart } from "./RentCharts";
+
+const blank: RentLineItem = { amount: 0, paid: false };
+
+const currentMonth = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+})();
+
+export default function RentTab() {
+  const query = useRent();
+  const remQuery = useRemuneration();
+  const currentYear = String(new Date().getFullYear());
+  const [year, setYear] = useState(currentYear);
+
+  return (
+    <QueryState isLoading={query.isLoading} error={query.error}>
+      {(() => {
+        const data: RentData = query.data ?? { items: [], months: {} };
+        const savedKeys = new Set(data.items.filter((i) => i.saved).map((i) => i.key));
+
+        const allMonths = Object.keys(data.months);
+        const years = [...new Set(allMonths.map((m) => m.slice(0, 4)))].sort();
+        if (years.length === 0) years.push(currentYear);
+        const months = allMonths.filter((m) => m.startsWith(year)).sort();
+
+        const reconciled = data.reconciled ?? {};
+        const cell = (m: string, k: string): RentLineItem => data.months[m]?.[k] ?? blank;
+        // Effective paid = manually ticked OR a matching transaction exists.
+        const isPaid = (m: string, k: string) => cell(m, k).paid || !!reconciled[m]?.[k];
+
+        // Year-to-date only: months up to and including the current month.
+        const ytdMonths = months.filter((m) => m <= currentMonth);
+
+        let costYtd = 0;
+        let setAsideYtd = 0;
+        let outstanding = 0; // unpaid amounts to date
+        for (const m of ytdMonths) {
+          for (const it of data.items) {
+            const c = cell(m, it.key);
+            costYtd += c.amount;
+            if (savedKeys.has(it.key)) setAsideYtd += c.amount;
+            if (!isPaid(m, it.key)) outstanding += c.amount;
+          }
+        }
+        const activeMonths = ytdMonths.filter((m) =>
+          data.items.some((it) => cell(m, it.key).amount > 0)
+        ).length || 1;
+
+        // Rent-to-salary % for the current month (rent total / current net monthly).
+        const remuneration = remQuery.data ?? [];
+        const netPm = (remuneration.find((r) => r.current) ?? remuneration[remuneration.length - 1])?.net_pm ?? 0;
+        const currentRentTotal = data.items.reduce((s, it) => s + cell(currentMonth, it.key).amount, 0);
+        const rentToSalary = netPm > 0 ? (currentRentTotal / netPm) * 100 : 0;
+
+        const stats = [
+          { label: "Cost YTD", value: gbp0(costYtd), sub: `${gbp0(costYtd / activeMonths)}/mo avg`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
+          { label: "Set Aside to Savings", value: gbp0(setAsideYtd), sub: "year to date", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
+          { label: "Outstanding (to date)", value: gbp0(outstanding), sub: outstanding > 0 ? "not yet paid" : "all settled", color: outstanding > 0 ? "text-red-600 dark:text-red-400" : "text-teal-600 dark:text-teal-400", bg: "bg-rose-50/60 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900" },
+          { label: "Rent to Salary", value: `${rentToSalary.toFixed(0)}%`, sub: "current month", color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
+        ];
+
+        return (
+          <div className="space-y-4">
+            {/* Year tabs */}
+            <div className="flex gap-1.5 rounded-xl bg-gray-100 p-1 dark:bg-gray-800 w-fit">
+              {years.map((y) => (
+                <button
+                  key={y}
+                  onClick={() => setYear(y)}
+                  className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
+                    y === year
+                      ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  }`}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
+
+            {/* Summary cards */}
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              {stats.map((s) => (
+                <div key={s.label} className={`rounded-2xl border px-5 py-4 text-center ${s.bg}`}>
+                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{s.label}</p>
+                  <p className={`mt-1.5 text-2xl font-bold ${s.color}`}>{s.value}</p>
+                  <p className="mt-0.5 text-xs text-gray-400">{s.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <CostBreakdownChart data={data} months={months} />
+              <PaidProgressChart data={data} months={months} />
+            </div>
+
+            {months.length > 0 ? (
+              <RentTable data={data} months={months} />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-gray-200 p-10 text-center text-sm text-gray-400 dark:border-gray-700">
+                No rent data for {year}.
+              </div>
+            )}
+          </div>
+        );
+      })()}
+    </QueryState>
+  );
+}
