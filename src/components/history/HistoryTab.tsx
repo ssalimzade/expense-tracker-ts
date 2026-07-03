@@ -138,15 +138,15 @@ export default function HistoryTab() {
         ) : (
           <>
             {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {[
                 { label: "Budget", value: totalBudget, color: "text-gray-900 dark:text-white", bg: "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700" },
                 { label: "Spent", value: totalSpent, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 dark:bg-indigo-950/40 border-indigo-100 dark:border-indigo-900" },
                 { label: "Remaining", value: totalRemaining, color: totalRemaining < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400", bg: totalRemaining < 0 ? "bg-red-50/60 border-red-100 dark:bg-red-950/40 dark:border-red-900" : "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-900" },
               ].map((m) => (
-                <div key={m.label} className={`rounded-2xl border px-5 py-4 text-center ${m.bg}`}>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{m.label}</p>
-                  <p className={`mt-1.5 text-2xl font-bold ${m.color}`}>{gbp(m.value)}</p>
+                <div key={m.label} className={`rounded-2xl border px-2.5 py-3 text-center sm:px-5 sm:py-4 ${m.bg}`}>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500 sm:text-xs">{m.label}</p>
+                  <p className={`mt-1 text-lg font-bold sm:mt-1.5 sm:text-2xl ${m.color}`}>{gbp(m.value)}</p>
                 </div>
               ))}
             </div>
@@ -181,7 +181,8 @@ export default function HistoryTab() {
               <div className="flex items-center bg-indigo-600 dark:bg-indigo-900 px-6 py-4">
                 <h2 className="text-sm font-bold text-white">Category Breakdown</h2>
               </div>
-              <table className="w-full table-fixed text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] table-fixed text-sm">
                 <colgroup>
                   <col className="w-56" />
                   <col className="w-40" />
@@ -237,6 +238,7 @@ export default function HistoryTab() {
                   </tr>
                 </tfoot>
               </table>
+              </div>
             </Card>
           </>
         )}

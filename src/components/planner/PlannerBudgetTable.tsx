@@ -58,7 +58,8 @@ export default function PlannerBudgetTable({
           Move to Budget
         </button>
       </div>
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[520px] text-sm">
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
             <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Category</th>
@@ -96,6 +97,7 @@ export default function PlannerBudgetTable({
           </tr>
         </tfoot>
       </table>
+      </div>
     </Card>
   );
 }

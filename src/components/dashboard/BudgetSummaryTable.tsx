@@ -47,7 +47,8 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
           </button>
         </div>
       </div>
-      <table className="w-full table-fixed text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] table-fixed text-sm">
         <colgroup>
           <col className="w-56" />
           <col className="w-40" />
@@ -101,6 +102,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
           })}
         </tbody>
       </table>
+      </div>
     </Card>
   );
 }

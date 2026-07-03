@@ -62,14 +62,14 @@ export default function BalanceSection({ month }: { month: string }) {
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Balances
       </p>
-      <div className="grid grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-7">
         {ITEMS.map(({ key, label }) => {
           const val = draft[key];
           const { text, bg, border } = cardStyle(val);
           return (
             <div
               key={key}
-              className={`rounded-2xl border ${border} ${bg} px-4 py-4 text-center`}
+              className={`rounded-2xl border ${border} ${bg} px-3 py-3 text-center sm:px-4 sm:py-4`}
             >
               <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 {label}
@@ -80,7 +80,7 @@ export default function BalanceSection({ month }: { month: string }) {
                   onCommit={(v) => commit(key, v)}
                   allowNegative
                   pound
-                  className={`!w-full !text-2xl !font-bold !tracking-tight ${text}`}
+                  className={`!w-full !text-xl !font-bold !tracking-tight sm:!text-2xl ${text}`}
                 />
               </div>
             </div>
@@ -88,11 +88,11 @@ export default function BalanceSection({ month }: { month: string }) {
         })}
 
         {/* Read-only sum of all balances above */}
-        <div className={`rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-4 py-4 text-center`}>
+        <div className={`rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-3 py-3 text-center sm:px-4 sm:py-4`}>
           <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Total Balance
           </p>
-          <p className={`mt-1.5 text-2xl font-bold tracking-tight ${totalStyle.text}`}>
+          <p className={`mt-1.5 text-xl font-bold tracking-tight sm:text-2xl ${totalStyle.text}`}>
             {gbp0(totalBalance)}
           </p>
         </div>
