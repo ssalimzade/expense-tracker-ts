@@ -112,33 +112,30 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
           const remaining = budget - spent;
           const pct = budget > 0 ? (spent / budget) * 100 : spent > 0 ? 999 : 0;
           return (
-            <li key={cat} className="px-4 py-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-gray-700 dark:text-gray-300">{cat}</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] uppercase tracking-wide text-gray-400">Budget</span>
-                  <CurrencyInput
-                    value={budget}
-                    onLiveChange={(n) => onChange(cat, n)}
-                    onCommit={(n) => onCommit(cat, n ?? 0)}
-                    className="w-16 rounded-lg border border-gray-200 bg-transparent px-1.5 py-0.5 text-right font-semibold text-gray-900 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:text-white"
+            <li key={cat} className="px-4 py-3.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-semibold text-gray-800 dark:text-gray-100">{cat}</span>
+                <CurrencyInput
+                  value={budget}
+                  onLiveChange={(n) => onChange(cat, n)}
+                  onCommit={(n) => onCommit(cat, n ?? 0)}
+                  className="w-20 rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-right font-semibold text-gray-900 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:text-white"
+                />
+              </div>
+              <div className="mt-2.5 flex items-center gap-3">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                  <div
+                    className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                    style={{ width: `${Math.min(pct, 100)}%` }}
                   />
                 </div>
+                <span className="w-9 shrink-0 text-right text-xs tabular-nums text-gray-400">{pct > 999 ? "—" : `${pct.toFixed(0)}%`}</span>
               </div>
-              <div className="mt-2 flex items-center gap-2 text-xs">
+              <div className="mt-1.5 flex items-center justify-between text-xs">
                 <span className="text-gray-500 dark:text-gray-400">Spent {gbp(spent)}</span>
                 <span className={`font-semibold ${remaining < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                   {gbp(remaining)} left
                 </span>
-                <div className="ml-auto flex w-24 shrink-0 items-center gap-1.5">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
-                    <div
-                      className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    />
-                  </div>
-                  <span className="w-6 text-right text-[10px] text-gray-400">{pct > 999 ? "—" : `${pct.toFixed(0)}%`}</span>
-                </div>
               </div>
             </li>
           );
