@@ -1,12 +1,47 @@
 import { Hono } from "hono";
 import { handle } from "hono/cloudflare-pages";
 import { getSql, type Env } from "../../lib/db";
-import { kvGet, kvKeysWithPrefix } from "../../lib/kv";
+import { kvGet, kvSet, kvKeysWithPrefix } from "../../lib/kv";
+import {
+  saveBudgetForMonth,
+  loadRules,
+  saveRules,
+  getFlagsForMonth,
+  setFlagsForMonth,
+  upsertSavingsRow,
+  upsertProjectionRow,
+  upsertRemunerationRow,
+  loadRentData,
+  upsertRentMonth,
+  upsertNote,
+  deleteNote,
+  savePlanner,
+  saveBalance,
+  saveWorksheet,
+  addRepaymentCategory,
+  addDeletedRepayment,
+  removeDeletedRepayment,
+  setRepaymentFlag,
+} from "../../lib/config";
+import { subcategoryToCategory } from "../../lib/categorize";
+import {
+  serializeTransactions,
+  fetchFlexRows,
+  serializeRepayments,
+  updateFlexRepayment,
+  repaymentId,
+  reconcileRent,
+  requisitionStatus,
+} from "../../lib/transactions";
+import {
+  listSynthetic,
+  syncMonth,
+  deleteMonth,
+  autoSyncCurrent,
+} from "../../lib/synthetic";
 
-// All API routes live under /api (matching the frontend's fetch base). The
-// Python backend served these at root; here Hono's basePath adds the /api prefix
-// that the Vite dev proxy used to strip.
 const app = new Hono<{ Bindings: Env }>().basePath("/api");
+const sqlOf = (c: any) => getSql(c.env);
 
 const BALANCE_DEFAULTS = {
   savings: 0,
@@ -17,76 +52,293 @@ const BALANCE_DEFAULTS = {
   diff_in_bills: 0,
 };
 const MONTH_RE = /^\d{4}-\d{2}$/;
+const MAIN_CATEGORIES = [
+  "Groceries", "Lunch", "Social Life", "Shopping", "Sports",
+  "Transport", "Mobile", "Barber", "Other", "Travel",
+];
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
-// ── Config reads (app_config / kv) ──────────────────────────────────────────
+// ── Requisition status ──────────────────────────────────────────────────────
+app.get("/requisition-status", async (c) => c.json(await requisitionStatus(sqlOf(c))));
 
-app.get("/budgets/all", async (c) =>
-  c.json(await kvGet(getSql(c.env), "budgets", {})),
-);
+// ── Transactions ────────────────────────────────────────────────────────────
+app.get("/transactions", async (c) => {
+  const month = c.req.query("month") || undefined;
+  return c.json(await serializeTransactions(sqlOf(c), month));
+});
+
+app.post("/transactions/:flag_id/flag", async (c) => {
+  const flagId = c.req.param("flag_id");
+  const b = await c.req.json();
+  const monthFlags = await getFlagsForMonth(sqlOf(c), b.month);
+  const entry = monthFlags[flagId] ?? {};
+  if (b.notes != null) entry.notes = b.notes;
+  if (b.subcategory != null) entry.subcategory = b.subcategory;
+  if (b.one_time != null) entry.one_time = b.one_time;
+  monthFlags[flagId] = entry;
+  await setFlagsForMonth(sqlOf(c), b.month, monthFlags);
+  return c.json({ flag_id: flagId, month: b.month, ...entry });
+});
+
+app.delete("/transactions/:flag_id/flag", async (c) => {
+  const flagId = c.req.param("flag_id");
+  const month = c.req.query("month") as string;
+  const monthFlags = await getFlagsForMonth(sqlOf(c), month);
+  delete monthFlags[flagId];
+  await setFlagsForMonth(sqlOf(c), month, monthFlags);
+  return c.json({ flag_id: flagId, month, deleted: true });
+});
+
+// ── Budgets ─────────────────────────────────────────────────────────────────
+app.get("/budgets/all", async (c) => c.json(await kvGet(sqlOf(c), "budgets", {})));
 
 app.get("/budgets", async (c) => {
   const month = c.req.query("month") ?? "";
-  const all = await kvGet<Record<string, unknown>>(getSql(c.env), "budgets", {});
+  const all = await kvGet<Record<string, unknown>>(sqlOf(c), "budgets", {});
   return c.json({ month, budgets: all[month] ?? {} });
 });
 
-app.get("/category-rules", async (c) =>
-  c.json(await kvGet(getSql(c.env), "category_rules", {})),
-);
+app.post("/budgets/:month", async (c) => {
+  const month = c.req.param("month");
+  const b = await c.req.json();
+  await saveBudgetForMonth(sqlOf(c), month, b.budgets);
+  return c.json({ month, budgets: b.budgets });
+});
+
+// ── Category rules ──────────────────────────────────────────────────────────
+app.get("/category-rules", async (c) => c.json(await loadRules(sqlOf(c))));
+
+app.post("/category-rules", async (c) => {
+  const b = await c.req.json();
+  const rules = await loadRules(sqlOf(c));
+  rules[b.description] = { subcategory: b.subcategory };
+  await saveRules(sqlOf(c), rules);
+  return c.json({
+    description: b.description,
+    subcategory: b.subcategory,
+    category: subcategoryToCategory[b.subcategory] ?? "Uncategorized",
+  });
+});
+
+// ── Repayments (Flex) ───────────────────────────────────────────────────────
+app.get("/repayments", async (c) => {
+  // On first load of a new month, push that month's repayments so they count as
+  // spend on the dashboard (idempotent — guarded by a marker).
+  await autoSyncCurrent(sqlOf(c));
+  return c.json(await serializeRepayments(sqlOf(c), await fetchFlexRows(sqlOf(c))));
+});
+
+app.post("/repayments", async (c) => {
+  const b = await c.req.json();
+  const raw: Record<string, any> = {
+    repayment_1_date: b.repayment_1_date && b.repayment_1_date !== "" ? b.repayment_1_date : null,
+    repayment_1_amount: b.repayment_1_amount ?? null,
+    repayment_2_date: b.repayment_2_date && b.repayment_2_date !== "" ? b.repayment_2_date : null,
+    repayment_2_amount: b.repayment_2_amount ?? null,
+    repayment_3_date: b.repayment_3_date && b.repayment_3_date !== "" ? b.repayment_3_date : null,
+    repayment_3_amount: b.repayment_3_amount ?? null,
+  };
+  const fields: Record<string, any> = {};
+  for (const [k, v] of Object.entries(raw)) if (v != null) fields[k] = v;
+
+  const tx = await updateFlexRepayment(sqlOf(c), b.flex_id, fields);
+  if (!tx) return c.json({ detail: "Flex transaction not found" }, 404);
+
+  const rid = await repaymentId(tx.description ?? "", tx.created_iso ?? "");
+  if (b.category != null || b.notes != null || b.refunded != null) {
+    await setRepaymentFlag(sqlOf(c), rid, b.category ?? null, b.notes ?? null, b.refunded ?? null);
+  }
+  const rows = await serializeRepayments(sqlOf(c), [tx]);
+  return c.json(rows[0]);
+});
+
+// Synthetic (manual) Monzo rows generated from the repayment amounts.
+app.get("/repayments/synthetic", async (c) => c.json(await listSynthetic(sqlOf(c))));
+app.post("/repayments/synthetic/sync", async (c) => {
+  const b = await c.req.json();
+  return c.json(await syncMonth(sqlOf(c), b.month, b.force ?? false));
+});
+app.delete("/repayments/synthetic/:month", async (c) => {
+  await deleteMonth(sqlOf(c), c.req.param("month"));
+  return c.json({ month: c.req.param("month"), deleted: true });
+});
 
 app.get("/repayment-categories", async (c) =>
-  c.json(await kvGet(getSql(c.env), "repayment_categories", ["Savings"])),
+  c.json(await kvGet(sqlOf(c), "repayment_categories", ["Savings"])),
 );
-
-app.get("/savings", async (c) =>
-  c.json(await kvGet(getSql(c.env), "savings_data", [])),
-);
-
-app.get("/projections", async (c) =>
-  c.json(await kvGet(getSql(c.env), "projections_data", [])),
-);
-
-app.get("/remuneration", async (c) =>
-  c.json(await kvGet(getSql(c.env), "remuneration_data", [])),
-);
-
-app.get("/notes", async (c) => c.json(await kvGet(getSql(c.env), "notes", [])));
-
-app.get("/worksheet", async (c) =>
-  c.json(await kvGet(getSql(c.env), "worksheet", { data: [] })),
-);
-
-app.get("/planner", async (c) =>
-  c.json(await kvGet(getSql(c.env), "planner_data", {})),
-);
-
-app.get("/planner/:month", async (c) => {
-  const month = c.req.param("month");
-  const all = await kvGet<Record<string, any>>(getSql(c.env), "planner_data", {});
-  const e = all[month];
-  return c.json({ month, days_off: e?.days_off ?? [], budgets: e?.budgets ?? {} });
+app.post("/repayment-categories", async (c) => {
+  const b = await c.req.json();
+  return c.json(await addRepaymentCategory(sqlOf(c), b.name));
 });
 
-app.get("/balance/:month", async (c) => {
-  const month = c.req.param("month");
-  const all = await kvGet<Record<string, any>>(getSql(c.env), "balance_data", {});
-  return c.json({ month, ...BALANCE_DEFAULTS, ...(all[month] ?? {}) });
+app.delete("/repayments/:rid", async (c) => {
+  const rid = c.req.param("rid");
+  await addDeletedRepayment(sqlOf(c), rid);
+  return c.json({ id: rid, deleted: true });
+});
+app.post("/repayments/:rid/restore", async (c) => {
+  const rid = c.req.param("rid");
+  await removeDeletedRepayment(sqlOf(c), rid);
+  return c.json({ id: rid, restored: true });
 });
 
+// ── Savings ─────────────────────────────────────────────────────────────────
+app.get("/savings", async (c) => c.json(await kvGet(sqlOf(c), "savings_data", [])));
+app.post("/savings", async (c) => {
+  const b = await c.req.json();
+  const row = {
+    start_date: b.start_date,
+    end_date: b.end_date ?? null,
+    starting_balance: b.starting_balance ?? 0,
+    home_contributions: b.home_contributions ?? 0,
+    savings: b.savings ?? 0,
+    adjustments: b.adjustments ?? 0,
+    investments: b.investments ?? 0,
+    adjustment_notes: b.adjustment_notes ?? "",
+  };
+  return c.json(await upsertSavingsRow(sqlOf(c), row));
+});
+
+// ── Projections ─────────────────────────────────────────────────────────────
+app.get("/projections", async (c) => c.json(await kvGet(sqlOf(c), "projections_data", [])));
+app.post("/projections", async (c) => {
+  const b = await c.req.json();
+  const row = {
+    month: b.month,
+    salary: b.salary ?? 0,
+    bonus: b.bonus ?? 0,
+    monthly_costs: b.monthly_costs ?? 0,
+    housing_costs: b.housing_costs ?? 0,
+    home_contributions: b.home_contributions ?? 0,
+    savings: b.savings ?? 0,
+    investments: b.investments ?? 0,
+    other_pl: b.other_pl ?? 0,
+    notes: b.notes ?? "",
+  };
+  return c.json(await upsertProjectionRow(sqlOf(c), row));
+});
+
+// ── Rent ────────────────────────────────────────────────────────────────────
+app.get("/rent", async (c) => {
+  const year = c.req.query("year") ? Number(c.req.query("year")) : new Date().getFullYear();
+  const data = await loadRentData(sqlOf(c));
+  data.reconciled = await reconcileRent(sqlOf(c), year);
+  return c.json(data);
+});
+app.post("/rent", async (c) => {
+  const b = await c.req.json();
+  const entry: Record<string, any> = {};
+  for (const [k, v] of Object.entries(b.entry ?? {})) {
+    const item = v as any;
+    entry[k] = { amount: item.amount ?? 0, paid: item.paid ?? false };
+  }
+  return c.json(await upsertRentMonth(sqlOf(c), b.month, entry));
+});
+
+// ── Remuneration ────────────────────────────────────────────────────────────
+app.get("/remuneration", async (c) => c.json(await kvGet(sqlOf(c), "remuneration_data", [])));
+app.post("/remuneration", async (c) => {
+  const b = await c.req.json();
+  const row = {
+    period: b.period,
+    gross: b.gross ?? 0,
+    deductions: b.deductions ?? 0,
+    pension: b.pension ?? 0,
+    pension_pct: b.pension_pct ?? 0,
+    net_pa: b.net_pa ?? 0,
+    net_pm: b.net_pm ?? 0,
+    bonus: b.bonus ?? 0,
+    current: b.current ?? false,
+  };
+  return c.json(await upsertRemunerationRow(sqlOf(c), row));
+});
+
+// ── Archive ─────────────────────────────────────────────────────────────────
 app.get("/archive", async (c) => {
-  const keys = await kvKeysWithPrefix(getSql(c.env), "archive:");
-  const months = keys
-    .map((k) => k.split(":")[1])
-    .filter((m) => MONTH_RE.test(m))
-    .sort();
+  const keys = await kvKeysWithPrefix(sqlOf(c), "archive:");
+  const months = keys.map((k) => k.split(":")[1]).filter((m) => MONTH_RE.test(m)).sort();
   return c.json(months);
 });
 
 app.get("/archive/:month", async (c) => {
   const month = c.req.param("month");
-  const data = await kvGet(getSql(c.env), `archive:${month}`, null);
+  const data = await kvGet(sqlOf(c), `archive:${month}`, null);
   if (data === null) return c.json({ detail: `No archive for ${month}` }, 404);
   return c.json(data);
+});
+
+app.post("/archive/:month", async (c) => {
+  const month = c.req.param("month");
+  const body = (await c.req.json()) as any[];
+  await kvSet(sqlOf(c), `archive:${month}`, body);
+  return c.json({ month, rows: body.length });
+});
+
+app.post("/archive/:month/recompute", async (c) => {
+  const month = c.req.param("month");
+  const txns = await serializeTransactions(sqlOf(c), month);
+  const raw: Record<string, number> = {};
+  for (const t of txns) {
+    const cat = t.category;
+    if (cat === "Uncategorized" || cat === "Rent & Utilities") continue;
+    raw[cat] = (raw[cat] ?? 0) + t.amount;
+  }
+  const budgets = ((await kvGet<Record<string, any>>(sqlOf(c), "budgets", {}))[month]) ?? {};
+  const archiveRows = MAIN_CATEGORIES.map((cat) => {
+    const s = raw[cat] ?? 0;
+    const spent = s < 0 ? round2(-s) : 0.0;
+    const budget = budgets[cat] ?? 0;
+    return {
+      Category: cat,
+      "Budget (£)": budget,
+      "Spent (£)": spent,
+      "Remaining (£)": round2(budget - spent),
+    };
+  });
+  await kvSet(sqlOf(c), `archive:${month}`, archiveRows);
+  return c.json(null);
+});
+
+// ── Balance ─────────────────────────────────────────────────────────────────
+app.get("/balance/:month", async (c) => {
+  const month = c.req.param("month");
+  const all = await kvGet<Record<string, any>>(sqlOf(c), "balance_data", {});
+  return c.json({ month, ...BALANCE_DEFAULTS, ...(all[month] ?? {}) });
+});
+app.put("/balance/:month", async (c) => {
+  const month = c.req.param("month");
+  const b = await c.req.json();
+  const saved = await saveBalance(sqlOf(c), month, b);
+  return c.json({ month, ...saved });
+});
+
+// ── Planner ─────────────────────────────────────────────────────────────────
+app.get("/planner", async (c) => c.json(await kvGet(sqlOf(c), "planner_data", {})));
+app.get("/planner/:month", async (c) => {
+  const month = c.req.param("month");
+  const all = await kvGet<Record<string, any>>(sqlOf(c), "planner_data", {});
+  const e = all[month];
+  return c.json({ month, days_off: e?.days_off ?? [], budgets: e?.budgets ?? {} });
+});
+app.put("/planner/:month", async (c) => {
+  const month = c.req.param("month");
+  const b = await c.req.json();
+  const saved = await savePlanner(sqlOf(c), month, b.days_off ?? [], b.budgets ?? {});
+  return c.json({ month, ...saved });
+});
+
+// ── Notes ───────────────────────────────────────────────────────────────────
+app.get("/notes", async (c) => c.json(await kvGet(sqlOf(c), "notes", [])));
+app.post("/notes", async (c) => c.json(await upsertNote(sqlOf(c), await c.req.json())));
+app.delete("/notes/:note_id", async (c) =>
+  c.json(await deleteNote(sqlOf(c), c.req.param("note_id"))),
+);
+
+// ── Worksheet ───────────────────────────────────────────────────────────────
+app.get("/worksheet", async (c) => c.json(await kvGet(sqlOf(c), "worksheet", { data: [] })));
+app.put("/worksheet", async (c) => {
+  const b = await c.req.json();
+  return c.json(await saveWorksheet(sqlOf(c), { data: b.data ?? [] }));
 });
 
 export const onRequest = handle(app);

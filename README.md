@@ -45,10 +45,15 @@ Local dev reads `DATABASE_URL` from `.dev.vars` (gitignored — never committed)
 2. Set `DATABASE_URL` as a Pages secret.
 3. Enable Cloudflare Access on the project.
 
-## Port status
+## Port status — ✅ complete
 
-- ✅ Foundation (Neon + kv) and read-only config routes — verified byte-identical
-  to the Python app via a differential test.
-- ⬜ Remaining kv write routes.
-- ⬜ DB routes: transactions + categorization, repayments, synthetic rows, rent
-  reconcile, archive recompute.
+All 40 routes ported and verified **byte-identical to the Python app** by running
+both against the same Neon DB and diffing responses:
+
+- 20 read routes (config + DB: transactions/categorization/`flag_id`, repayments,
+  rent reconcile, requisition status).
+- 15 write routes (verified with snapshot → run-both → restore, zero net change).
+- Synthetic repayments: `list` + force-resync (category totals match).
+
+Not yet done: the Cloudflare **deploy** (connect repo to Pages, set `DATABASE_URL`
+secret, enable Access) and mobile/responsive polish.
