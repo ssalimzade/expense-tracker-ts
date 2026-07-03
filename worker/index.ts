@@ -1,7 +1,6 @@
 import { Hono } from "hono";
-import { handle } from "hono/cloudflare-pages";
-import { getSql, type Env } from "../../lib/db";
-import { kvGet, kvSet, kvKeysWithPrefix } from "../../lib/kv";
+import { getSql, type Env } from "../lib/db";
+import { kvGet, kvSet, kvKeysWithPrefix } from "../lib/kv";
 import {
   saveBudgetForMonth,
   loadRules,
@@ -22,8 +21,8 @@ import {
   addDeletedRepayment,
   removeDeletedRepayment,
   setRepaymentFlag,
-} from "../../lib/config";
-import { subcategoryToCategory } from "../../lib/categorize";
+} from "../lib/config";
+import { subcategoryToCategory } from "../lib/categorize";
 import {
   serializeTransactions,
   fetchFlexRows,
@@ -32,15 +31,18 @@ import {
   repaymentId,
   reconcileRent,
   requisitionStatus,
-} from "../../lib/transactions";
+} from "../lib/transactions";
 import {
   listSynthetic,
   syncMonth,
   deleteMonth,
   autoSyncCurrent,
-} from "../../lib/synthetic";
+} from "../lib/synthetic";
 
-const app = new Hono<{ Bindings: Env }>().basePath("/api");
+// Worker bindings: the Neon URL plus the static-assets fetcher (the built SPA).
+type Bindings = Env & { ASSETS: Fetcher };
+
+const app = new Hono<{ Bindings: Bindings }>().basePath("/api");
 const sqlOf = (c: any) => getSql(c.env);
 
 const BALANCE_DEFAULTS = {
@@ -341,4 +343,13 @@ app.put("/worksheet", async (c) => {
   return c.json(await saveWorksheet(sqlOf(c), { data: b.data ?? [] }));
 });
 
-export const onRequest = handle(app);
+// Workers entry: /api/* → Hono; everything else → static SPA assets.
+export default {
+  async fetch(request: Request, env: Bindings, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/api")) {
+      return app.fetch(request, env, ctx);
+    }
+    return env.ASSETS.fetch(request);
+  },
+};
