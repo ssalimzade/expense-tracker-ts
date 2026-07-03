@@ -1,82 +1,59 @@
-import { useCallback, useEffect, useState } from "react";
-
-const STORAGE_KEY = "hiddenTransactions";
-
-type HiddenMap = Map<string, Set<string>>;
-
-/** localStorage stores a plain { [month]: string[] } since Map/Set aren't JSON. */
-function load(): HiddenMap {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return new Map();
-    const obj = JSON.parse(raw) as Record<string, string[]>;
-    return new Map(Object.entries(obj).map(([m, ids]) => [m, new Set(ids)]));
-  } catch {
-    return new Map();
-  }
-}
-
-function save(map: HiddenMap) {
-  const obj: Record<string, string[]> = {};
-  for (const [month, ids] of map) {
-    if (ids.size) obj[month] = [...ids];
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
-}
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchHidden, saveHiddenMonth, type HiddenMap } from "../api/hidden";
 
 /**
- * Per-month set of hidden transaction flag_ids, persisted to localStorage so
- * hidden rows survive page reloads and browser restarts.
+ * Per-month set of hidden transaction flag_ids, persisted in Neon (app_config)
+ * so hidden rows sync across every device. Writes update the cache optimistically
+ * for an instant UI, then persist.
  */
 export function useHiddenTransactions() {
-  const [hiddenByMonth, setHiddenByMonth] = useState<HiddenMap>(load);
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ["hidden"], queryFn: fetchHidden });
+  const map: HiddenMap = data ?? {};
 
-  useEffect(() => {
-    save(hiddenByMonth);
-  }, [hiddenByMonth]);
+  const { mutate } = useMutation({
+    mutationFn: ({ month, ids }: { month: string; ids: string[] }) =>
+      saveHiddenMonth(month, ids),
+    onSuccess: (all) => qc.setQueryData(["hidden"], all),
+    onError: () => qc.invalidateQueries({ queryKey: ["hidden"] }),
+  });
 
-  const hide = useCallback((month: string, flagId: string) => {
-    setHiddenByMonth((prev) => {
-      const next = new Map(prev);
-      next.set(month, new Set([...(next.get(month) ?? []), flagId]));
-      return next;
-    });
-  }, []);
-
-  const restore = useCallback((month: string, flagId: string) => {
-    setHiddenByMonth((prev) => {
-      const next = new Map(prev);
-      const s = new Set(next.get(month) ?? []);
-      s.delete(flagId);
-      next.set(month, s);
-      return next;
-    });
-  }, []);
-
-  const restoreAll = useCallback((month: string) => {
-    setHiddenByMonth((prev) => {
-      const next = new Map(prev);
-      next.set(month, new Set());
-      return next;
-    });
-  }, []);
-
-  const hiddenFor = useCallback(
-    (month: string) => hiddenByMonth.get(month) ?? new Set<string>(),
-    [hiddenByMonth],
+  const setMonth = useCallback(
+    (month: string, ids: string[]) => {
+      qc.setQueryData<HiddenMap>(["hidden"], (prev) => {
+        const next = { ...(prev ?? {}) };
+        if (ids.length) next[month] = ids;
+        else delete next[month];
+        return next;
+      });
+      mutate({ month, ids });
+    },
+    [qc, mutate],
   );
 
-  const pruneStale = useCallback((month: string, validIds: Set<string>) => {
-    setHiddenByMonth((prev) => {
-      const s = prev.get(month);
-      if (!s) return prev;
-      const pruned = new Set([...s].filter((id) => validIds.has(id)));
-      if (pruned.size === s.size) return prev;
-      const next = new Map(prev);
-      next.set(month, pruned);
-      return next;
-    });
-  }, []);
+  const hiddenFor = useCallback(
+    (month: string) => new Set(map[month] ?? []),
+    [map],
+  );
+  const hide = useCallback(
+    (month: string, flagId: string) => setMonth(month, [...(map[month] ?? []), flagId]),
+    [map, setMonth],
+  );
+  const restore = useCallback(
+    (month: string, flagId: string) =>
+      setMonth(month, (map[month] ?? []).filter((id) => id !== flagId)),
+    [map, setMonth],
+  );
+  const restoreAll = useCallback((month: string) => setMonth(month, []), [setMonth]);
+  const pruneStale = useCallback(
+    (month: string, validIds: Set<string>) => {
+      const cur = map[month] ?? [];
+      const pruned = cur.filter((id) => validIds.has(id));
+      if (pruned.length !== cur.length) setMonth(month, pruned);
+    },
+    [map, setMonth],
+  );
 
   return { hiddenFor, hide, restore, restoreAll, pruneStale };
 }

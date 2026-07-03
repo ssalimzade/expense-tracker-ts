@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { recentMonths } from "../../lib/format";
 import Select from "../Select";
 
@@ -97,6 +97,11 @@ interface Props {
 
 export default function NavBar({ active, onChange, selectedMonth, onMonthChange, showMonth }: Props) {
   const months = recentMonths();
+  // Keep the active tab visible in the scrollable mobile bar.
+  const activeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [active]);
   return (
     <>
       {/* ── Desktop top bar ─────────────────────────────────── */}
@@ -143,15 +148,34 @@ export default function NavBar({ active, onChange, selectedMonth, onMonthChange,
         </div>
       </header>
 
-      {/* ── Mobile bottom bar ────────────────────────────────── */}
-      <nav className="md:hidden fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-gray-200 bg-white px-2 py-2 dark:border-gray-800 dark:bg-gray-900">
+      {/* ── Mobile top strip (brand + month picker) ──────────── */}
+      <header className="flex md:hidden h-12 shrink-0 items-center justify-between border-b border-gray-200/80 bg-white px-4 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-600 text-white text-xs font-bold">
+            £
+          </div>
+          <span className="text-sm font-bold tracking-tight">Expense Tracker</span>
+        </div>
+        {showMonth && (
+          <Select
+            value={selectedMonth}
+            onChange={onMonthChange}
+            options={months.map((m) => ({ value: m, label: m }))}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          />
+        )}
+      </header>
+
+      {/* ── Mobile bottom bar (horizontally scrollable) ──────── */}
+      <nav className="md:hidden fixed inset-x-0 bottom-0 z-10 flex gap-1 overflow-x-auto border-t border-gray-200 bg-white px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] dark:border-gray-800 dark:bg-gray-900 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => (
           <button
             key={tab.key}
+            ref={active === tab.key ? activeRef : undefined}
             onClick={() => onChange(tab.key)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-medium transition-all ${
+            className={`flex shrink-0 min-w-[4.25rem] flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-medium transition-all ${
               active === tab.key
-                ? "text-indigo-600 dark:text-indigo-400"
+                ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400"
                 : "text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
             }`}
           >

@@ -212,3 +212,15 @@ export async function setRepaymentFlag(
   await saveRepaymentFlags(sql, flags);
   return entry;
 }
+
+// ── hidden transactions (per month, synced across devices via Neon) ─────────
+export const loadHidden = (sql: Sql) =>
+  kvGet<Record<string, string[]>>(sql, "hidden_transactions", {});
+
+export async function saveHiddenMonth(sql: Sql, month: string, ids: string[]) {
+  const all = await loadHidden(sql);
+  if (ids.length) all[month] = ids;
+  else delete all[month];
+  await kvSet(sql, "hidden_transactions", all);
+  return all;
+}

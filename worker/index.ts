@@ -21,6 +21,8 @@ import {
   addDeletedRepayment,
   removeDeletedRepayment,
   setRepaymentFlag,
+  loadHidden,
+  saveHiddenMonth,
 } from "../lib/config";
 import { subcategoryToCategory } from "../lib/categorize";
 import {
@@ -341,6 +343,14 @@ app.get("/worksheet", async (c) => c.json(await kvGet(sqlOf(c), "worksheet", { d
 app.put("/worksheet", async (c) => {
   const b = await c.req.json();
   return c.json(await saveWorksheet(sqlOf(c), { data: b.data ?? [] }));
+});
+
+// ── Hidden transactions (per month) ─────────────────────────────────────────
+app.get("/hidden", async (c) => c.json(await loadHidden(sqlOf(c))));
+app.put("/hidden/:month", async (c) => {
+  const month = c.req.param("month");
+  const ids = (await c.req.json()) as string[];
+  return c.json(await saveHiddenMonth(sqlOf(c), month, ids));
 });
 
 // Workers entry: /api/* → Hono; everything else → static SPA assets.
