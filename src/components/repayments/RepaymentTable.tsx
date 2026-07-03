@@ -133,8 +133,8 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
   }
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="px-3 2xl:px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+    <Card className="p-0 overflow-hidden max-md:!p-0">
+      <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:py-4 2xl:px-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Repayment Schedule
         </h2>
@@ -150,7 +150,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
           />
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1280px] text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -308,6 +308,81 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile cards */}
+      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+        {filtered.map((r) => (
+          <li key={r.id} className={`space-y-2 px-4 py-3 ${r.refunded ? "bg-rose-50/60 dark:bg-rose-950/30" : ""}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-medium text-gray-800 dark:text-gray-200">{r.description}</p>
+                <p className="text-xs text-gray-400">{shortDate(r.created)}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="font-semibold text-gray-800 dark:text-gray-200">{gbp(Math.abs(r.amount))}</p>
+                <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{gbp(leftToPay(r))} left</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                {addingFor === r.id ? (
+                  <input
+                    autoFocus
+                    placeholder="New category…"
+                    onKeyDown={(e) => { if (e.key === "Enter") commitNewCategory(r, e.currentTarget.value); else if (e.key === "Escape") setAddingFor(null); }}
+                    onBlur={(e) => commitNewCategory(r, e.currentTarget.value)}
+                    className="w-full rounded-lg border border-indigo-400 bg-transparent px-2 py-1 text-sm focus:outline-none dark:border-indigo-600"
+                  />
+                ) : (
+                  <Select value={r.category || ""} onChange={(value) => onCategoryChange(r, value)} options={categoryOptions} className="w-full rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-sm dark:border-gray-700" />
+                )}
+              </div>
+              <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <input type="checkbox" checked={r.refunded} onChange={(e) => save.mutate({ flex_id: r.flex_id, refunded: e.target.checked })} className="h-4 w-4 rounded border-gray-300 accent-rose-600" />
+                Refund
+              </label>
+            </div>
+            <input
+              defaultValue={r.notes}
+              placeholder="Add note…"
+              onBlur={(e) => e.target.value !== r.notes && save.mutate({ flex_id: r.flex_id, notes: e.target.value })}
+              onKeyDown={commitOnEnter(r.notes)}
+              className="w-full rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-sm placeholder-gray-300 focus:border-gray-300 focus:outline-none dark:border-gray-700 dark:placeholder-gray-600"
+            />
+            <div className="grid grid-cols-3 gap-2">
+              {([1, 2, 3] as const).map((n) => {
+                const date = dateOf(r, n);
+                const amount = amountOf(r, n);
+                const isPast = date && date.slice(0, 10) < today;
+                return (
+                  <div key={n} className={`space-y-1 ${isPast ? "opacity-50" : ""}`}>
+                    <DatePicker
+                      selected={date ? parseLocal(date.slice(0, 10)) : null}
+                      onChange={(d: Date | null) => saveDate(r, n, d ? toISO(d) : "")}
+                      dateFormat="d MMM"
+                      placeholderText="—"
+                      popperProps={{ strategy: "fixed" }}
+                      wrapperClassName="w-full"
+                      className={`w-full rounded-lg border border-gray-200 bg-transparent px-1 py-1 text-center text-xs dark:border-gray-700 ${isPast ? "line-through" : ""}`}
+                    />
+                    <CurrencyInput
+                      value={amount ?? null}
+                      allowEmpty
+                      forceNegative
+                      onCommit={(v) => saveAmount(r, n, v === null ? "" : String(v))}
+                      className="w-full rounded-lg border border-gray-200 bg-transparent px-1 py-1 text-center text-xs dark:border-gray-700"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={() => onDelete(r)} className="text-xs font-medium text-red-400 hover:text-red-600">Delete</button>
+          </li>
+        ))}
+        {filtered.length === 0 && (
+          <li className="px-4 py-6 text-center text-sm text-gray-400">No repayments match “{search}”</li>
+        )}
+      </ul>
     </Card>
   );
 }

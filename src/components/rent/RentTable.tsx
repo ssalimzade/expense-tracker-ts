@@ -88,12 +88,12 @@ export default function RentTable({ data, months }: Props) {
     items.reduce((s, it) => s + (isPaid(month, it.key) ? cell(month, it.key).amount : 0), 0);
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+    <Card className="p-0 overflow-hidden max-md:!p-0">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Rent &amp; Utilities (Wyndham)
         </h2>
-        <div className="flex items-center gap-3 text-xs text-gray-400">
+        <div className="hidden items-center gap-3 text-xs text-gray-400 sm:flex">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-amber-400" /> set aside to savings
           </span>
@@ -105,7 +105,7 @@ export default function RentTable({ data, months }: Props) {
           </span>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -170,6 +170,48 @@ export default function RentTable({ data, months }: Props) {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile cards */}
+      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+        {months.map((month) => {
+          const isFuture = month > currentMonth;
+          const isCurrent = month === currentMonth;
+          const total = monthTotal(month);
+          const paid = monthPaid(month);
+          const fullyPaid = total > 0 && paid >= total - 0.001;
+          return (
+            <li
+              key={month}
+              className={`px-4 py-3 ${isFuture ? "opacity-50" : ""} ${isCurrent ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{mo(month)}</span>
+                <div className="text-right">
+                  <div className="font-bold tabular-nums text-gray-800 dark:text-gray-100">{gbp0(total)}</div>
+                  <div className={`text-[11px] font-medium ${fullyPaid ? "text-emerald-500" : "text-gray-400"}`}>
+                    {fullyPaid ? "paid" : `${gbp0(total - paid)} left`}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                {items.map((it) => {
+                  const c = cell(month, it.key);
+                  const m = match(month, it.key);
+                  return (
+                    <div key={it.key} className="flex items-center justify-between gap-1">
+                      <span className={`shrink-0 ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
+                      <div className="flex items-center gap-1">
+                        <MoneyInput value={c.amount} onCommit={(n) => update(month, it.key, { amount: n })} color={it.saved ? "#d97706" : undefined} />
+                        <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => update(month, it.key, { paid: !c.paid })} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </Card>
   );
 }

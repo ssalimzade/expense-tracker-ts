@@ -43,13 +43,13 @@ function monthCellClass(month: string) {
 
 export default function ProjectionsTable({ rows, onProjectionField, onNotes, onAllocation }: Props) {
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+    <Card className="p-0 overflow-hidden max-md:!p-0">
+      <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Monthly Plan
         </h2>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -169,6 +169,44 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
           </tbody>
         </table>
       </div>
+
+      {/* Mobile cards — one per month */}
+      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+        {rows.map((row) => (
+          <li
+            key={row.month}
+            className={`px-4 py-3 ${row.month > currentMonth ? "opacity-60" : ""} ${row.month === currentMonth ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""}`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-gray-700 dark:text-gray-300">{mo(row.month)}</span>
+              <span className="text-xs text-gray-400">
+                Buffer{" "}
+                <span className={`text-sm font-bold tabular-nums ${row.buffer < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                  {gbp0(row.buffer)}
+                </span>
+              </span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+              <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Salary</span><MoneyInput value={row.salary} onCommit={(n) => onProjectionField(row.month, "salary", n)} color="#6366f1" /></div>
+              <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Bonus</span><MoneyInput value={row.bonus} onCommit={(n) => onProjectionField(row.month, "bonus", n)} /></div>
+              <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Monthly</span><MoneyInput value={row.monthly_costs} onCommit={(n) => onProjectionField(row.month, "monthly_costs", n)} color="#f97316" /></div>
+              <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Rent</span><MoneyInput value={row.rent} onCommit={(n) => onProjectionField(row.month, "housing_costs", n)} color="#ea580c" /></div>
+              <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Home</span><MoneyInput value={row.home_contributions} onCommit={(n) => onAllocation(row.month, "home_contributions", n)} color="#0ea5e9" /></div>
+              <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Savings</span><MoneyInput value={row.savings} onCommit={(n) => onAllocation(row.month, "savings", n)} color="#10b981" /></div>
+              <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Invest</span><MoneyInput value={row.investments} onCommit={(n) => onAllocation(row.month, "investments", n)} color="#a855f7" /></div>
+              <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Other P/L</span><MoneyInput value={row.other_pl} onCommit={(n) => onProjectionField(row.month, "other_pl", n)} allowNegative /></div>
+            </div>
+            <input
+              defaultValue={row.notes}
+              key={row.notes}
+              placeholder="Notes…"
+              onBlur={(e) => e.target.value !== row.notes && onNotes(row.month, e.target.value)}
+              onKeyDown={commitOnEnter(row.notes)}
+              className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-sm placeholder-gray-300 focus:border-gray-300 focus:outline-none dark:border-gray-700 dark:placeholder-gray-600"
+            />
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

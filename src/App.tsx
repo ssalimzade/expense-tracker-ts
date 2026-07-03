@@ -47,7 +47,7 @@ export default function App() {
         showMonth={MONTH_TABS.includes(tab)}
       />
       <RequisitionBanner />
-      <main className="flex-1 overflow-x-auto p-5 pb-20 md:pb-5">
+      <main className="flex-1 overflow-x-auto p-3 pb-20 md:p-5">
         {tab === "dashboard"    && <DashboardTab month={month} />}
         {tab === "transactions" && (
           <TransactionsTab

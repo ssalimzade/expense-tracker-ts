@@ -104,13 +104,13 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
   };
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+    <Card className="p-0 overflow-hidden max-md:!p-0">
+      <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Monthly Savings
         </h2>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -183,6 +183,47 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
           </tbody>
         </table>
       </div>
+
+      {/* Mobile cards */}
+      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+        {rows.map((row) => {
+          const isFuture = monthKey(row.start_date) > currentKey;
+          return (
+            <li key={row.start_date} className={`px-4 py-3 ${isFuture ? "opacity-40" : ""}`}>
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{mo(row.start_date)}</span>
+                <span className="text-base font-bold" style={{ color: ENDING_COLOR }}>{gbp0(row.ending_balance)}</span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                {editableFields.map((field) => {
+                  const startingDerived = field === "starting_balance" && row.start_date !== seedDate;
+                  return (
+                    <div key={field} className="flex items-center justify-between gap-1">
+                      <span className="shrink-0 text-gray-400">{LABELS[field] ?? field}</span>
+                      {startingDerived ? (
+                        <span className="px-1 py-0.5 text-gray-400">{gbp0((row[field] as number) ?? 0)}</span>
+                      ) : (
+                        <MoneyInput
+                          value={(row[field] as number) ?? 0}
+                          onCommit={(n) => commitNumber(row, field, n)}
+                          color={COLORS[field as string]}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <input
+                defaultValue={row.adjustment_notes}
+                placeholder="Notes…"
+                onBlur={(e) => commitNotes(row, e.target.value)}
+                onKeyDown={commitOnEnter(row.adjustment_notes)}
+                className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-sm placeholder-gray-300 focus:border-gray-300 focus:outline-none dark:border-gray-700 dark:placeholder-gray-600"
+              />
+            </li>
+          );
+        })}
+      </ul>
     </Card>
   );
 }

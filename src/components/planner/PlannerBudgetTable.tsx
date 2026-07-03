@@ -36,8 +36,8 @@ export default function PlannerBudgetTable({
   const total = sum(draft);
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between bg-teal-600 dark:bg-teal-900 px-6 py-4">
+    <Card className="p-0 overflow-hidden max-md:!p-0">
+      <div className="flex items-center justify-between bg-teal-600 dark:bg-teal-900 px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-bold text-white">Planned Budget</h2>
           {saving && (
@@ -58,7 +58,7 @@ export default function PlannerBudgetTable({
           Move to Budget
         </button>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
       <table className="w-full min-w-[520px] text-sm">
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -98,6 +98,34 @@ export default function PlannerBudgetTable({
         </tfoot>
       </table>
       </div>
+
+      {/* Mobile cards */}
+      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+        {MAIN_CATEGORIES.map((cat) => {
+          const planned = draft[cat] ?? 0;
+          return (
+            <li key={cat} className="px-4 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-gray-800 dark:text-gray-100">{cat}</span>
+                <CurrencyInput
+                  value={planned}
+                  onLiveChange={(n) => onChange(cat, n)}
+                  onCommit={(n) => onCommit(cat, n ?? 0)}
+                  className="w-24 rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-right font-semibold text-gray-900 focus:border-teal-400 focus:outline-none dark:border-gray-700 dark:text-white dark:focus:border-teal-500"
+                />
+              </div>
+              <div className="mt-1.5 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
+                <span>Avg {gbp(avg2026[cat] ?? 0)}</span>
+                <span>{lastMonthLabel} {gbp(lastMonth[cat] ?? 0)}</span>
+              </div>
+            </li>
+          );
+        })}
+        <li className="flex items-center justify-between border-t-2 border-gray-200 px-4 py-3 text-sm font-bold dark:border-gray-700">
+          <span className="text-gray-700 dark:text-gray-200">Total</span>
+          <span className="text-teal-700 dark:text-teal-300">{gbp(total)}</span>
+        </li>
+      </ul>
     </Card>
   );
 }

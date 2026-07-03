@@ -91,8 +91,8 @@ export default function RemunerationTable({ rows }: Props) {
   const autoTd = "px-3 py-2.5 text-center bg-gray-50/50 dark:bg-gray-800/30";
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+    <Card className="p-0 overflow-hidden max-md:!p-0">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Salary History
@@ -108,7 +108,7 @@ export default function RemunerationTable({ rows }: Props) {
           + Add salary update
         </button>
       </div>
-      <div className="overflow-x-auto">
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[920px] text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -182,6 +182,42 @@ export default function RemunerationTable({ rows }: Props) {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile cards */}
+      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+        {rows.map((row, i) => {
+          const prev = rows[i - 1];
+          const deltaAbs = prev ? row.net_pm - prev.net_pm : 0;
+          return (
+            <li key={row.period} className={`px-4 py-3 ${row.current ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">
+                  {row.period}
+                  {row.current && (
+                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                      Current
+                    </span>
+                  )}
+                </span>
+                {prev && (
+                  <span className={`shrink-0 text-xs font-semibold tabular-nums ${deltaAbs >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                    {deltaAbs >= 0 ? "+" : "−"}{gbp0(Math.abs(deltaAbs))}
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Gross p.a</span><MoneyInput value={row.gross} onCommit={(n) => commitInput(row, "gross", n)} pound /></div>
+                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Pension %</span><PercentInput value={row.pension_pct} onCommit={(n) => commitInput(row, "pension_pct", n)} /></div>
+                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Net p.m</span><MoneyInput value={row.net_pm} onCommit={(n) => commitInput(row, "net_pm", n)} pound /></div>
+                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Bonus</span><MoneyInput value={row.bonus} onCommit={(n) => commitInput(row, "bonus", n)} pound /></div>
+                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Pension</span><MoneyInput value={row.pension} onCommit={(n) => commitPension(row, n)} pound allowNegative /></div>
+                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Deductions</span><MoneyInput value={row.deductions} onCommit={(n) => commitDeductions(row, n)} pound allowNegative /></div>
+                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Net p.a</span><MoneyInput value={row.net_pa} onCommit={(n) => commitNetPa(row, n)} pound /></div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </Card>
   );
 }
