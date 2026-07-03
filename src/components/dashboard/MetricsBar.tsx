@@ -35,16 +35,16 @@ export default function MetricsBar({ totalBudget, totalSpent }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {metrics.map((m) => (
           <div
             key={m.label}
-            className={`rounded-2xl border ${m.border} ${m.bg} px-5 py-4 text-center`}
+            className={`rounded-2xl border ${m.border} ${m.bg} px-2.5 py-3 text-center sm:px-5 sm:py-4`}
           >
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
               {m.label}
             </p>
-            <p className={`mt-1.5 text-2xl font-bold tracking-tight ${m.color}`}>
+            <p className={`mt-1 text-lg font-bold tracking-tight sm:mt-1.5 sm:text-2xl ${m.color}`}>
               {gbp(m.value)}
             </p>
           </div>
