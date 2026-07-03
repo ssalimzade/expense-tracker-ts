@@ -69,7 +69,7 @@ export default function BalanceSection({ month }: { month: string }) {
           return (
             <div
               key={key}
-              className={`rounded-2xl border ${border} ${bg} px-2 py-2.5 text-center sm:px-4 sm:py-4`}
+              className={`rounded-2xl border ${border} ${bg} px-2 py-2 text-center sm:px-4 sm:py-4`}
             >
               <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                 {label}
@@ -88,7 +88,7 @@ export default function BalanceSection({ month }: { month: string }) {
         })}
 
         {/* Read-only sum of all balances above */}
-        <div className={`col-span-3 rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-3 py-3 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
+        <div className={`col-span-3 rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-3 py-2.5 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
           <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Total Balance
           </p>

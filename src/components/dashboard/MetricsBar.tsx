@@ -39,7 +39,7 @@ export default function MetricsBar({ totalBudget, totalSpent }: Props) {
         {metrics.map((m) => (
           <div
             key={m.label}
-            className={`rounded-2xl border ${m.border} ${m.bg} px-2.5 py-3 text-center sm:px-5 sm:py-4`}
+            className={`rounded-2xl border ${m.border} ${m.bg} px-2.5 py-2 text-center sm:px-5 sm:py-4`}
           >
             <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
               {m.label}

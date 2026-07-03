@@ -144,7 +144,7 @@ export default function HistoryTab() {
                 { label: "Spent", value: totalSpent, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 dark:bg-indigo-950/40 border-indigo-100 dark:border-indigo-900" },
                 { label: "Remaining", value: totalRemaining, color: totalRemaining < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400", bg: totalRemaining < 0 ? "bg-red-50/60 border-red-100 dark:bg-red-950/40 dark:border-red-900" : "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-900" },
               ].map((m) => (
-                <div key={m.label} className={`rounded-2xl border px-2.5 py-3 text-center sm:px-5 sm:py-4 ${m.bg}`}>
+                <div key={m.label} className={`rounded-2xl border px-2.5 py-2 text-center sm:px-5 sm:py-4 ${m.bg}`}>
                   <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500 sm:text-xs">{m.label}</p>
                   <p className={`mt-1 text-lg font-bold sm:mt-1.5 sm:text-2xl ${m.color}`}>{gbp(m.value)}</p>
                 </div>
@@ -248,7 +248,7 @@ export default function HistoryTab() {
                     ? (row["Spent (£)"] / row["Budget (£)"]) * 100
                     : row["Spent (£)"] > 0 ? 999 : 0;
                   return (
-                    <li key={i} className="px-4 py-3.5">
+                    <li key={i} className="px-4 py-2.5">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-semibold text-gray-800 dark:text-gray-100">{row.Category}</span>
                         <span className="font-semibold text-gray-900 dark:text-white">{gbp(row["Budget (£)"])}</span>

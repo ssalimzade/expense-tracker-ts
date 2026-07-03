@@ -6,6 +6,7 @@ import { dailySpendSeries } from "../../lib/spend";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
 import { gbp0 as gbp } from "../../lib/format";
 import { Card } from "../common";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 interface Props {
   transactions: Transaction[];
@@ -22,9 +23,11 @@ export default function CumulativeSpendChart({ transactions, month, totalBudget 
   const paceNow = lastActual?.pace ?? 0;
   const overPace = totalBudget > 0 && spent > paceNow;
 
-  // Sparse, evenly-spaced day ticks: 1, 5, 10, …, last day of month.
+  const isMobile = useIsMobile();
+  // Sparse, evenly-spaced day ticks — fewer on mobile.
   const lastDay = data.length;
-  const ticks = [1, 5, 10, 15, 20, 25, lastDay].filter((d, i, a) => d <= lastDay && a.indexOf(d) === i);
+  const ticks = (isMobile ? [1, 10, 20, lastDay] : [1, 5, 10, 15, 20, 25, lastDay])
+    .filter((d, i, a) => d <= lastDay && a.indexOf(d) === i);
 
   const monthShort = new Date(`${month}-01`).toLocaleString("en-GB", { month: "short" });
   const monthName = new Date(`${month}-01`).toLocaleString("en-GB", { month: "long", year: "numeric" });
@@ -81,6 +84,7 @@ export default function CumulativeSpendChart({ transactions, month, totalBudget 
             <YAxis
               tick={{ fontSize: 11, fill: "#9ca3af" }}
               width={52}
+              tickCount={isMobile ? 3 : 5}
               tickFormatter={(v) => `£${v}`}
               axisLine={false}
               tickLine={false}
@@ -101,19 +105,21 @@ export default function CumulativeSpendChart({ transactions, month, totalBudget 
                 return [gbp(v), labels[name as string] ?? name];
               }}
             />
-            <Legend
-              iconType="plainline"
-              iconSize={16}
-              wrapperStyle={{ fontSize: "12px" }}
-              formatter={(value) => {
-                const labels: Record<string, string> = {
-                  cumulative: "Spent",
-                  pace: "Budget pace",
-                  projection: "Projected",
-                };
-                return labels[value] ?? value;
-              }}
-            />
+            {!isMobile && (
+              <Legend
+                iconType="plainline"
+                iconSize={16}
+                wrapperStyle={{ fontSize: "12px" }}
+                formatter={(value) => {
+                  const labels: Record<string, string> = {
+                    cumulative: "Spent",
+                    pace: "Budget pace",
+                    projection: "Projected",
+                  };
+                  return labels[value] ?? value;
+                }}
+              />
+            )}
             {totalBudget > 0 && (
               <Line
                 type="monotone"
