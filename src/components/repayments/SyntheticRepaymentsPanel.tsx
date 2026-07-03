@@ -32,8 +32,8 @@ export default function SyntheticRepaymentsPanel({ visibleMonths }: Props) {
   const busy = sync.isPending || remove.isPending;
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="border-b border-gray-100 px-6 py-4 dark:border-gray-800">
+    <Card className="p-0 overflow-hidden max-md:!p-0">
+      <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Pushed to Monzo
         </h2>
@@ -52,7 +52,7 @@ export default function SyntheticRepaymentsPanel({ visibleMonths }: Props) {
           const synced = entries.length > 0;
 
           return (
-            <div key={month} className="px-6 py-4">
+            <div key={month} className="px-4 py-3 sm:px-6 sm:py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">

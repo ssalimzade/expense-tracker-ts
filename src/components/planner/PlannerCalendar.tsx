@@ -77,7 +77,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) 
   }
 
   return (
-    <Card>
+    <Card className="max-md:!p-3">
       <div className="space-y-4">
         {/* Header: month name + stats */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -117,7 +117,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) 
                 return (
                   <div
                     key={`e${idx}`}
-                    className="min-h-[78px] border-b border-r border-gray-100 bg-gray-50/40 last:border-r-0 dark:border-gray-800 dark:bg-gray-900/40"
+                    className="min-h-[52px] sm:min-h-[78px] border-b border-r border-gray-100 bg-gray-50/40 last:border-r-0 dark:border-gray-800 dark:bg-gray-900/40"
                   />
                 );
               const dow = (new Date(year, monthNum - 1, day).getDay() + 6) % 7;
@@ -138,7 +138,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) 
                   key={day}
                   onClick={() => clickable && onToggleDay(day)}
                   title={isBankHol ? holTitles[dateStr] : undefined}
-                  className={`relative min-h-[78px] border-b border-r border-gray-100 p-1.5 transition-colors last:border-r-0 dark:border-gray-800 ${cellBg} ${
+                  className={`relative min-h-[52px] sm:min-h-[78px] border-b border-r border-gray-100 p-1 transition-colors last:border-r-0 sm:p-1.5 dark:border-gray-800 ${cellBg} ${
                     clickable ? "cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/40" : "cursor-default"
                   } ${isDayOff && clickable ? "hover:bg-teal-600 dark:hover:bg-teal-700" : ""}`}
                 >
