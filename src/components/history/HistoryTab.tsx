@@ -248,7 +248,7 @@ export default function HistoryTab() {
                     ? (row["Spent (£)"] / row["Budget (£)"]) * 100
                     : row["Spent (£)"] > 0 ? 999 : 0;
                   return (
-                    <li key={i} className="px-4 py-2.5">
+                    <li key={i} className="px-6 py-2.5">
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-semibold text-gray-800 dark:text-gray-100">{row.Category}</span>
                         <span className="font-semibold text-gray-900 dark:text-white">{gbp(row["Budget (£)"])}</span>
@@ -271,7 +271,7 @@ export default function HistoryTab() {
                     </li>
                   );
                 })}
-                <li className="flex items-center justify-between border-t-2 border-gray-200 px-4 py-3 text-sm font-bold dark:border-gray-700">
+                <li className="flex items-center justify-between border-t-2 border-gray-200 px-6 py-3 text-sm font-bold dark:border-gray-700">
                   <span className="uppercase tracking-wider text-gray-900 dark:text-white">Total</span>
                   <span className="flex items-center gap-3">
                     <span className="text-gray-500 dark:text-gray-400">Spent {gbp(totalSpent)}</span>

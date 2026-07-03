@@ -112,7 +112,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
           const remaining = budget - spent;
           const pct = budget > 0 ? (spent / budget) * 100 : spent > 0 ? 999 : 0;
           return (
-            <li key={cat} className="px-4 py-2.5">
+            <li key={cat} className="px-6 py-2.5">
               <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-gray-800 dark:text-gray-100">{cat}</span>
                 <CurrencyInput
