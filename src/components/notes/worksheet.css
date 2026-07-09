@@ -15,4 +15,11 @@
 .ws-dark {
   background: #ffffff;
   filter: invert(0.9) hue-rotate(180deg);
+  /* The app sets a light dark-mode text colour on <body> (dark:text-gray-100)
+     which cascades into the widget; the invert then flips that light text to
+     near-black — invisible. DOM text that inherits colour (the cell editor, the
+     toolbar font/size/format dropdown labels, sheet names, zoom %) is not
+     redrawn on the canvas, so reset the base to black here and let the invert
+     flip it uniformly to light. Elements with their own colour are unaffected. */
+  color: #000;
 }
