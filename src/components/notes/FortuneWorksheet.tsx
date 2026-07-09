@@ -6,10 +6,12 @@ import type { Sheet } from "@fortune-sheet/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWorksheet, useSaveWorksheet } from "../../hooks/useWorksheet";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { isLegacyMatrix, toSheets } from "./worksheetMigration";
 
 export default function FortuneWorksheet() {
   const dark = useDarkMode();
+  const isMobile = useIsMobile();
   const qc = useQueryClient();
   const wsQuery = useWorksheet();
   const save = useSaveWorksheet();
@@ -82,9 +84,20 @@ export default function FortuneWorksheet() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-        <div className={`ws-workbook h-full w-full ${dark ? "ws-dark" : "bg-white"}`}>
+        <div
+          className={`ws-workbook h-full w-full ${dark ? "ws-dark" : "bg-white"} ${
+            isMobile ? "ws-mobile" : ""
+          }`}
+        >
           {initial ? (
-            <Workbook ref={wbRef} data={initial} onChange={handleChange} lang="en" />
+            <Workbook
+              ref={wbRef}
+              data={initial}
+              onChange={handleChange}
+              lang="en"
+              // Taller rows are easier to tap on a phone; desktop keeps the default.
+              {...(isMobile ? { defaultRowHeight: 26 } : {})}
+            />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-gray-400">
               Loading worksheet…

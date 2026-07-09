@@ -123,7 +123,9 @@ export default function NotesTab() {
       </div>
 
       {/* ── Worksheet pane (bottom) — its own scroll window ──── */}
-      <div className="min-h-0 flex-1 border-t border-gray-200 pt-3 dark:border-gray-800">
+      {/* On phones the worksheet takes ~2/3 of the height so the grid is
+          actually usable; desktop keeps the even split. */}
+      <div className="min-h-0 flex-1 border-t border-gray-200 pt-3 dark:border-gray-800 max-md:flex-[2]">
         <Worksheet />
       </div>
 
