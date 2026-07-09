@@ -6,9 +6,11 @@ export function useWorksheet() {
   return useQuery({
     queryKey: ["worksheet"],
     queryFn: fetchWorksheet,
-    // The editor keeps this cache in sync on every edit (see FortuneWorksheet),
-    // so never refetch and clobber in-progress edits with the pre-edit snapshot.
-    staleTime: Infinity,
+    // Refetch on focus/remount so returning to a device picks up edits made on
+    // another one. FortuneWorksheet reseeds the grid when the server has genuinely
+    // newer content (and there are no unsaved local edits).
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 }
 

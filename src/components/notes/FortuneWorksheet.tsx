@@ -9,6 +9,21 @@ import { useDarkMode } from "../../hooks/useDarkMode";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { isLegacyMatrix, toSheets } from "./worksheetMigration";
 
+// A content fingerprint of the sheets that ignores selection/scroll (which live
+// on the sheet too and change constantly). Two payloads with the same cell
+// values, styles, column widths and merges hash equal — so we can tell a real
+// edit apart from a mount echo or a cursor move, and detect when another device
+// has genuinely changed the data.
+function contentSig(sheets: Sheet[]): string {
+  try {
+    return JSON.stringify(
+      (sheets ?? []).map((s) => ({ n: s.name, d: s.data ?? s.celldata ?? null, c: s.config ?? null })),
+    );
+  } catch {
+    return String(Math.random());
+  }
+}
+
 export default function FortuneWorksheet() {
   const dark = useDarkMode();
   const isMobile = useIsMobile();
@@ -16,37 +31,57 @@ export default function FortuneWorksheet() {
   const wsQuery = useWorksheet();
   const save = useSaveWorksheet();
 
-  // Fortune-sheet reads `data` once at mount and owns state thereafter, so seed
-  // it a single time from the server and never feed the prop again.
+  // Fortune-sheet reads `data` once per mount and owns state thereafter, so we
+  // seed it and force a remount (via `seedKey`) whenever we need to reload.
   const [initial, setInitial] = useState<Sheet[] | null>(null);
+  const [seedKey, setSeedKey] = useState(0);
   const wbRef = useRef<WorkbookInstance>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const needsRecalc = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const pending = useRef<Sheet[] | null>(null);
+  // Fingerprint of the content currently in sync with the server. Saves and
+  // reseeds are gated on this so we never re-save unchanged data (which would
+  // clobber another device's edits) and never reload on top of local edits.
+  const syncedSig = useRef<string | null>(null);
+  // Fortune-sheet fires `onChange` once on mount echoing the seeded data — adopt
+  // that as the baseline instead of saving it back.
+  const captureBaseline = useRef(false);
 
+  // Seed on first load; reseed when the server has genuinely newer content and
+  // there are no unsaved local edits to protect.
   useEffect(() => {
-    if (wsQuery.data && initial === null) {
-      const raw = wsQuery.data.data;
-      // Legacy formulas arrive as `{ f }` with no cached value, so they render
-      // blank until the calc chain is rebuilt. Already-migrated sheets keep
-      // their cached values and need no recompute.
+    if (!wsQuery.data) return;
+    const raw = wsQuery.data.data;
+    const sheets = toSheets(raw);
+    const sig = contentSig(sheets);
+
+    if (initial === null) {
       needsRecalc.current = isLegacyMatrix(raw);
-      setInitial(toSheets(raw));
+      syncedSig.current = sig;
+      captureBaseline.current = true;
+      setInitial(sheets);
+      return;
+    }
+    if (sig !== syncedSig.current && pending.current == null) {
+      needsRecalc.current = isLegacyMatrix(raw);
+      syncedSig.current = sig;
+      captureBaseline.current = true;
+      setInitial(sheets);
+      setSeedKey((k) => k + 1);
     }
   }, [wsQuery.data, initial]);
 
-  // One-time recompute of migrated formulas, once the Workbook has mounted.
+  // One-time recompute of migrated formulas, after each (re)mount.
   useEffect(() => {
     if (!initial || !needsRecalc.current) return;
     needsRecalc.current = false;
     const t = setTimeout(() => wbRef.current?.calculateFormula(), 300);
     return () => clearTimeout(t);
-  }, [initial]);
+  }, [initial, seedKey]);
 
-  // Persist the latest sheets. Held in a ref and behind a `flushRef` so an
-  // unmount (e.g. switching tabs) can push a pending save instead of dropping
-  // the debounced edit.
+  // Persist the latest sheets. Held in a ref and behind `flushRef` so an unmount
+  // (e.g. switching tabs) pushes a pending save instead of dropping it.
   const flushRef = useRef<() => void>(() => {});
   flushRef.current = () => {
     if (pending.current == null) return;
@@ -61,6 +96,29 @@ export default function FortuneWorksheet() {
       flushRef.current();
     },
     [],
+  );
+
+  const handleChange = useCallback(
+    (sheets: Sheet[]) => {
+      const sig = contentSig(sheets);
+      // The mount/reseed echo: adopt it as the baseline, don't save it back.
+      if (captureBaseline.current) {
+        captureBaseline.current = false;
+        syncedSig.current = sig;
+        return;
+      }
+      // Selection / scroll / no-op change — content is unchanged, skip.
+      if (sig === syncedSig.current) return;
+
+      // A real edit. Record it, mirror to the cache (so a same-device tab switch
+      // reseeds from the current sheet), and debounce the save.
+      syncedSig.current = sig;
+      qc.setQueryData(["worksheet"], { data: sheets });
+      pending.current = sheets;
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => flushRef.current(), 700);
+    },
+    [qc],
   );
 
   // Touch panning. Fortune-sheet's own touch-scroll (core `handleOverlayTouchMove`)
@@ -126,18 +184,6 @@ export default function FortuneWorksheet() {
     };
   }, []);
 
-  const handleChange = useCallback(
-    (sheets: Sheet[]) => {
-      // Keep the query cache in sync so re-opening the tab reseeds from the
-      // current sheet, not the pre-edit snapshot.
-      qc.setQueryData(["worksheet"], { data: sheets });
-      pending.current = sheets;
-      clearTimeout(timer.current);
-      timer.current = setTimeout(() => flushRef.current(), 700);
-    },
-    [qc],
-  );
-
   return (
     <div className="flex h-full flex-col">
       <div className="mb-2 flex items-center justify-between">
@@ -156,6 +202,7 @@ export default function FortuneWorksheet() {
         >
           {initial ? (
             <Workbook
+              key={seedKey}
               ref={wbRef}
               data={initial}
               onChange={handleChange}
