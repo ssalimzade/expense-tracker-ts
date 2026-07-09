@@ -41,12 +41,10 @@ export default function FortuneWorksheet() {
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const pending = useRef<Sheet[] | null>(null);
   // Fingerprint of the content currently in sync with the server. Saves and
-  // reseeds are gated on this so we never re-save unchanged data (which would
-  // clobber another device's edits) and never reload on top of local edits.
+  // reseeds are gated on this: we skip echoes/cursor moves (same fingerprint,
+  // so no clobber), save real edits, and reseed only when the server's content
+  // genuinely differs and there are no unsaved local edits to protect.
   const syncedSig = useRef<string | null>(null);
-  // Fortune-sheet fires `onChange` once on mount echoing the seeded data — adopt
-  // that as the baseline instead of saving it back.
-  const captureBaseline = useRef(false);
 
   // Seed on first load; reseed when the server has genuinely newer content and
   // there are no unsaved local edits to protect.
@@ -59,14 +57,12 @@ export default function FortuneWorksheet() {
     if (initial === null) {
       needsRecalc.current = isLegacyMatrix(raw);
       syncedSig.current = sig;
-      captureBaseline.current = true;
       setInitial(sheets);
       return;
     }
     if (sig !== syncedSig.current && pending.current == null) {
       needsRecalc.current = isLegacyMatrix(raw);
       syncedSig.current = sig;
-      captureBaseline.current = true;
       setInitial(sheets);
       setSeedKey((k) => k + 1);
     }
@@ -98,16 +94,43 @@ export default function FortuneWorksheet() {
     [],
   );
 
+  // A hard refresh / tab close / app switch doesn't run React cleanup, so a
+  // still-debounced edit would be lost. Flush it with a `keepalive` request that
+  // survives the page going away.
+  useEffect(() => {
+    const flushBeacon = () => {
+      if (pending.current == null) return;
+      const body = JSON.stringify({ data: pending.current });
+      pending.current = null;
+      clearTimeout(timer.current);
+      try {
+        fetch("/api/worksheet", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        });
+      } catch {
+        /* best effort on unload */
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flushBeacon();
+    };
+    window.addEventListener("pagehide", flushBeacon);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flushBeacon);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
   const handleChange = useCallback(
     (sheets: Sheet[]) => {
       const sig = contentSig(sheets);
-      // The mount/reseed echo: adopt it as the baseline, don't save it back.
-      if (captureBaseline.current) {
-        captureBaseline.current = false;
-        syncedSig.current = sig;
-        return;
-      }
-      // Selection / scroll / no-op change — content is unchanged, skip.
+      // Same fingerprint → a mount echo, cursor move or scroll, not a content
+      // change. Skip: this both avoids needless writes and (crucially) stops an
+      // idle device from re-saving stale data over another device's edits.
       if (sig === syncedSig.current) return;
 
       // A real edit. Record it, mirror to the cache (so a same-device tab switch
@@ -116,7 +139,7 @@ export default function FortuneWorksheet() {
       qc.setQueryData(["worksheet"], { data: sheets });
       pending.current = sheets;
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => flushRef.current(), 700);
+      timer.current = setTimeout(() => flushRef.current(), 600);
     },
     [qc],
   );
