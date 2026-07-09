@@ -7,3 +7,12 @@
   height: 100%;
   width: 100%;
 }
+
+/* Fortune-sheet draws the grid on <canvas> with hard-coded light colours and
+   ships no dark theme, so we fake dark mode by inverting the whole widget.
+   hue-rotate(180deg) keeps any user-set cell colours roughly true after the
+   inversion; the white backdrop inverts to near-black. */
+.ws-dark {
+  background: #ffffff;
+  filter: invert(0.9) hue-rotate(180deg);
+}

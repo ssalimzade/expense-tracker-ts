@@ -3,10 +3,14 @@ import { Workbook, type WorkbookInstance } from "@fortune-sheet/react";
 import "@fortune-sheet/react/dist/index.css";
 import "./worksheet.css";
 import type { Sheet } from "@fortune-sheet/core";
+import { useQueryClient } from "@tanstack/react-query";
 import { useWorksheet, useSaveWorksheet } from "../../hooks/useWorksheet";
+import { useDarkMode } from "../../hooks/useDarkMode";
 import { isLegacyMatrix, toSheets } from "./worksheetMigration";
 
 export default function FortuneWorksheet() {
+  const dark = useDarkMode();
+  const qc = useQueryClient();
   const wsQuery = useWorksheet();
   const save = useSaveWorksheet();
 
@@ -16,6 +20,7 @@ export default function FortuneWorksheet() {
   const wbRef = useRef<WorkbookInstance>(null);
   const needsRecalc = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
+  const pending = useRef<Sheet[] | null>(null);
 
   useEffect(() => {
     if (wsQuery.data && initial === null) {
@@ -36,14 +41,35 @@ export default function FortuneWorksheet() {
     return () => clearTimeout(t);
   }, [initial]);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  // Persist the latest sheets. Held in a ref and behind a `flushRef` so an
+  // unmount (e.g. switching tabs) can push a pending save instead of dropping
+  // the debounced edit.
+  const flushRef = useRef<() => void>(() => {});
+  flushRef.current = () => {
+    if (pending.current == null) return;
+    const data = pending.current;
+    pending.current = null;
+    save.mutate({ data });
+  };
+
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current);
+      flushRef.current();
+    },
+    [],
+  );
 
   const handleChange = useCallback(
     (sheets: Sheet[]) => {
+      // Keep the query cache in sync so re-opening the tab reseeds from the
+      // current sheet, not the pre-edit snapshot.
+      qc.setQueryData(["worksheet"], { data: sheets });
+      pending.current = sheets;
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => save.mutate({ data: sheets }), 700);
+      timer.current = setTimeout(() => flushRef.current(), 700);
     },
-    [save],
+    [qc],
   );
 
   return (
@@ -55,14 +81,16 @@ export default function FortuneWorksheet() {
         {save.isPending && <span className="text-xs text-gray-400">Saving…</span>}
       </div>
 
-      <div className="ws-workbook min-h-0 flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800">
-        {initial ? (
-          <Workbook ref={wbRef} data={initial} onChange={handleChange} lang="en" />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-gray-400">
-            Loading worksheet…
-          </div>
-        )}
+      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+        <div className={`ws-workbook h-full w-full ${dark ? "ws-dark" : "bg-white"}`}>
+          {initial ? (
+            <Workbook ref={wbRef} data={initial} onChange={handleChange} lang="en" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-gray-400">
+              Loading worksheet…
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
