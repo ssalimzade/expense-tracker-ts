@@ -35,6 +35,23 @@ function contentSig(sheets: Sheet[]): string {
   }
 }
 
+// Does the payload actually hold any content? Used to refuse saving an empty
+// sheet — Fortune-sheet can briefly emit a blank sheet while (re)initialising on
+// remount, and saving that would wipe real data on the server.
+function hasContent(sheets: Sheet[]): boolean {
+  return (sheets ?? []).some((s) => {
+    if (Array.isArray(s.celldata) && s.celldata.length > 0) return true;
+    if (Array.isArray(s.data) && s.data.some((row) => Array.isArray(row) && row.some((c) => c != null)))
+      return true;
+    const cfg = s.config ?? {};
+    return (
+      Object.keys(cfg.merge ?? {}).length > 0 ||
+      Object.keys(cfg.columnlen ?? {}).length > 0 ||
+      Object.keys(cfg.rowlen ?? {}).length > 0
+    );
+  });
+}
+
 export default function FortuneWorksheet() {
   const dark = useDarkMode();
   const isMobile = useIsMobile();
@@ -143,6 +160,13 @@ export default function FortuneWorksheet() {
       // change. Skip: this both avoids needless writes and (crucially) stops an
       // idle device from re-saving stale data over another device's edits.
       if (sig === syncedSig.current) return;
+
+      // Never persist an empty sheet. On remount Fortune-sheet can briefly emit a
+      // blank sheet before the seeded data loads; saving that would wipe real
+      // content on the server. Leave the fingerprint on the real content so the
+      // following real echo/edit is still recognised. (A genuine "clear
+      // everything" won't auto-save — an acceptable price for not losing data.)
+      if (!hasContent(sheets)) return;
 
       // A real edit. Record it, mirror to the cache (so a same-device tab switch
       // reseeds from the current sheet), and debounce the save.
