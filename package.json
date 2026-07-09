@@ -11,6 +11,8 @@
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@fortune-sheet/core": "^1.0.4",
+    "@fortune-sheet/react": "^1.0.4",
     "@neondatabase/serverless": "^1.1.0",
     "@tanstack/react-query": "^5.51.0",
     "@tanstack/react-table": "^8.19.0",
@@ -19,7 +21,6 @@
     "react": "^18.3.1",
     "react-datepicker": "^9.1.0",
     "react-dom": "^18.3.1",
-    "react-spreadsheet": "^0.9.5",
     "recharts": "^2.12.7"
   },
   "devDependencies": {

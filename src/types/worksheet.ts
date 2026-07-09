@@ -1,10 +1,9 @@
-import type { CellBase, Matrix } from "react-spreadsheet";
-
-// A worksheet cell only needs to persist its raw value (formulas are stored as
-// the `=…` string and re-evaluated on load by react-spreadsheet).
-export type WorksheetCell = CellBase<string | number | undefined>;
-export type WorksheetMatrix = Matrix<WorksheetCell>;
-
+// The worksheet payload persisted to the server.
+//
+// Historically this was a react-spreadsheet `Matrix<{ value }>` (a 2-D array of
+// rows). It is now Fortune-sheet's `Sheet[]` format. `toSheets()` in
+// FortuneWorksheet detects and migrates the legacy shape on load, so both are
+// accepted here — hence `unknown`.
 export interface WorksheetDoc {
-  data: WorksheetMatrix;
+  data: unknown;
 }

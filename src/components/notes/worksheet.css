@@ -1,0 +1,9 @@
+/* Fortune-sheet fills its parent (its root uses inline height:100%), so the
+   .ws-workbook flex child just needs to be a sized, positioned box. */
+.ws-workbook {
+  position: relative;
+}
+.ws-workbook .fortune-container {
+  height: 100%;
+  width: 100%;
+}

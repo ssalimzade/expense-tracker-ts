@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Git(*)",
+      "Bash(gh *)",
+      "Read(/Users/samirsalimzade/Documents/Python/**)",
+      "Bash(echo * && python3 *)",
+      "Bash(*| head *)",
+      "Bash(node *; npm *; python3 *)",
+      "Bash(python3 -c *)",
+      "Bash(cd * && python3 *)",
+      "Bash(*| tail *)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(**/.env)",
+      "Edit(.env)",
+      "Edit(**/.env)"
+    ]
+  }
+}
