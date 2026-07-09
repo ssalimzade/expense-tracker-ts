@@ -10,6 +10,10 @@
    Tailwind sizes down together. Bump toward 16px if it feels too small. */
 @media (max-width: 767px) {
   :root { font-size: 14px; }
+  /* Give recharts legend items more breathing room on phones. */
+  .recharts-legend-item { margin-right: 16px !important; }
+  /* …except charts with many series, which need to stay on one line. */
+  .tight-legend .recharts-legend-item { margin-right: 8px !important; }
 }
 
 body {

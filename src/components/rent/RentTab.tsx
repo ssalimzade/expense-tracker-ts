@@ -61,10 +61,10 @@ export default function RentTab() {
         const rentToSalary = netPm > 0 ? (currentRentTotal / netPm) * 100 : 0;
 
         const stats = [
-          { label: "Cost YTD", value: gbp0(costYtd), sub: `${gbp0(costYtd / activeMonths)}/mo avg`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
-          { label: "Set Aside to Savings", value: gbp0(setAsideYtd), sub: "year to date", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
-          { label: "Outstanding (to date)", value: gbp0(outstanding), sub: outstanding > 0 ? "not yet paid" : "all settled", color: outstanding > 0 ? "text-red-600 dark:text-red-400" : "text-teal-600 dark:text-teal-400", bg: "bg-rose-50/60 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900" },
-          { label: "Rent to Salary", value: `${rentToSalary.toFixed(0)}%`, sub: "current month", color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
+          { label: "Cost YTD", short: "Cost YTD", value: gbp0(costYtd), sub: `${gbp0(costYtd / activeMonths)}/mo avg`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
+          { label: "Set Aside to Savings", short: "Set Aside", value: gbp0(setAsideYtd), sub: "year to date", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
+          { label: "Outstanding (to date)", short: "Outstanding", value: gbp0(outstanding), sub: outstanding > 0 ? "not yet paid" : "all settled", color: outstanding > 0 ? "text-red-600 dark:text-red-400" : "text-teal-600 dark:text-teal-400", bg: "bg-rose-50/60 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900" },
+          { label: "Rent to Salary", short: "Rent/Salary", value: `${rentToSalary.toFixed(0)}%`, sub: "current month", color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
         ];
 
         return (
@@ -87,12 +87,15 @@ export default function RentTab() {
             </div>
 
             {/* Summary cards */}
-            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-2 grid-cols-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
               {stats.map((s) => (
-                <div key={s.label} className={`rounded-2xl border px-5 py-4 text-center ${s.bg}`}>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{s.label}</p>
-                  <p className={`mt-1.5 text-2xl font-bold ${s.color}`}>{s.value}</p>
-                  <p className="mt-0.5 text-xs text-gray-400">{s.sub}</p>
+                <div key={s.label} className={`rounded-2xl border px-1.5 py-2 text-center sm:px-5 sm:py-4 ${s.bg}`}>
+                  <p className="text-[9px] font-medium uppercase leading-tight tracking-wide text-gray-500 sm:text-xs sm:tracking-wider">
+                    <span className="sm:hidden">{s.short}</span>
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </p>
+                  <p className={`mt-1 text-sm font-bold sm:mt-1.5 sm:text-2xl ${s.color}`}>{s.value}</p>
+                  <p className="mt-0.5 hidden truncate text-xs text-gray-400 sm:block">{s.sub}</p>
                 </div>
               ))}
             </div>

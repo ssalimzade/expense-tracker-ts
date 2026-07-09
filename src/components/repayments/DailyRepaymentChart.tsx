@@ -3,17 +3,16 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from "recharts";
 import type { Repayment } from "../../types/repayment";
-import { dailyUpcoming, dailyUpcomingCats, repaymentsOnDate } from "../../lib/repayments";
+import { dailyUpcoming, dailyUpcomingCats, repaymentsOnDate, catColor } from "../../lib/repayments";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
 import { gbp } from "../../lib/format";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { Card } from "../common";
 
 const fmtDate = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 };
-
-const PALETTE = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#a855f7", "#f43f5e", "#14b8a6", "#fb923c"];
 
 interface TooltipPayloadItem {
   name: string;
@@ -61,6 +60,7 @@ interface Props {
 }
 
 export default function DailyRepaymentChart({ repayments, visibleMonths }: Props) {
+  const isMobile = useIsMobile();
   const raw = dailyUpcoming(repayments, visibleMonths);
   const cats = dailyUpcomingCats(repayments, visibleMonths);
   const today = new Date().toISOString().slice(0, 10);
@@ -140,7 +140,8 @@ export default function DailyRepaymentChart({ repayments, visibleMonths }: Props
                 key={cat}
                 dataKey={cat}
                 stackId="a"
-                fill={PALETTE[i % PALETTE.length]}
+                fill={catColor(cat)}
+                maxBarSize={isMobile ? 48 : undefined}
                 radius={i === cats.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
               />
             ))}

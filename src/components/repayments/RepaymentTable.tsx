@@ -7,7 +7,7 @@ import {
   useAddRepaymentCategory,
 } from "../../hooks/useRepayments";
 import { gbp, shortDate } from "../../lib/format";
-import { leftToPay } from "../../lib/repayments";
+import { leftToPay, catColor } from "../../lib/repayments";
 import { commitOnEnter } from "../../lib/keys";
 import { MAIN_CATEGORIES } from "../../types/categories";
 import { Card } from "../common";
@@ -138,7 +138,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Repayment Schedule
         </h2>
-        <div className="relative mt-3 w-full max-w-xs">
+        <div className="relative mt-3 w-full max-w-xs max-md:max-w-none">
           <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
             <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
           </svg>
@@ -315,12 +315,12 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
           <li key={r.id} className={`space-y-2 px-4 py-3 ${r.refunded ? "bg-rose-50/60 dark:bg-rose-950/30" : ""}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate font-medium text-gray-800 dark:text-gray-200">{r.description}</p>
+                <p className="truncate font-semibold" style={{ color: catColor(r.category) }}>{r.description}</p>
                 <p className="text-xs text-gray-400">{shortDate(r.created)}</p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="font-semibold text-gray-800 dark:text-gray-200">{gbp(Math.abs(r.amount))}</p>
-                <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{gbp(leftToPay(r))} left</p>
+                <p className="font-semibold" style={{ color: catColor(r.category) }}>{gbp(Math.abs(r.amount))}</p>
+                <p className="text-xs font-semibold text-gray-900 dark:text-white">{gbp(leftToPay(r))} left</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

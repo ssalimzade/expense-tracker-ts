@@ -10,6 +10,7 @@ const SOURCE_COLORS: Record<string, string> = {
   flex: "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
   amex: "bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
   chase: "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  barclays: "bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
 };
 
 interface Props {
@@ -23,7 +24,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
   const setFlag = useSetFlag(month);
 
   const sourceBadge = (source: string) => (
-    <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium capitalize ${SOURCE_COLORS[source] ?? ""}`}>
+    <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium capitalize ${SOURCE_COLORS[source?.toLowerCase()] ?? ""}`}>
       {source}
     </span>
   );

@@ -33,18 +33,18 @@ export default function SavingsTab() {
         const avgPerMonth = elapsed.length ? totalSaved / elapsed.length : 0;
 
         const stats = [
-          { label: "Current Balance", value: latest?.ending_balance ?? 0, color: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50/60 border-teal-100 dark:bg-teal-950/30 dark:border-teal-900" },
-          { label: "Saved this year", value: totalSaved, sub: `avg ${gbp0(avgPerMonth)}/mo`, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900" },
+          { label: "Current Balance", short: "Balance", value: latest?.ending_balance ?? 0, sub: "", color: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50/60 border-teal-100 dark:bg-teal-950/30 dark:border-teal-900" },
+          { label: "Saved this year", short: "Saved", value: totalSaved, sub: `avg ${gbp0(avgPerMonth)}/mo`, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900" },
           ...(showInvestments
-            ? [{ label: "Invested", value: sum("investments"), color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50/60 border-purple-100 dark:bg-purple-950/30 dark:border-purple-900" }]
+            ? [{ label: "Invested", short: "Invested", value: sum("investments"), sub: "", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50/60 border-purple-100 dark:bg-purple-950/30 dark:border-purple-900" }]
             : []),
-          { label: "Home Contributions", value: sum("home_contributions"), color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
+          { label: "Home Contributions", short: "Home", value: sum("home_contributions"), sub: "", color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
         ];
 
         return (
           <div className="space-y-4">
             {/* Year tabs */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <div className="flex gap-1.5 rounded-xl bg-gray-100 p-1 dark:bg-gray-800 w-fit">
                 {years.map((y) => (
                   <button
@@ -71,12 +71,15 @@ export default function SavingsTab() {
             </div>
 
             {/* Year summary stats */}
-            <div className={`grid gap-3 ${stats.length === 4 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3"}`}>
+            <div className={`grid gap-2 sm:gap-3 ${stats.length === 4 ? "grid-cols-4 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-3"}`}>
               {stats.map((s) => (
-                <div key={s.label} className={`rounded-2xl border px-5 py-4 text-center ${s.bg}`}>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{s.label}</p>
-                  <p className={`mt-1.5 text-2xl font-bold ${s.color}`}>{gbp0(s.value)}</p>
-                  {s.sub && <p className="mt-0.5 text-xs text-gray-400">{s.sub}</p>}
+                <div key={s.label} className={`rounded-2xl border px-1.5 py-2 text-center sm:px-5 sm:py-4 ${s.bg}`}>
+                  <p className="text-[9px] font-medium uppercase leading-tight tracking-wide text-gray-500 sm:text-xs sm:tracking-wider">
+                    <span className="sm:hidden">{s.short}</span>
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </p>
+                  <p className={`mt-1 text-sm font-bold sm:mt-1.5 sm:text-2xl ${s.color}`}>{gbp0(s.value)}</p>
+                  {s.sub && <p className="mt-0.5 hidden truncate text-xs text-gray-400 sm:block">{s.sub}</p>}
                 </div>
               ))}
             </div>

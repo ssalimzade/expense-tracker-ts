@@ -9,6 +9,8 @@ interface Props {
   /** Previous-month budget reference column. */
   lastMonth: BudgetMap;
   lastMonthLabel: string;
+  /** Full previous-month name (e.g. "July") for the mobile reference row. */
+  lastMonthName: string;
   /** 2026 per-category average reference column. */
   avg2026: BudgetMap;
   /** Label for the editable column — the month being planned, e.g. "Jul 2026". */
@@ -24,6 +26,7 @@ export default function PlannerBudgetTable({
   draft,
   lastMonth,
   lastMonthLabel,
+  lastMonthName,
   avg2026,
   planLabel,
   onChange,
@@ -104,26 +107,26 @@ export default function PlannerBudgetTable({
         {MAIN_CATEGORIES.map((cat) => {
           const planned = draft[cat] ?? 0;
           return (
-            <li key={cat} className="px-4 py-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-gray-800 dark:text-gray-100">{cat}</span>
-                <CurrencyInput
-                  value={planned}
-                  onLiveChange={(n) => onChange(cat, n)}
-                  onCommit={(n) => onCommit(cat, n ?? 0)}
-                  className="w-24 rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-right font-semibold text-gray-900 focus:border-teal-400 focus:outline-none dark:border-gray-700 dark:text-white dark:focus:border-teal-500"
-                />
+            <li key={cat} className="flex items-center justify-between gap-2 px-4 py-2.5">
+              <div className="min-w-0">
+                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{cat}</span>
+                <div className="mt-1.5 flex text-xs text-gray-400 dark:text-gray-500">
+                  <span className="flex w-28 items-center gap-1.5"><span>Average</span><span className="tabular-nums text-gray-500 dark:text-gray-400">{gbp(avg2026[cat] ?? 0)}</span></span>
+                  <span className="flex items-center gap-1.5"><span>{lastMonthName}</span><span className="tabular-nums text-gray-500 dark:text-gray-400">{gbp(lastMonth[cat] ?? 0)}</span></span>
+                </div>
               </div>
-              <div className="mt-1.5 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
-                <span>Avg {gbp(avg2026[cat] ?? 0)}</span>
-                <span>{lastMonthLabel} {gbp(lastMonth[cat] ?? 0)}</span>
-              </div>
+              <CurrencyInput
+                value={planned}
+                onLiveChange={(n) => onChange(cat, n)}
+                onCommit={(n) => onCommit(cat, n ?? 0)}
+                className="w-24 shrink-0 rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-center text-sm font-semibold text-gray-900 focus:border-teal-400 focus:outline-none dark:border-gray-700 dark:text-white dark:focus:border-teal-500"
+              />
             </li>
           );
         })}
         <li className="flex items-center justify-between border-t-2 border-gray-200 px-4 py-3 text-sm font-bold dark:border-gray-700">
           <span className="text-gray-700 dark:text-gray-200">Total</span>
-          <span className="text-teal-700 dark:text-teal-300">{gbp(total)}</span>
+          <span className="w-24 shrink-0 text-center text-teal-700 dark:text-teal-300">{gbp(total)}</span>
         </li>
       </ul>
     </Card>

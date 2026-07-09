@@ -4,7 +4,7 @@ import { gbp0 } from "../../lib/format";
 import { Card } from "../common";
 import MoneyInput from "../MoneyInput";
 
-const mo = (m: string) => new Date(`${m}-01`).toLocaleString("en-GB", { month: "short" });
+const mo = (m: string) => new Date(`${m}-01`).toLocaleString("en-GB", { month: "long" });
 
 const currentMonth = (() => {
   const d = new Date();
@@ -12,6 +12,11 @@ const currentMonth = (() => {
 })();
 
 const blank: RentLineItem = { amount: 0, paid: false };
+
+// Mobile-card column split: the housing bills on the left, the water group on
+// the right (matching how the user thinks about them).
+const LEFT_KEYS = ["flat", "council_tax", "energy", "wifi"];
+const RIGHT_KEYS = ["water", "water_savings", "hot_water"];
 
 /**
  * Marks a line item paid / unpaid. When a real transaction was matched the item
@@ -86,6 +91,27 @@ export default function RentTable({ data, months }: Props) {
   const monthTotal = (month: string) => items.reduce((s, it) => s + cell(month, it.key).amount, 0);
   const monthPaid = (month: string) =>
     items.reduce((s, it) => s + (isPaid(month, it.key) ? cell(month, it.key).amount : 0), 0);
+
+  // Ordered item lists for the mobile card's two columns.
+  const orderItems = (keys: string[]) =>
+    keys.map((k) => items.find((i) => i.key === k)).filter(Boolean) as RentItemDef[];
+  const knownKeys = new Set([...LEFT_KEYS, ...RIGHT_KEYS]);
+  const leftItems = orderItems(LEFT_KEYS);
+  const rightItems = [...orderItems(RIGHT_KEYS), ...items.filter((i) => !knownKeys.has(i.key))];
+
+  // One category row in a mobile card: paid/linked toggle on the left, then the
+  // label, then the amount aligned right.
+  const renderRow = (month: string, it: RentItemDef) => {
+    const c = cell(month, it.key);
+    const m = match(month, it.key);
+    return (
+      <div key={it.key} className="flex items-center gap-1.5">
+        <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => update(month, it.key, { paid: !c.paid })} />
+        <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
+        <MoneyInput value={c.amount} onCommit={(n) => update(month, it.key, { amount: n })} color={it.saved ? "#d97706" : undefined} className="!w-14 !px-1 !text-right" />
+      </div>
+    );
+  };
 
   return (
     <Card className="p-0 overflow-hidden max-md:!p-0">
@@ -184,29 +210,18 @@ export default function RentTable({ data, months }: Props) {
               key={month}
               className={`px-4 py-3 ${isFuture ? "opacity-50" : ""} ${isCurrent ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""}`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-baseline justify-between gap-2">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{mo(month)}</span>
-                <div className="text-right">
-                  <div className="font-bold tabular-nums text-gray-800 dark:text-gray-100">{gbp0(total)}</div>
-                  <div className={`text-[11px] font-medium ${fullyPaid ? "text-emerald-500" : "text-gray-400"}`}>
+                <span className="flex items-baseline gap-2 pr-1">
+                  <span className={`text-[11px] font-medium ${fullyPaid ? "text-emerald-500" : "text-gray-400"}`}>
                     {fullyPaid ? "paid" : `${gbp0(total - paid)} left`}
-                  </div>
-                </div>
+                  </span>
+                  <span className="font-bold tabular-nums text-gray-800 dark:text-gray-100">{gbp0(total)}</span>
+                </span>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                {items.map((it) => {
-                  const c = cell(month, it.key);
-                  const m = match(month, it.key);
-                  return (
-                    <div key={it.key} className="flex items-center justify-between gap-1">
-                      <span className={`shrink-0 ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
-                      <div className="flex items-center gap-1">
-                        <MoneyInput value={c.amount} onCommit={(n) => update(month, it.key, { amount: n })} color={it.saved ? "#d97706" : undefined} />
-                        <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => update(month, it.key, { paid: !c.paid })} />
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div className="space-y-1">{leftItems.map((it) => renderRow(month, it))}</div>
+                <div className="space-y-1">{rightItems.map((it) => renderRow(month, it))}</div>
               </div>
             </li>
           );

@@ -10,10 +10,12 @@ function MoneyInput({
   value,
   onCommit,
   color,
+  className = "",
 }: {
   value: number;
   onCommit: (n: number) => void;
   color?: string;
+  className?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [raw, setRaw] = useState("");
@@ -37,7 +39,7 @@ function MoneyInput({
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         if (e.key === "Escape") { setEditing(false); (e.target as HTMLInputElement).blur(); }
       }}
-      className={`w-24 rounded-lg border border-transparent bg-transparent px-2 py-1 text-center text-sm focus:border-gray-200 focus:outline-none dark:focus:border-gray-700 ${color ? "font-semibold" : ""}`}
+      className={`w-24 rounded-lg border border-transparent bg-transparent px-2 py-1 text-center text-sm focus:border-gray-200 focus:outline-none dark:focus:border-gray-700 ${color ? "font-semibold" : ""} ${className}`}
     />
   );
 }
@@ -63,7 +65,7 @@ const ENDING_COLOR = "#14b8a6"; // teal
 
 const mo = (iso: string) => {
   const d = new Date(iso);
-  return d.toLocaleString("en-GB", { month: "short" });
+  return d.toLocaleString("en-GB", { month: "long" });
 };
 
 // "YYYY-MM" key for comparing months.
@@ -188,30 +190,54 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
         {rows.map((row) => {
           const isFuture = monthKey(row.start_date) > currentKey;
+          const startingDerived = row.start_date !== seedDate;
+          // Editable category field for the mobile card (label + right-aligned input).
+          const renderField = (field: keyof SavingsRow) => (
+            <div key={field} className="flex items-center justify-between gap-1">
+              <span className="shrink-0 text-gray-400">{LABELS[field as string] ?? field}</span>
+              <MoneyInput
+                value={(row[field] as number) ?? 0}
+                onCommit={(n) => commitNumber(row, field, n)}
+                color={COLORS[field as string]}
+                className="!w-16 !px-1 !text-right"
+              />
+            </div>
+          );
           return (
             <li key={row.start_date} className={`px-4 py-3 ${isFuture ? "opacity-40" : ""}`}>
-              <div className="flex items-center justify-between">
+              {/* Month on the left, starting balance value on the right (same line). */}
+              <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{mo(row.start_date)}</span>
-                <span className="text-base font-bold" style={{ color: ENDING_COLOR }}>{gbp0(row.ending_balance)}</span>
+                <div className="flex items-center gap-1.5 text-xs">
+                  {startingDerived ? (
+                    <span
+                      className="inline-block w-20 px-1 py-0.5 text-right tabular-nums text-gray-400"
+                      title="Derived from the previous month's ending balance"
+                    >
+                      {gbp0(row.starting_balance ?? 0)}
+                    </span>
+                  ) : (
+                    <MoneyInput
+                      value={row.starting_balance ?? 0}
+                      onCommit={(n) => commitNumber(row, "starting_balance", n)}
+                      className="!w-20 !px-1 !text-right"
+                    />
+                  )}
+                </div>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                {editableFields.map((field) => {
-                  const startingDerived = field === "starting_balance" && row.start_date !== seedDate;
-                  return (
-                    <div key={field} className="flex items-center justify-between gap-1">
-                      <span className="shrink-0 text-gray-400">{LABELS[field] ?? field}</span>
-                      {startingDerived ? (
-                        <span className="px-1 py-0.5 text-gray-400">{gbp0((row[field] as number) ?? 0)}</span>
-                      ) : (
-                        <MoneyInput
-                          value={(row[field] as number) ?? 0}
-                          onCommit={(n) => commitNumber(row, field, n)}
-                          color={COLORS[field as string]}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                <div className="space-y-1">
+                  {renderField("savings")}
+                  {renderField("home_contributions")}
+                </div>
+                <div className="space-y-1">
+                  {showInvestments && renderField("investments")}
+                  {renderField("adjustments")}
+                </div>
+              </div>
+              <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2 dark:border-gray-800">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Ending</span>
+                <span className="text-base font-bold" style={{ color: ENDING_COLOR }}>{gbp0(row.ending_balance)}</span>
               </div>
               <input
                 defaultValue={row.adjustment_notes}

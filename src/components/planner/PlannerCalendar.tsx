@@ -77,11 +77,11 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) 
   }
 
   return (
-    <Card className="max-md:!p-3">
-      <div className="space-y-4">
+    <Card className="max-md:!p-2.5">
+      <div className="space-y-4 max-md:space-y-2.5">
         {/* Header: month name + stats */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">{formatMonthLabel(month)}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 max-md:gap-1.5">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 max-md:text-base">{formatMonthLabel(month)}</h2>
           <div className="flex gap-2 text-xs">
             <span className="rounded-md bg-teal-50 px-2.5 py-1 font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300">
               {daysOff.size} days off
@@ -102,7 +102,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) 
             {DOW_LABELS.map((d, i) => (
               <div
                 key={d}
-                className={`py-2 text-center text-xs font-semibold uppercase tracking-wider ${
+                className={`py-2 text-center text-xs font-semibold uppercase tracking-wider max-md:py-1 max-md:text-[10px] ${
                   i >= 5 ? "text-gray-300 dark:text-gray-600" : "text-gray-500 dark:text-gray-400"
                 }`}
               >
@@ -117,7 +117,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) 
                 return (
                   <div
                     key={`e${idx}`}
-                    className="min-h-[52px] sm:min-h-[78px] border-b border-r border-gray-100 bg-gray-50/40 last:border-r-0 dark:border-gray-800 dark:bg-gray-900/40"
+                    className="min-h-[36px] sm:min-h-[78px] border-b border-r border-gray-100 bg-gray-50/40 last:border-r-0 dark:border-gray-800 dark:bg-gray-900/40"
                   />
                 );
               const dow = (new Date(year, monthNum - 1, day).getDay() + 6) % 7;
@@ -138,12 +138,12 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) 
                   key={day}
                   onClick={() => clickable && onToggleDay(day)}
                   title={isBankHol ? holTitles[dateStr] : undefined}
-                  className={`relative min-h-[52px] sm:min-h-[78px] border-b border-r border-gray-100 p-1 transition-colors last:border-r-0 sm:p-1.5 dark:border-gray-800 ${cellBg} ${
+                  className={`relative min-h-[36px] sm:min-h-[78px] border-b border-r border-gray-100 p-1 transition-colors last:border-r-0 max-md:p-0.5 sm:p-1.5 dark:border-gray-800 ${cellBg} ${
                     clickable ? "cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/40" : "cursor-default"
                   } ${isDayOff && clickable ? "hover:bg-teal-600 dark:hover:bg-teal-700" : ""}`}
                 >
                   <span
-                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-medium ${
+                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-medium max-md:h-5 max-md:w-5 max-md:text-xs ${
                       isToday ? "bg-indigo-600 text-white" : ""
                     } ${
                       isDayOff

@@ -1,4 +1,4 @@
-export type Source = "monzo" | "flex" | "amex" | "chase";
+export type Source = "monzo" | "flex" | "amex" | "chase" | "barclays";
 
 export interface Transaction {
   id: string;

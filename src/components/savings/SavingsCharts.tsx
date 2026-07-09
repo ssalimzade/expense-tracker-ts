@@ -4,6 +4,7 @@ import {
 } from "recharts";
 import type { SavingsRow } from "../../types/savings";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { Card } from "../common";
 
 const mo = (iso: string) => new Date(iso).toLocaleString("en-GB", { month: "short" });
@@ -13,6 +14,7 @@ const currentKey = (() => {
 })();
 
 export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
+  const isMobile = useIsMobile();
   // Split the series: year-to-date (solid line + shade) and future (dashed, no
   // shade). The future series starts at the current month so the lines connect.
   const data = rows.map((r) => {
@@ -26,8 +28,13 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
 
   const balances = rows.map((r) => r.ending_balance);
   const max = Math.max(...balances, 0);
-  const min = Math.min(...balances, 0);
   const lastBalance = rows[rows.length - 1]?.ending_balance ?? 0;
+  // Even, whole-thousand Y ticks (e.g. 0 / 3k / 6k / 9k / 12k) instead of the
+  // ragged auto ticks recharts would otherwise pick.
+  const step = Math.max(1000, Math.ceil(max / 4 / 1000) * 1000);
+  const niceMax = Math.max(step, Math.ceil(max / step) * step);
+  const yTicks: number[] = [];
+  for (let v = 0; v <= niceMax; v += step) yTicks.push(v);
 
   return (
     <Card>
@@ -51,12 +58,14 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="month" tick={{ fontSize: isMobile ? 9 : 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval={isMobile ? 0 : undefined} />
             <YAxis
               tick={{ fontSize: 11, fill: "#9ca3af" }}
-              width={60}
+              width={44}
               tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`}
-              domain={[Math.floor(min * 0.95), Math.ceil(max * 1.05)]}
+              domain={[0, niceMax]}
+              ticks={yTicks}
+              allowDecimals={false}
               axisLine={false}
               tickLine={false}
             />
@@ -95,6 +104,7 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
 }
 
 export function MonthlyBreakdownChart({ rows, showInvestments }: { rows: SavingsRow[]; showInvestments: boolean }) {
+  const isMobile = useIsMobile();
   const data = rows.map((r) => ({
     month: mo(r.start_date),
     Home: r.home_contributions,
@@ -114,11 +124,11 @@ export function MonthlyBreakdownChart({ rows, showInvestments }: { rows: Savings
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
             <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="month" tick={{ fontSize: isMobile ? 9 : 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval={isMobile ? 0 : undefined} />
             <YAxis
               tick={{ fontSize: 11, fill: "#9ca3af" }}
-              width={60}
-              tickFormatter={(v) => `£${v.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`}
+              width={isMobile ? 44 : 60}
+              tickFormatter={(v) => (isMobile ? `£${(v / 1000).toFixed(1)}k` : `£${v.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`)}
               axisLine={false}
               tickLine={false}
             />

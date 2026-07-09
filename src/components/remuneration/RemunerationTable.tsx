@@ -1,4 +1,3 @@
-import { useRef, useState } from "react";
 import { useSaveRemunerationRow } from "../../hooks/useRemuneration";
 import type { RemunerationRow } from "../../types/remuneration";
 import { gbp0 } from "../../lib/format";
@@ -14,30 +13,6 @@ function computeAuto(row: RemunerationRow) {
   const net_pa = row.net_pm * 12;
   const deductions = -(row.gross - net_pa + pension);
   return { pension, net_pa, deductions };
-}
-
-/** Inline percent input (stores a fraction, displays a whole percent). */
-function PercentInput({ value, onCommit }: { value: number; onCommit: (n: number) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [raw, setRaw] = useState("");
-  const touched = useRef(false);
-  const display = `${Math.round(value * 100)}%`;
-  return (
-    <input
-      type="text"
-      value={editing ? raw : display}
-      onFocus={() => { setEditing(true); touched.current = false; setRaw(String(Math.round(value * 100))); }}
-      onChange={(e) => { touched.current = true; setRaw(e.target.value); }}
-      onBlur={() => {
-        setEditing(false);
-        if (!touched.current) return;
-        const n = (parseFloat(raw.replace(/[^0-9.]/g, "")) || 0) / 100;
-        if (n !== value) onCommit(n);
-      }}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur(); }}
-      className="w-14 rounded-lg border border-transparent bg-transparent px-2 py-1 text-center text-sm tabular-nums focus:border-gray-200 focus:outline-none dark:focus:border-gray-700"
-    />
-  );
 }
 
 const currentYear = String(new Date().getFullYear());
@@ -90,6 +65,20 @@ export default function RemunerationTable({ rows }: Props) {
   const autoTh = "px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-400 bg-gray-50/70 dark:bg-gray-800/40";
   const autoTd = "px-3 py-2.5 text-center bg-gray-50/50 dark:bg-gray-800/30";
 
+  // Show the most recent salary first (both the desktop table and mobile cards).
+  // Δ is still computed against the chronologically-previous period.
+  const displayRows = rows
+    .map((row, i) => {
+      const prev = rows[i - 1];
+      return {
+        row,
+        hasPrev: !!prev,
+        deltaAbs: prev ? row.net_pm - prev.net_pm : 0,
+        deltaPct: prev && prev.net_pm ? (row.net_pm - prev.net_pm) / prev.net_pm : 0,
+      };
+    })
+    .reverse();
+
   return (
     <Card className="p-0 overflow-hidden max-md:!p-0">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
@@ -114,7 +103,6 @@ export default function RemunerationTable({ rows }: Props) {
             <tr className="border-b border-gray-100 dark:border-gray-800">
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Period</th>
               <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Gross p.a</th>
-              <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Pension %</th>
               <th className={autoTh}>Pension</th>
               <th className={autoTh}>Deductions</th>
               <th className={autoTh}>Net p.a</th>
@@ -124,10 +112,7 @@ export default function RemunerationTable({ rows }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-            {rows.map((row, i) => {
-              const prev = rows[i - 1];
-              const deltaAbs = prev ? row.net_pm - prev.net_pm : 0;
-              const deltaPct = prev && prev.net_pm ? deltaAbs / prev.net_pm : 0;
+            {displayRows.map(({ row, hasPrev, deltaAbs, deltaPct }) => {
               return (
                 <tr
                   key={row.period}
@@ -146,9 +131,6 @@ export default function RemunerationTable({ rows }: Props) {
                   <td className="px-3 py-2.5 text-center">
                     <MoneyInput value={row.gross} onCommit={(n) => commitInput(row, "gross", n)} pound />
                   </td>
-                  <td className="px-3 py-2.5 text-center">
-                    <PercentInput value={row.pension_pct} onCommit={(n) => commitInput(row, "pension_pct", n)} />
-                  </td>
                   <td className={autoTd}>
                     <MoneyInput value={row.pension} onCommit={(n) => commitPension(row, n)} pound allowNegative />
                   </td>
@@ -165,7 +147,7 @@ export default function RemunerationTable({ rows }: Props) {
                     <MoneyInput value={row.bonus} onCommit={(n) => commitInput(row, "bonus", n)} pound />
                   </td>
                   <td className="px-6 py-2.5 text-center whitespace-nowrap">
-                    {prev ? (
+                    {hasPrev ? (
                       <span className={`font-semibold tabular-nums ${deltaAbs >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                         {deltaAbs >= 0 ? "+" : "−"}{gbp0(Math.abs(deltaAbs))}
                         <span className="ml-1 text-xs text-gray-400">
@@ -183,12 +165,9 @@ export default function RemunerationTable({ rows }: Props) {
         </table>
       </div>
 
-      {/* Mobile cards */}
+      {/* Mobile cards — most recent first */}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
-        {rows.map((row, i) => {
-          const prev = rows[i - 1];
-          const deltaAbs = prev ? row.net_pm - prev.net_pm : 0;
-          return (
+        {displayRows.map(({ row, hasPrev, deltaAbs }) => (
             <li key={row.period} className={`px-4 py-3 ${row.current ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""}`}>
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">
@@ -199,24 +178,26 @@ export default function RemunerationTable({ rows }: Props) {
                     </span>
                   )}
                 </span>
-                {prev && (
-                  <span className={`shrink-0 text-xs font-semibold tabular-nums ${deltaAbs >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                {hasPrev && (
+                  <span className={`shrink-0 pr-1 text-xs font-semibold tabular-nums ${deltaAbs >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                     {deltaAbs >= 0 ? "+" : "−"}{gbp0(Math.abs(deltaAbs))}
                   </span>
                 )}
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Gross p.a</span><MoneyInput value={row.gross} onCommit={(n) => commitInput(row, "gross", n)} pound /></div>
-                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Pension %</span><PercentInput value={row.pension_pct} onCommit={(n) => commitInput(row, "pension_pct", n)} /></div>
-                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Net p.m</span><MoneyInput value={row.net_pm} onCommit={(n) => commitInput(row, "net_pm", n)} pound /></div>
-                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Bonus</span><MoneyInput value={row.bonus} onCommit={(n) => commitInput(row, "bonus", n)} pound /></div>
-                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Pension</span><MoneyInput value={row.pension} onCommit={(n) => commitPension(row, n)} pound allowNegative /></div>
-                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Deductions</span><MoneyInput value={row.deductions} onCommit={(n) => commitDeductions(row, n)} pound allowNegative /></div>
-                <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Net p.a</span><MoneyInput value={row.net_pa} onCommit={(n) => commitNetPa(row, n)} pound /></div>
+              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Gross p.a</span><MoneyInput value={row.gross} onCommit={(n) => commitInput(row, "gross", n)} pound className="!w-20 !px-1 !text-right" /></div>
+                  <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Bonus</span><MoneyInput value={row.bonus} onCommit={(n) => commitInput(row, "bonus", n)} pound className="!w-20 !px-1 !text-right" /></div>
+                  <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Deductions</span><MoneyInput value={row.deductions} onCommit={(n) => commitDeductions(row, n)} pound allowNegative className="!w-20 !px-1 !text-right" /></div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Net p.a</span><MoneyInput value={row.net_pa} onCommit={(n) => commitNetPa(row, n)} pound className="!w-20 !px-1 !text-right" /></div>
+                  <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Net p.m</span><MoneyInput value={row.net_pm} onCommit={(n) => commitInput(row, "net_pm", n)} pound className="!w-20 !px-1 !text-right" /></div>
+                  <div className="flex items-center justify-between gap-1"><span className="text-gray-400">Pension</span><MoneyInput value={row.pension} onCommit={(n) => commitPension(row, n)} pound allowNegative className="!w-20 !px-1 !text-right" /></div>
+                </div>
               </div>
             </li>
-          );
-        })}
+        ))}
       </ul>
     </Card>
   );

@@ -151,9 +151,9 @@ export default function ProjectionsTab() {
         const avgRate = avgSalary ? totalAllocated / sum((r) => r.salary) : 0;
 
         const stats = [
-          { label: "Avg Salary", value: gbp0(avgSalary), sub: `${elapsed.length} mo`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
-          { label: "Avg Costs", value: gbp0(avgCosts), sub: `${Math.round((avgCosts / (avgSalary || 1)) * 100)}% of salary`, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50/60 border-orange-100 dark:bg-orange-950/30 dark:border-orange-900" },
-          { label: "Allocated (Home/Save/Invest)", value: gbp0(totalAllocated), sub: `${Math.round(avgRate * 100)}% savings rate`, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900" },
+          { label: "Avg Salary", short: "Avg Salary", value: gbp0(avgSalary), sub: `${elapsed.length} mo`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
+          { label: "Avg Costs", short: "Avg Costs", value: gbp0(avgCosts), sub: `${Math.round((avgCosts / (avgSalary || 1)) * 100)}% of salary`, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50/60 border-orange-100 dark:bg-orange-950/30 dark:border-orange-900" },
+          { label: "Allocated (Home/Save/Invest)", short: "Allocated", value: gbp0(totalAllocated), sub: `${Math.round(avgRate * 100)}% savings rate`, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900" },
         ];
 
         return (
@@ -176,12 +176,15 @@ export default function ProjectionsTab() {
             </div>
 
             {/* Summary cards */}
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <div className="grid gap-2 grid-cols-3 sm:gap-3">
               {stats.map((s) => (
-                <div key={s.label} className={`rounded-2xl border px-5 py-4 text-center ${s.bg}`}>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{s.label}</p>
-                  <p className={`mt-1.5 text-2xl font-bold ${s.color}`}>{s.value}</p>
-                  <p className="mt-0.5 text-xs text-gray-400">{s.sub}</p>
+                <div key={s.label} className={`rounded-2xl border px-2 py-2.5 text-center sm:px-5 sm:py-4 ${s.bg}`}>
+                  <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 sm:text-xs">
+                    <span className="sm:hidden">{s.short}</span>
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </p>
+                  <p className={`mt-1 text-base font-bold sm:mt-1.5 sm:text-2xl ${s.color}`}>{s.value}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-gray-400 sm:text-xs">{s.sub}</p>
                 </div>
               ))}
             </div>

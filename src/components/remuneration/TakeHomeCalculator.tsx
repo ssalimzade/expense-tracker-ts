@@ -37,12 +37,16 @@ export default function TakeHomeCalculator({ defaultAnnual, currentNetMonthly }:
 
   // Always render the same set of rows so the card height never shifts when a
   // toggle is flipped. Disabled rows show "—".
+  // Pension & Vitality are the toggleable lines, so they get colour to stand
+  // out; the fixed statutory deductions (tax, NI) stay neutral. Vitality is a
+  // taxable benefit and a cost, so it's shown as a negative — this is display
+  // only; the net take-home still comes straight from takeHome().
   const lines = [
-    { label: "Gross salary", value: r.gross, on: true, tone: "text-gray-700 dark:text-gray-200" },
+    { label: "Gross salary", value: r.gross, on: true, tone: "text-emerald-600 dark:text-emerald-400" },
     { label: "Pension (4%)", value: -r.pension, on: pension, tone: "text-purple-600 dark:text-purple-400" },
-    { label: "Vitality (taxable)", value: r.medTaxable, on: vitality, tone: "text-gray-400" },
-    { label: "Income tax (PAYE)", value: -r.paye, on: true, tone: "text-red-600 dark:text-red-400" },
-    { label: "National Insurance", value: -r.nic, on: true, tone: "text-red-600 dark:text-red-400" },
+    { label: "Vitality (taxable)", value: -r.medTaxable, on: vitality, tone: "text-amber-600 dark:text-amber-400" },
+    { label: "Income tax (PAYE)", value: -r.paye, on: true, tone: "text-gray-500" },
+    { label: "National Insurance", value: -r.nic, on: true, tone: "text-gray-500" },
   ];
 
   const diff = currentNetMonthly ? r.netMonthly - currentNetMonthly : null;

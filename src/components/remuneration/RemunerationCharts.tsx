@@ -4,6 +4,7 @@ import {
 } from "recharts";
 import type { RemunerationRow } from "../../types/remuneration";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { Card } from "../common";
 
 // "Sep 2022 - Jan 2023" → "Sep '22"
@@ -15,6 +16,7 @@ const shortLabel = (period: string) => {
 };
 
 export function PayGrowthChart({ rows }: { rows: RemunerationRow[] }) {
+  const isMobile = useIsMobile();
   const data = rows.map((r) => ({
     period: shortLabel(r.period),
     "Net p.m": Math.round(r.net_pm),
@@ -38,9 +40,9 @@ export function PayGrowthChart({ rows }: { rows: RemunerationRow[] }) {
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-            <XAxis dataKey="period" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval={0} angle={-15} textAnchor="end" height={42} />
-            <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#9ca3af" }} width={56} tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#9ca3af" }} width={48} tickFormatter={(v) => `£${(v / 1000).toFixed(1)}k`} axisLine={false} tickLine={false} />
+            <XAxis dataKey="period" tick={{ fontSize: isMobile ? 8 : 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval={0} angle={isMobile ? -45 : -15} textAnchor="end" height={isMobile ? 52 : 42} />
+            <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#9ca3af" }} width={isMobile ? 40 : 56} tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
+            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#9ca3af" }} width={isMobile ? 36 : 48} tickFormatter={(v) => `£${(v / 1000).toFixed(1)}k`} axisLine={false} tickLine={false} />
             <Tooltip
               formatter={(v: number) => `£${v.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`}
               contentStyle={tooltipStyle()} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} cursor={cursorStyle()}

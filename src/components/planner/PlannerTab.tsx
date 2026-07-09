@@ -61,7 +61,13 @@ export default function PlannerTab() {
   }, [serverPlan]);
 
   const allBudgets = allBudgetsQuery.data ?? {};
-  const lastMonth = allBudgets[prevMonthKey(planMonth)] ?? {};
+  const lastMonthKey = prevMonthKey(planMonth);
+  const lastMonth = allBudgets[lastMonthKey] ?? {};
+  const lastMonthName = new Date(
+    Number(lastMonthKey.slice(0, 4)),
+    Number(lastMonthKey.slice(5, 7)) - 1,
+    1,
+  ).toLocaleString("en-GB", { month: "long" });
   const avg2026 = useMemo(() => average2026(allBudgets), [allBudgets]);
 
   const persist = (nextDraft: BudgetMap, nextDaysOff: Set<number>) => {
@@ -127,7 +133,8 @@ export default function PlannerTab() {
             <PlannerBudgetTable
               draft={draft}
               lastMonth={lastMonth}
-              lastMonthLabel={formatMonthLabel(prevMonthKey(planMonth))}
+              lastMonthLabel={formatMonthLabel(lastMonthKey)}
+              lastMonthName={lastMonthName}
               avg2026={avg2026}
               planLabel={formatMonthLabel(planMonth)}
               onChange={setCategory}

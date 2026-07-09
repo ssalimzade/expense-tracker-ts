@@ -65,13 +65,33 @@ desktop (`md:`+) layout exactly as-is.
   `px-4 py-3 sm:px-6 sm:py-4`, so content reaches the card edges.
 - **Data tables → stacked cards on mobile.** Wrap the table in
   `hidden overflow-x-auto md:block` and add a `md:hidden` card list (`<ul>` with
-  `divide-y`). Card row = name/label + primary value justified on top row, then
-  secondary fields (label→value) below, all justified to the card edges at `px-4`.
+  `divide-y`). Card row = name/label + primary value on the top row (the primary
+  value is a right-aligned labelled stat block, e.g. Buffer / Ending / Total),
+  then a `grid grid-cols-2` of `label → value` fields below.
   Prefer this over horizontal scrolling for any table with >3 meaningful columns.
-- **Stat-card grids:** responsive columns (never a fixed wide `grid-cols-N` on
-  mobile — e.g. balances `grid-cols-3 … lg:grid-cols-7`, full-width total via
-  `col-span-3 sm:col-span-1`) and reduced `py` (`py-2 sm:py-4`) so cards aren't
-  too tall.
-- **Charts on mobile** (via `useIsMobile`): drop the legend, use fewer X-axis
-  date ticks and fewer Y-axis ticks. Desktop keeps the full chart.
+- **Right-align the editable values** inside those 2-column field grids so numbers
+  form clean columns. The shared inline inputs default to `text-center`/`w-20`, so
+  override per-cell with important utilities: `className="!w-16 !px-1 !text-right"`
+  (add a `className` passthrough to any local input that lacks one). Read-only
+  derived cells get `inline-block w-16 text-right tabular-nums`.
+- **Reference/label pairs** (e.g. Planner "Average £x / July £y"): use
+  `grid grid-cols-2` with each cell `flex gap-1.5` (label then value, grouped left)
+  — **not** `justify-between`, which flings the two apart. The fixed columns keep
+  the second label aligned across every row.
+- **Summary stat cards → one compact row on phones.** Put all cards in a single
+  row (`grid-cols-N` matching the count) with tight padding (`px-1.5 py-2` →
+  `sm:px-5 sm:py-4`), a smaller value (`text-sm sm:text-2xl`), a `short` responsive
+  label (`<span className="sm:hidden">{short}</span>` + `hidden sm:inline` full
+  label), and the sub-line hidden on mobile (`hidden … sm:block`). Preserve the
+  desktop grid via `sm:grid-cols-2 lg:grid-cols-N`.
+- **Charts on mobile** (via `useIsMobile`): **disable the `<Tooltip>`**
+  (`{!isMobile && <Tooltip/>}`) — on touch it sticks open while scrolling; the
+  tables below carry the numbers. Thin the X ticks with `interval={isMobile ? 2 : undefined}`
+  (≈ every 3rd month), hide dense (5-6 item) legends, and give money Y-axes even
+  whole-thousand `ticks` instead of ragged auto ticks. Desktop keeps the full chart.
+- **Month-name axes:** format `YYYY-MM` X ticks as `MMM 'YY` (e.g. `Jun '26`) on
+  both web and mobile; never show raw `2026-06`.
 - **Hide desktop-only actions on phones** with `hidden sm:flex` (e.g. Export CSV).
+- **No input-focus zoom:** the viewport meta carries `maximum-scale=1,
+  user-scalable=no` so tapping an inline input doesn't zoom the page on iOS.
+  (Viewport meta is ignored on desktop, so this is mobile-only.)

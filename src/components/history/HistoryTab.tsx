@@ -9,6 +9,15 @@ import {
 import { Card, QueryState } from "../common";
 import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
+import { useIsMobile } from "../../hooks/useIsMobile";
+
+// "2026-06" → "Jun '26" for chart axes (month name + short year across years).
+const monthTick = (m: string) => {
+  if (!m || !m.includes("-")) return m;
+  const [y, mm] = m.split("-");
+  const d = new Date(Number(y), Number(mm) - 1, 1);
+  return `${d.toLocaleString("en-GB", { month: "short" })} '${y.slice(2)}`;
+};
 
 export default function HistoryTab() {
   const monthsQuery = useArchiveMonths();
@@ -17,6 +26,7 @@ export default function HistoryTab() {
   const allMonths = monthsQuery.data ?? [];
   const allArchives = useAllArchives(allMonths);
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
 
   const refreshSnapshot = useMutation({
     mutationFn: (m: string) => recomputeArchive(m),
@@ -46,12 +56,22 @@ export default function HistoryTab() {
     <div className="space-y-4">
       {/* Month selector */}
       <QueryState isLoading={monthsQuery.isLoading} error={monthsQuery.error}>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {allMonths.map((m) => (
+        <div className="flex flex-wrap items-center gap-1.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 max-md:[&::-webkit-scrollbar]:hidden">
+          {month && (
+            <button
+              onClick={() => refreshSnapshot.mutate(month)}
+              disabled={refreshSnapshot.isPending}
+              title="Recompute and overwrite this month's snapshot from live data"
+              className="mr-2 rounded-lg px-3 py-1.5 text-sm font-medium text-indigo-600 ring-1 ring-indigo-200 transition-all hover:bg-indigo-50 disabled:opacity-50 max-md:mr-1 max-md:shrink-0 max-md:whitespace-nowrap dark:text-indigo-400 dark:ring-indigo-800 dark:hover:bg-indigo-950/40"
+            >
+              {refreshSnapshot.isPending ? "Refreshing…" : "Refresh snapshot"}
+            </button>
+          )}
+          {[...allMonths].reverse().map((m) => (
             <button
               key={m}
               onClick={() => setMonth(m)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all max-md:shrink-0 ${
                 m === month
                   ? "bg-indigo-600 text-white shadow-sm"
                   : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700"
@@ -60,16 +80,6 @@ export default function HistoryTab() {
               {m}
             </button>
           ))}
-          {month && (
-            <button
-              onClick={() => refreshSnapshot.mutate(month)}
-              disabled={refreshSnapshot.isPending}
-              title="Recompute and overwrite this month's snapshot from live data"
-              className="ml-2 rounded-lg px-3 py-1.5 text-sm font-medium text-indigo-600 ring-1 ring-indigo-200 transition-all hover:bg-indigo-50 disabled:opacity-50 dark:text-indigo-400 dark:ring-indigo-800 dark:hover:bg-indigo-950/40"
-            >
-              {refreshSnapshot.isPending ? "Refreshing…" : "Refresh snapshot"}
-            </button>
-          )}
         </div>
       </QueryState>
 
@@ -94,7 +104,7 @@ export default function HistoryTab() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} tickFormatter={monthTick} interval={isMobile ? 2 : undefined} axisLine={false} tickLine={false} />
                 <YAxis
                   tick={{ fontSize: 10, fill: "#9ca3af" }}
                   width={52}
@@ -104,6 +114,7 @@ export default function HistoryTab() {
                 />
                 <Tooltip
                   formatter={(v: number, name: string) => [gbp(v), name === "spent" ? "Spent" : "Budget"]}
+                  labelFormatter={(m) => formatMonthLabel(m as string)}
                   itemSorter={(item) => -(item.value as number)}
                   contentStyle={tooltipStyle()}
                   itemStyle={tooltipItemStyle}
@@ -275,7 +286,7 @@ export default function HistoryTab() {
                   <span className="uppercase tracking-wider text-gray-900 dark:text-white">Total</span>
                   <span className="flex items-center gap-3">
                     <span className="text-gray-500 dark:text-gray-400">Spent {gbp(totalSpent)}</span>
-                    <span className={totalRemaining < 0 ? "text-red-600" : "text-emerald-600"}>{gbp(totalRemaining)}</span>
+                    <span className={totalRemaining < 0 ? "text-red-600" : "text-emerald-600"}>Left {gbp(totalRemaining)}</span>
                   </span>
                 </li>
               </ul>

@@ -3,7 +3,8 @@ import {
   useSyncSyntheticRepayments,
   useDeleteSyntheticRepayments,
 } from "../../hooks/useRepayments";
-import { gbp0 } from "../../lib/format";
+import { gbp0, formatMonthLabel } from "../../lib/format";
+import { catColor } from "../../lib/repayments";
 import { Card } from "../common";
 import type { SyntheticRepayment } from "../../types/repayment";
 
@@ -40,6 +41,11 @@ export default function SyntheticRepaymentsPanel({ visibleMonths }: Props) {
         <p className="mt-1 text-xs text-gray-400">
           Auto-created on the 1st from each month's repayment totals (budget
           categories only) so they show as spend on the dashboard.
+          <span className="mt-1 block">
+            <span className="font-medium text-gray-500 dark:text-gray-400">Sync</span> pushes a
+            month's totals to Monzo; <span className="font-medium text-gray-500 dark:text-gray-400">Re-sync</span> refreshes
+            them if the repayments changed; <span className="font-medium text-gray-500 dark:text-gray-400">Remove</span> clears them.
+          </span>
         </p>
       </div>
 
@@ -53,10 +59,10 @@ export default function SyntheticRepaymentsPanel({ visibleMonths }: Props) {
 
           return (
             <div key={month} className="px-4 py-3 sm:px-6 sm:py-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    {month}
+                    {formatMonthLabel(month)}
                   </span>
                   {synced ? (
                     <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
@@ -87,20 +93,18 @@ export default function SyntheticRepaymentsPanel({ visibleMonths }: Props) {
               </div>
 
               {synced && (
-                <table className="mt-3 w-full text-sm">
-                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-                    {entries.map((e) => (
-                      <tr key={e.id}>
-                        <td className="py-1.5 text-left font-medium text-gray-700 dark:text-gray-300">
-                          {e.category}
-                        </td>
-                        <td className="py-1.5 text-right text-gray-600 dark:text-gray-400">
-                          {gbp0(Math.abs(e.amount))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <ul className="ml-1 mt-2 space-y-1 border-l-2 border-gray-100 pl-3 pr-2.5 dark:border-gray-800">
+                  {entries.map((e) => (
+                    <li key={e.id} className="flex items-center justify-between text-xs">
+                      <span className="font-medium" style={{ color: catColor(e.category) }}>
+                        {e.category}
+                      </span>
+                      <span className="font-medium tabular-nums" style={{ color: catColor(e.category) }}>
+                        {gbp0(Math.abs(e.amount))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           );

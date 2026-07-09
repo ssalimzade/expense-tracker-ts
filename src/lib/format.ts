@@ -43,9 +43,9 @@ export function recentMonths(count = 18): string[] {
   return months;
 }
 
-/** Format "2026-06" → "Jun 2026" */
+/** Format "2026-06" → "June 2026" (full month name — used everywhere except graphs) */
 export const formatMonthLabel = (m: string): string => {
   const [year, month] = m.split("-");
   const d = new Date(parseInt(year), parseInt(month) - 1, 1);
-  return `${d.toLocaleString("en-GB", { month: "short" })} ${year}`;
+  return `${d.toLocaleString("en-GB", { month: "long" })} ${year}`;
 };
