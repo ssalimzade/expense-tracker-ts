@@ -9,16 +9,27 @@ import { useDarkMode } from "../../hooks/useDarkMode";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { isLegacyMatrix, toSheets } from "./worksheetMigration";
 
-// A content fingerprint of the sheets that ignores selection/scroll (which live
-// on the sheet too and change constantly). Two payloads with the same cell
-// values, styles, column widths and merges hash equal — so we can tell a real
-// edit apart from a mount echo or a cursor move, and detect when another device
-// has genuinely changed the data.
+// Fields Fortune-sheet mutates on selection / scroll / view changes — excluded
+// from the fingerprint so a cursor move isn't mistaken for an edit.
+const VOLATILE_KEYS = new Set([
+  "luckysheet_select_save",
+  "luckysheet_selection_range",
+  "luckysheet_scroll_status",
+  "scrollLeft",
+  "scrollTop",
+  "status",
+  "zoomRatio",
+  "calcChain",
+  "filter_select",
+]);
+
+// A content fingerprint of the sheets. We stringify the *whole* sheet minus the
+// volatile view fields above — rather than cherry-picking `data`, because a cell
+// edit may land in `data` OR `celldata` and Fortune-sheet keeps both. Anything
+// that actually changes the content changes this; a cursor move does not.
 function contentSig(sheets: Sheet[]): string {
   try {
-    return JSON.stringify(
-      (sheets ?? []).map((s) => ({ n: s.name, d: s.data ?? s.celldata ?? null, c: s.config ?? null })),
-    );
+    return JSON.stringify(sheets ?? [], (k, v) => (VOLATILE_KEYS.has(k) ? undefined : v));
   } catch {
     return String(Math.random());
   }
