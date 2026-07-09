@@ -20,6 +20,7 @@ export default function FortuneWorksheet() {
   // it a single time from the server and never feed the prop again.
   const [initial, setInitial] = useState<Sheet[] | null>(null);
   const wbRef = useRef<WorkbookInstance>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const needsRecalc = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const pending = useRef<Sheet[] | null>(null);
@@ -62,6 +63,69 @@ export default function FortuneWorksheet() {
     [],
   );
 
+  // Touch panning. Fortune-sheet's own touch-scroll (core `handleOverlayTouchMove`)
+  // subtracts the *cumulative* finger delta from the *live* scroll each frame, so
+  // it compounds and flings the grid across the sheet from a single drag. We take
+  // over: block its handler on grid touch-moves and drive the scrollbars 1:1.
+  // Taps (touchstart/end without move) still fall through, so cell selection and
+  // double-tap-to-edit keep working.
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+
+    let startX = 0;
+    let startY = 0;
+    let startLeft = 0;
+    let startTop = 0;
+    let sbx: HTMLElement | null = null;
+    let sby: HTMLElement | null = null;
+    let active = false;
+
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (e.touches.length !== 1 || !t) {
+        active = false;
+        return;
+      }
+      const target = t.target as HTMLElement | null;
+      if (!target?.closest(".fortune-sheet-overlay")) {
+        active = false; // touch began on toolbar / formula bar / sheet tabs
+        return;
+      }
+      sbx = root.querySelector<HTMLElement>(".luckysheet-scrollbar-x");
+      sby = root.querySelector<HTMLElement>(".luckysheet-scrollbar-y");
+      startX = t.pageX;
+      startY = t.pageY;
+      startLeft = sbx?.scrollLeft ?? 0;
+      startTop = sby?.scrollTop ?? 0;
+      active = true;
+    };
+
+    const onMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!active || e.touches.length !== 1 || !t) return;
+      e.stopPropagation(); // keep Fortune-sheet's buggy pan from also running
+      if (e.cancelable) e.preventDefault(); // and don't scroll the page instead
+      if (sbx) sbx.scrollLeft = startLeft - (t.pageX - startX);
+      if (sby) sby.scrollTop = startTop - (t.pageY - startY);
+    };
+
+    const onEnd = () => {
+      active = false;
+    };
+
+    root.addEventListener("touchstart", onStart, { passive: true });
+    root.addEventListener("touchmove", onMove, { passive: false });
+    root.addEventListener("touchend", onEnd, { passive: true });
+    root.addEventListener("touchcancel", onEnd, { passive: true });
+    return () => {
+      root.removeEventListener("touchstart", onStart);
+      root.removeEventListener("touchmove", onMove);
+      root.removeEventListener("touchend", onEnd);
+      root.removeEventListener("touchcancel", onEnd);
+    };
+  }, []);
+
   const handleChange = useCallback(
     (sheets: Sheet[]) => {
       // Keep the query cache in sync so re-opening the tab reseeds from the
@@ -85,6 +149,7 @@ export default function FortuneWorksheet() {
 
       <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
         <div
+          ref={containerRef}
           className={`ws-workbook h-full w-full ${dark ? "ws-dark" : "bg-white"} ${
             isMobile ? "ws-mobile" : ""
           }`}
