@@ -69,8 +69,27 @@ function migrateLegacy(matrix: LegacyCell[][]): Sheet[] {
   return [{ ...blankSheet(), row: maxR + 1, column: maxC + 1, celldata }];
 }
 
+// Fortune-sheet's `onChange` emits each sheet as a `data` MATRIX (no `celldata`),
+// and that's what we persist. But on load the `<Workbook data>` prop is only read
+// from `celldata` — a sheet with just a `data` matrix renders BLANK. So rebuild
+// `celldata` from the matrix (and drop `data`) for any sheet missing it.
+export function withCelldata(sheets: Sheet[]): Sheet[] {
+  return (sheets ?? []).map((s) => {
+    if (Array.isArray(s.celldata) && s.celldata.length > 0) return s;
+    if (!Array.isArray(s.data)) return s;
+    const celldata: CellWithRowAndCol[] = [];
+    s.data.forEach((row, r) =>
+      row?.forEach((cell, c) => {
+        if (cell != null) celldata.push({ r, c, v: cell });
+      }),
+    );
+    const { data: _drop, ...rest } = s;
+    return { ...rest, celldata };
+  });
+}
+
 export function toSheets(data: unknown): Sheet[] {
-  if (isFortuneSheets(data)) return data;
+  if (isFortuneSheets(data)) return withCelldata(data);
   if (isLegacyMatrix(data)) return migrateLegacy(data);
   return [blankSheet()];
 }
