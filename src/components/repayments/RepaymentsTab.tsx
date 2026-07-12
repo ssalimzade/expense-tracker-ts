@@ -51,8 +51,8 @@ export default function RepaymentsTab() {
             </div>
 
             <DailyRepaymentChart repayments={active} visibleMonths={months} />
-            <RepaymentTable repayments={active} onDelete={handleDelete} />
             <RepaymentPivot repayments={active} visibleMonths={months} />
+            <RepaymentTable repayments={active} onDelete={handleDelete} />
             <SyntheticRepaymentsPanel visibleMonths={months} />
 
             {/* Undo list */}

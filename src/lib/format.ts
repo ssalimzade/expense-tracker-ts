@@ -49,3 +49,10 @@ export const formatMonthLabel = (m: string): string => {
   const d = new Date(parseInt(year), parseInt(month) - 1, 1);
   return `${d.toLocaleString("en-GB", { month: "long" })} ${year}`;
 };
+
+/** Format "2026-06" → "Jun 26" (compact — used where space is tight, e.g. mobile tables) */
+export const formatMonthLabelShort = (m: string): string => {
+  const [year, month] = m.split("-");
+  const d = new Date(parseInt(year), parseInt(month) - 1, 1);
+  return `${d.toLocaleString("en-GB", { month: "short" })} ${year.slice(2)}`;
+};
