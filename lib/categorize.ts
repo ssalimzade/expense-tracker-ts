@@ -61,37 +61,47 @@ export const subcategoryToCategory: Record<string, string> = {
 
 export type Rules = Record<string, { subcategory: string }>;
 
-export function categorizeRow(desc: string, rules: Rules): string {
-  const descClean = desc.toLowerCase().trim();
+function normalizeText(value?: string | null): string {
+  return (value ?? "").toLowerCase().trim();
+}
+
+export function categorizeRow(desc: string, rules: Rules, merchant?: string | null): string {
+  const candidates = [normalizeText(desc), normalizeText(merchant)].filter(Boolean);
 
   // Priority 1: exact match against user rules
-  for (const [keyword, val] of Object.entries(rules)) {
-    if (descClean === keyword.toLowerCase().trim()) return val.subcategory;
+  for (const candidate of candidates) {
+    for (const [keyword, val] of Object.entries(rules)) {
+      if (candidate === normalizeText(keyword)) return val.subcategory;
+    }
   }
 
   // Priority 2: keyword substring match
-  for (const [subcat, keywords] of Object.entries(subCategoryKeywords)) {
-    for (const keyword of keywords) {
-      if (subcat === "Mobile" && keyword === "EE") {
-        if (/\bEE\b/i.test(desc)) return subcat;
-      } else if (descClean.includes(keyword.toLowerCase())) {
-        return subcat;
+  for (const candidate of candidates) {
+    for (const [subcat, keywords] of Object.entries(subCategoryKeywords)) {
+      for (const keyword of keywords) {
+        if (subcat === "Mobile" && keyword === "EE") {
+          if (/\bEE\b/i.test(candidate)) return subcat;
+        } else if (candidate.includes(keyword.toLowerCase())) {
+          return subcat;
+        }
       }
     }
   }
 
   // Priority 3: Rent & Utilities ("rent" is exact-match only)
-  if (descClean === "rent") return "Rent";
-  for (const [subcat, keywords] of Object.entries(rentSubcategoryKeywords)) {
-    for (const keyword of keywords) {
-      if (descClean.includes(keyword.toLowerCase())) return subcat;
+  if (candidates.includes("rent")) return "Rent";
+  for (const candidate of candidates) {
+    for (const [subcat, keywords] of Object.entries(rentSubcategoryKeywords)) {
+      for (const keyword of keywords) {
+        if (candidate.includes(keyword.toLowerCase())) return subcat;
+      }
     }
   }
 
   return "Uncategorized";
 }
 
-export function categorizeOne(desc: string, rules: Rules): [string, string] {
-  const sub = categorizeRow(desc, rules);
+export function categorizeOne(desc: string, rules: Rules, merchant?: string | null): [string, string] {
+  const sub = categorizeRow(desc, rules, merchant);
   return [sub, subcategoryToCategory[sub] ?? "Uncategorized"];
 }

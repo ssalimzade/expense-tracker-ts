@@ -81,7 +81,7 @@ export async function serializeTransactions(sql: Sql, month?: string): Promise<R
     const createdIso: string | null = t.created_iso ?? null;
     const flagId = await makeTransactionId(t.description ?? "", createdIso ?? "");
 
-    let [subcategory, category] = categorizeOne(t.description ?? "", rules);
+    let [subcategory, category] = categorizeOne(t.description ?? "", rules, t.merchant_name ?? "");
     const flag = monthFlags[flagId] ?? {};
     if ("subcategory" in flag) {
       subcategory = flag.subcategory;
@@ -214,7 +214,7 @@ function shiftMonth(yr: number, mo: number, offset: number): string {
 }
 
 const RECONCILE_COLS =
-  `description, amount, extract(year from created)::int AS yr, ` +
+  `description, merchant_name, amount, extract(year from created)::int AS yr, ` +
   `extract(month from created)::int AS mo, to_char(created,'YYYY-MM-DD') AS created_date`;
 
 export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
@@ -226,15 +226,16 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
       [],
     );
     for (const r of rows) {
-      if (!r.amount || r.amount >= 0) continue;
-      const sub = categorizeRow(r.description ?? "", rules);
+      const rawAmount = Number(r.amount ?? 0);
+      if (!Number.isFinite(rawAmount) || rawAmount === 0) continue;
+      const sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
       const mapping = SUBCAT_TO_RENT_ITEM[sub];
       if (!mapping) continue;
       const [itemKey, offset] = mapping;
       const targetMonth = shiftMonth(r.yr, r.mo, offset);
       if (!targetMonth.startsWith(String(year))) continue;
       const bucket = (out[targetMonth] ??= {});
-      const amount = Math.round(Math.abs(r.amount) * 100) / 100;
+      const amount = Math.round(Math.abs(rawAmount) * 100) / 100;
       const existing = bucket[itemKey];
       if (existing == null || amount > existing.amount) {
         bucket[itemKey] = { amount, date: r.created_date, description: r.description };
