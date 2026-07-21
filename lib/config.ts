@@ -142,6 +142,9 @@ export async function savePlanner(
 }
 
 // ── balance ─────────────────────────────────────────────────────────────────
+// `*_manual` flags mark a card as manually overridden; when false the UI shows
+// the auto value (live account balance / derived diff), when true the saved
+// amount persists.
 export const BALANCE_KEYS = [
   "savings",
   "monzo",
@@ -150,20 +153,34 @@ export const BALANCE_KEYS = [
   "amex",
   "diff_in_bills",
   "diff_in_bills_manual",
+  "monzo_manual",
+  "chase_manual",
+  "barclays_manual",
+  "amex_manual",
 ];
 export async function saveBalance(sql: Sql, month: string, values: Dict) {
   const all = await kvGet<Dict>(sql, "balance_data", {});
   const saved: Dict = {};
   for (const k of BALANCE_KEYS) {
-    if (k === "diff_in_bills_manual") {
-      saved[k] = Boolean(values[k]);
-    } else {
-      saved[k] = values[k] ?? 0;
-    }
+    saved[k] = k.endsWith("_manual") ? Boolean(values[k]) : values[k] ?? 0;
   }
   all[month] = saved;
   await kvSet(sql, "balance_data", all);
   return saved;
+}
+
+/**
+ * Live per-account balances (updated daily by an external job). Positive for
+ * debit accounts, negative for the AMEX credit card. Keyed by source.
+ */
+export async function loadAccountBalances(sql: Sql): Promise<Dict> {
+  const rows = (await sql`SELECT source, balance FROM account_balances`) as {
+    source: string;
+    balance: number;
+  }[];
+  const out: Dict = {};
+  for (const r of rows) out[r.source] = Number(r.balance ?? 0);
+  return out;
 }
 
 // ── worksheet ───────────────────────────────────────────────────────────────

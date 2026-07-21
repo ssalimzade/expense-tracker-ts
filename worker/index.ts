@@ -16,6 +16,7 @@ import {
   deleteNote,
   savePlanner,
   saveBalance,
+  loadAccountBalances,
   saveWorksheet,
   addRepaymentCategory,
   addDeletedRepayment,
@@ -55,6 +56,10 @@ const BALANCE_DEFAULTS = {
   amex: 0,
   diff_in_bills: 0,
   diff_in_bills_manual: false,
+  monzo_manual: false,
+  chase_manual: false,
+  barclays_manual: false,
+  amex_manual: false,
 };
 const MONTH_RE = /^\d{4}-\d{2}$/;
 const MAIN_CATEGORIES = [
@@ -305,6 +310,8 @@ app.post("/archive/:month/recompute", async (c) => {
 });
 
 // ── Balance ─────────────────────────────────────────────────────────────────
+// Live per-account balances (auto-fetched default for the balance cards).
+app.get("/account-balances", async (c) => c.json(await loadAccountBalances(sqlOf(c))));
 app.get("/balance/:month", async (c) => {
   const month = c.req.param("month");
   const all = await kvGet<Record<string, any>>(sqlOf(c), "balance_data", {});

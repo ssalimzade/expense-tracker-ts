@@ -1,9 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useBalance, useSaveBalance } from "../../hooks/useBalance";
+import { useBalance, useSaveBalance, useAccountBalances } from "../../hooks/useBalance";
 import { useRent } from "../../hooks/useRent";
 import MoneyInput from "../MoneyInput";
-import { gbp, gbp0, formatMonthLabel } from "../../lib/format";
+import { gbp, gbp0, formatMonthLabel, toMonthKey } from "../../lib/format";
 import type { BalanceValues } from "../../api/balance";
+
+// Cards whose default value is the live account balance (updated daily).
+const AUTO_SOURCES = ["monzo", "chase", "barclays", "amex"] as const;
+type AutoSource = (typeof AUTO_SOURCES)[number];
+const isAutoSource = (k: string): k is AutoSource =>
+  (AUTO_SOURCES as readonly string[]).includes(k);
+
+/** "2026-07" → "2026-06". */
+function prevMonthKey(m: string): string {
+  const [y, mo] = m.split("-").map(Number);
+  const d = new Date(y, mo - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
 type DiffPart = { label: string; allocated: number; paid: number; diff: number };
 
@@ -146,6 +159,10 @@ const DEFAULTS: BalanceValues = {
   barclays: 0,
   diff_in_bills: 0,
   diff_in_bills_manual: false,
+  monzo_manual: false,
+  chase_manual: false,
+  barclays_manual: false,
+  amex_manual: false,
 };
 
 function cardStyle(v: number) {
@@ -171,6 +188,7 @@ function cardStyle(v: number) {
 export default function BalanceSection({ month }: { month: string }) {
   const query = useBalance(month);
   const rentQuery = useRent();
+  const accountsQuery = useAccountBalances();
   const save = useSaveBalance(month);
   const [draft, setDraft] = useState<BalanceValues>(DEFAULTS);
 
@@ -178,9 +196,19 @@ export default function BalanceSection({ month }: { month: string }) {
     if (query.data) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { month: _m, ...vals } = query.data;
-      setDraft(vals);
+      setDraft({ ...DEFAULTS, ...vals });
     }
   }, [query.data]);
+
+  // Live balances only make sense for the month that is actually current — a
+  // past month keeps whatever was recorded for it.
+  const isCurrentMonth = month === toMonthKey(new Date());
+  const live = accountsQuery.data ?? {};
+  const autoValueFor = (key: AutoSource): number | undefined => {
+    if (!isCurrentMonth) return undefined;
+    const v = live[key];
+    return typeof v === "number" ? v : undefined;
+  };
 
   // Auto "diff in bills" = for every bill actually PAID this month, the gap
   // between what was allocated in the rent tab and what was really paid.
@@ -212,6 +240,52 @@ export default function BalanceSection({ month }: { month: string }) {
 
   const diffInBills = draft.diff_in_bills_manual ? draft.diff_in_bills : autoDiffInBills;
 
+  // "Left to pay" = rent & utilities still outstanding for this month plus any
+  // still owed from last month (mirrors the rent table's Total column "… left").
+  // Shown as a negative because it reduces the money you actually have.
+  const leftToPay = useMemo(() => {
+    const data = rentQuery.data;
+    if (!data) return { current: 0, previous: 0, total: 0 };
+    const items = data.items ?? [];
+    const outstandingFor = (m: string) => {
+      let sum = 0;
+      for (const it of items) {
+        const matchAmt = data.reconciled?.[m]?.[it.key]?.amount; // matched txn amount
+        const cell = data.months?.[m]?.[it.key];
+        const isPaid = Boolean(cell?.paid) || matchAmt != null; // ticked OR matched
+        if (isPaid) continue;
+        sum += matchAmt ?? cell?.amount ?? 0;
+      }
+      return sum;
+    };
+    const current = outstandingFor(month);
+    const previous = outstandingFor(prevMonthKey(month));
+    return { current, previous, total: current + previous };
+  }, [rentQuery.data, month]);
+  const leftToPayValue = -leftToPay.total; // negative in the card
+
+  // The value a card actually shows: manual override → saved amount; otherwise
+  // the live account balance (current month) falling back to the saved amount.
+  const effectiveValue = (key: BalanceCardKey): number => {
+    if (key === "diff_in_bills") return diffInBills;
+    if (isAutoSource(key)) {
+      const manual = draft[`${key}_manual`] as boolean;
+      if (!manual) {
+        const auto = autoValueFor(key);
+        if (auto !== undefined) return auto;
+      }
+      return draft[key];
+    }
+    return draft[key];
+  };
+
+  // Whether a card is currently pinned to a manual override (shows an "Auto" reset).
+  const isOverridden = (key: BalanceCardKey): boolean => {
+    if (key === "diff_in_bills") return draft.diff_in_bills_manual;
+    if (isAutoSource(key)) return (draft[`${key}_manual`] as boolean) && autoValueFor(key) !== undefined;
+    return false;
+  };
+
   function commit(key: keyof BalanceValues, value: number) {
     const next: BalanceValues = { ...draft, [key]: value };
     if (key === "diff_in_bills") {
@@ -222,25 +296,28 @@ export default function BalanceSection({ month }: { month: string }) {
       } else {
         next.diff_in_bills_manual = true;
       }
+    } else if (isAutoSource(key)) {
+      // Editing an auto card pins it as a manual override that persists.
+      (next as Record<string, unknown>)[`${key}_manual`] = true;
     }
     setDraft(next);
     save.mutate(next);
   }
 
-  function resetDiffInBills() {
-    const next: BalanceValues = {
-      ...draft,
-      diff_in_bills: autoDiffInBills,
-      diff_in_bills_manual: false,
-    };
+  function resetToAuto(key: BalanceCardKey) {
+    const next: BalanceValues = { ...draft };
+    if (key === "diff_in_bills") {
+      next.diff_in_bills = autoDiffInBills;
+      next.diff_in_bills_manual = false;
+    } else if (isAutoSource(key)) {
+      (next as Record<string, unknown>)[`${key}_manual`] = false;
+    }
     setDraft(next);
     save.mutate(next);
   }
 
-  const totalBalance = ITEMS.reduce((sum, { key }) => {
-    const value = key === "diff_in_bills" ? diffInBills : draft[key];
-    return sum + value;
-  }, 0);
+  const totalBalance =
+    ITEMS.reduce((sum, { key }) => sum + effectiveValue(key), 0) + leftToPayValue;
   const totalStyle = cardStyle(totalBalance);
 
   return (
@@ -248,9 +325,9 @@ export default function BalanceSection({ month }: { month: string }) {
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Balances
       </p>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-7">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-8">
         {ITEMS.map(({ key, label }) => {
-          const val = key === "diff_in_bills" ? diffInBills : draft[key];
+          const val = effectiveValue(key);
           const { text, bg, border } = cardStyle(val);
           return (
             <div
@@ -277,11 +354,11 @@ export default function BalanceSection({ month }: { month: string }) {
                     pound
                     className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
                   />
-                  {key === "diff_in_bills" && draft.diff_in_bills_manual && (
+                  {isOverridden(key) && (
                     <button
                       type="button"
-                      onClick={resetDiffInBills}
-                      title="Reset to auto-calculated diff"
+                      onClick={() => resetToAuto(key)}
+                      title="Reset to the auto value"
                       className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     >
                       Auto
@@ -293,8 +370,36 @@ export default function BalanceSection({ month }: { month: string }) {
           );
         })}
 
+        {/* Derived: rent & utilities still outstanding (this month + last month). */}
+        {(() => {
+          const { text, bg, border } = cardStyle(leftToPayValue);
+          const tip =
+            `Rent & utilities still to pay — ${formatMonthLabel(month)}: ${gbp0(leftToPay.current)}` +
+            (leftToPay.previous ? ` · ${formatMonthLabel(prevMonthKey(month))}: ${gbp0(leftToPay.previous)}` : "");
+          return (
+            <div
+              title={tip}
+              className={`relative rounded-2xl border ${border} ${bg} px-2 py-2 text-center sm:px-4 sm:py-4`}
+            >
+              <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
+                Left to Pay
+              </p>
+              <div className="mt-1.5 flex justify-center">
+                <MoneyInput
+                  value={leftToPayValue}
+                  onCommit={() => {}}
+                  readOnly
+                  allowNegative
+                  pound
+                  className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
+                />
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Read-only sum of all balances above */}
-        <div className={`col-span-3 rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-3 py-2.5 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
+        <div className={`col-span-2 rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-3 py-2.5 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
           <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Total Balance
           </p>

@@ -1,11 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchBalance, saveBalance, type BalanceValues } from "../api/balance";
+import {
+  fetchBalance,
+  saveBalance,
+  fetchAccountBalances,
+  type BalanceValues,
+} from "../api/balance";
 
 export function useBalance(month: string) {
   return useQuery({
     queryKey: ["balance", month],
     queryFn: () => fetchBalance(month),
     enabled: !!month,
+  });
+}
+
+/** Live per-account balances, refreshed daily by an external job. */
+export function useAccountBalances() {
+  return useQuery({
+    queryKey: ["account-balances"],
+    queryFn: fetchAccountBalances,
   });
 }
 
