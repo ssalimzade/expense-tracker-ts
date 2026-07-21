@@ -149,11 +149,18 @@ export const BALANCE_KEYS = [
   "barclays",
   "amex",
   "diff_in_bills",
+  "diff_in_bills_manual",
 ];
 export async function saveBalance(sql: Sql, month: string, values: Dict) {
   const all = await kvGet<Dict>(sql, "balance_data", {});
   const saved: Dict = {};
-  for (const k of BALANCE_KEYS) saved[k] = values[k] ?? 0;
+  for (const k of BALANCE_KEYS) {
+    if (k === "diff_in_bills_manual") {
+      saved[k] = Boolean(values[k]);
+    } else {
+      saved[k] = values[k] ?? 0;
+    }
+  }
   all[month] = saved;
   await kvSet(sql, "balance_data", all);
   return saved;

@@ -215,7 +215,8 @@ function shiftMonth(yr: number, mo: number, offset: number): string {
 
 const RECONCILE_COLS =
   `description, merchant_name, amount, extract(year from created)::int AS yr, ` +
-  `extract(month from created)::int AS mo, to_char(created,'YYYY-MM-DD') AS created_date`;
+  `extract(month from created)::int AS mo, to_char(created,'YYYY-MM-DD') AS created_date, ` +
+  `${CREATED_STRFTIME} AS created_iso`;
 
 export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
   const rules = (await loadRules(sql)) as Rules;
@@ -238,11 +239,15 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
       const amount = Math.round(Math.abs(rawAmount) * 100) / 100;
       const existing = bucket[itemKey];
       if (existing == null || amount > existing.amount) {
+        // flag_id matches the id serializeTransactions computes, so the UI can
+        // jump straight to this exact bank row.
+        const flag_id = await makeTransactionId(r.description ?? "", r.created_iso ?? "");
         bucket[itemKey] = {
           amount,
           date: r.created_date,
           description: r.description,
           merchant_name: r.merchant_name ?? null,
+          flag_id,
         };
       }
     }

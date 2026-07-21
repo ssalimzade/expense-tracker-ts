@@ -29,14 +29,14 @@ export default function RentTab({ onOpenTransactions }: Props) {
       {(() => {
         const data: RentData = query.data ?? { items: [], months: {} };
         const savedKeys = new Set(data.items.filter((i) => i.saved).map((i) => i.key));
+        const reconciled = data.reconciled ?? {};
 
-        const allMonths = Object.keys(data.months);
+        const allMonths = [...new Set([...Object.keys(data.months), ...Object.keys(reconciled)])];
         const years = [...new Set(allMonths.map((m) => m.slice(0, 4)))].sort();
         if (years.length === 0) years.push(currentYear);
         const months = allMonths.filter((m) => m.startsWith(year)).sort();
-
-        const reconciled = data.reconciled ?? {};
         const cell = (m: string, k: string): RentLineItem => data.months[m]?.[k] ?? blank;
+        const matchedAmount = (m: string, k: string) => reconciled[m]?.[k]?.amount ?? cell(m, k).amount;
         // Effective paid = manually ticked OR a matching transaction exists.
         const isPaid = (m: string, k: string) => cell(m, k).paid || !!reconciled[m]?.[k];
 
@@ -48,20 +48,20 @@ export default function RentTab({ onOpenTransactions }: Props) {
         let outstanding = 0; // unpaid amounts to date
         for (const m of ytdMonths) {
           for (const it of data.items) {
-            const c = cell(m, it.key);
-            costYtd += c.amount;
-            if (savedKeys.has(it.key)) setAsideYtd += c.amount;
-            if (!isPaid(m, it.key)) outstanding += c.amount;
+            const amount = matchedAmount(m, it.key);
+            costYtd += amount;
+            if (savedKeys.has(it.key)) setAsideYtd += amount;
+            if (!isPaid(m, it.key)) outstanding += amount;
           }
         }
         const activeMonths = ytdMonths.filter((m) =>
-          data.items.some((it) => cell(m, it.key).amount > 0)
+          data.items.some((it) => matchedAmount(m, it.key) > 0)
         ).length || 1;
 
         // Rent-to-salary % for the current month (rent total / current net monthly).
         const remuneration = remQuery.data ?? [];
         const netPm = (remuneration.find((r) => r.current) ?? remuneration[remuneration.length - 1])?.net_pm ?? 0;
-        const currentRentTotal = data.items.reduce((s, it) => s + cell(currentMonth, it.key).amount, 0);
+        const currentRentTotal = data.items.reduce((s, it) => s + matchedAmount(currentMonth, it.key), 0);
         const rentToSalary = netPm > 0 ? (currentRentTotal / netPm) * 100 : 0;
 
         const stats = [

@@ -54,6 +54,7 @@ const BALANCE_DEFAULTS = {
   barclays: 0,
   amex: 0,
   diff_in_bills: 0,
+  diff_in_bills_manual: false,
 };
 const MONTH_RE = /^\d{4}-\d{2}$/;
 const MAIN_CATEGORIES = [

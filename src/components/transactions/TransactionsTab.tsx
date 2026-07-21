@@ -29,9 +29,10 @@ interface Props {
   onRestoreAll: () => void;
   onPruneStale: (validIds: Set<string>) => void;
   searchOverride?: string;
+  focus?: { flagId: string } | null;
 }
 
-export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, onRestoreAll, onPruneStale, searchOverride }: Props) {
+export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, onRestoreAll, onPruneStale, searchOverride, focus }: Props) {
   const txQuery = useTransactions(month);
   const [search, setSearch] = useState(searchOverride ?? "");
   const [category, setCategory] = useState("");
@@ -43,6 +44,16 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
       setSearch(searchOverride);
     }
   }, [searchOverride]);
+
+  // When jumping to a specific transaction, drop any active filters so the row
+  // it wants to highlight can't be filtered out of view.
+  useEffect(() => {
+    if (focus) {
+      setSearch("");
+      setCategory("");
+      setSource("");
+    }
+  }, [focus]);
 
   const hiddenRows = useMemo<Transaction[]>(() => {
     const all = txQuery.data ?? [];
@@ -216,7 +227,7 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
 
       <Card className="p-0 overflow-hidden max-md:!p-0">
         <QueryState isLoading={txQuery.isLoading} error={txQuery.error}>
-          <TransactionTable transactions={filtered} month={month} onHide={onHide} anomalies={anomalies} />
+          <TransactionTable transactions={filtered} month={month} onHide={onHide} anomalies={anomalies} focus={focus} />
         </QueryState>
       </Card>
     </div>

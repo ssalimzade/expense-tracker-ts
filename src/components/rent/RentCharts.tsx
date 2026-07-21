@@ -25,8 +25,11 @@ export function CostBreakdownChart({ data, months }: { data: RentData; months: s
   const isMobile = useIsMobile();
   const rows = months.map((m) => {
     const entry = data.months[m] ?? {};
+    const reconciled = data.reconciled ?? {};
     const row: Record<string, number | string> = { month: mo(m) };
-    for (const it of data.items) row[it.label] = (entry[it.key] ?? blank).amount;
+    for (const it of data.items) {
+      row[it.label] = reconciled[m]?.[it.key]?.amount ?? (entry[it.key] ?? blank).amount;
+    }
     return row;
   });
 
@@ -74,8 +77,9 @@ export function PaidProgressChart({ data, months }: { data: RentData; months: st
     let outstanding = 0;
     for (const it of data.items) {
       const c = entry[it.key] ?? blank;
-      if (c.paid || reconciled[m]?.[it.key]) paid += c.amount;
-      else outstanding += c.amount;
+      const amount = reconciled[m]?.[it.key]?.amount ?? c.amount;
+      if (c.paid || reconciled[m]?.[it.key]) paid += amount;
+      else outstanding += amount;
     }
     return { month: mo(m), Paid: paid, Outstanding: outstanding };
   });

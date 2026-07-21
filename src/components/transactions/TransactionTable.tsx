@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { Transaction } from "../../types/transaction";
 import { useSetFlag } from "../../hooks/useTransactions";
 import { gbp, shortDate } from "../../lib/format";
@@ -18,10 +19,36 @@ interface Props {
   month: string;
   onHide: (flagId: string) => void;
   anomalies?: Set<string>;
+  /** When set (a fresh object each request), scroll to + highlight this row. */
+  focus?: { flagId: string } | null;
 }
 
-export default function TransactionTable({ transactions, month, onHide, anomalies }: Props) {
+export default function TransactionTable({ transactions, month, onHide, anomalies, focus }: Props) {
   const setFlag = useSetFlag(month);
+
+  // Scroll to and briefly highlight a transaction requested from another tab
+  // (e.g. a rent auto-paid link). Waits until the row is actually loaded, and
+  // handles each focus request once so refetches don't re-trigger it.
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const handledRef = useRef<Props["focus"]>(null);
+  useEffect(() => {
+    if (!focus || handledRef.current === focus) return;
+    if (!transactions.some((t) => t.flag_id === focus.flagId)) return; // not loaded yet
+    handledRef.current = focus;
+    setHighlightId(focus.flagId);
+    requestAnimationFrame(() => {
+      document
+        .querySelectorAll(`[data-flag-id="${CSS.escape(focus.flagId)}"]`)
+        .forEach((el) => el.scrollIntoView({ behavior: "smooth", block: "center" }));
+    });
+    const timer = setTimeout(() => setHighlightId(null), 2600);
+    return () => clearTimeout(timer);
+  }, [focus, transactions]);
+
+  const highlightClass = (t: Transaction) =>
+    t.flag_id === highlightId
+      ? "bg-indigo-50 ring-2 ring-inset ring-indigo-400 dark:bg-indigo-950/40"
+      : "";
 
   const sourceBadge = (source: string) => (
     <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium capitalize ${SOURCE_COLORS[source?.toLowerCase()] ?? ""}`}>
@@ -69,7 +96,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
             {transactions.map((t) => (
-              <tr key={t.id} className="group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40">
+              <tr key={t.id} data-flag-id={t.flag_id} className={`group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40 ${highlightClass(t)}`}>
                 <td className="whitespace-nowrap px-6 py-3 text-gray-500 dark:text-gray-400">{shortDate(t.created)}</td>
                 <td className="px-6 py-3">
                   <Tooltip label={t.description} className="block">
@@ -125,7 +152,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
       {/* ── Mobile card list ──────────────────────────────────── */}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
         {transactions.map((t) => (
-          <li key={t.id} className="space-y-2.5 p-4">
+          <li key={t.id} data-flag-id={t.flag_id} className={`space-y-2.5 p-4 transition-colors ${highlightClass(t)}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium text-gray-800 dark:text-gray-200">{t.description}</p>

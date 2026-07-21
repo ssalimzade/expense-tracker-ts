@@ -81,6 +81,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   const get = (month: string): RentMonthEntry => data.months[month] ?? {};
   const cell = (month: string, key: string): RentLineItem => get(month)[key] ?? blank;
   const match = (month: string, key: string): RentMatch | undefined => reconciled[month]?.[key];
+  const effectiveAmount = (month: string, key: string) => match(month, key)?.amount ?? cell(month, key).amount;
   // Effective paid = manually ticked OR a matching transaction exists.
   const isPaid = (month: string, key: string) => cell(month, key).paid || !!match(month, key);
 
@@ -93,9 +94,9 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
     save.mutate({ month, entry });
   };
 
-  const monthTotal = (month: string) => items.reduce((s, it) => s + cell(month, it.key).amount, 0);
+  const monthTotal = (month: string) => items.reduce((s, it) => s + effectiveAmount(month, it.key), 0);
   const monthPaid = (month: string) =>
-    items.reduce((s, it) => s + (isPaid(month, it.key) ? cell(month, it.key).amount : 0), 0);
+    items.reduce((s, it) => s + (isPaid(month, it.key) ? effectiveAmount(month, it.key) : 0), 0);
 
   // Ordered item lists for the mobile card's two columns.
   const orderItems = (keys: string[]) =>
@@ -113,7 +114,12 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
       <div key={it.key} className="flex items-center gap-1.5">
         <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => update(month, it.key, { paid: !c.paid })} onOpenMatch={onOpenMatch} />
         <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
-        <MoneyInput value={c.amount} onCommit={(n) => update(month, it.key, { amount: n })} color={it.saved ? "#d97706" : undefined} className="!w-14 !px-1 !text-right" />
+        <MoneyInput
+          value={m?.amount ?? c.amount}
+          onCommit={(n) => update(month, it.key, { amount: n })}
+          color={it.saved ? "#d97706" : undefined}
+          className="!w-14 !px-1 !text-right"
+        />
       </div>
     );
   };
@@ -175,7 +181,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                       <td key={it.key} className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-1.5">
                           <MoneyInput
-                            value={c.amount}
+                            value={m?.amount ?? c.amount}
                             onCommit={(n) => update(month, it.key, { amount: n })}
                             color={it.saved ? "#d97706" : undefined}
                           />

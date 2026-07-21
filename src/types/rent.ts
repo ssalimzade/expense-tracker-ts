@@ -18,6 +18,8 @@ export interface RentMatch {
   date: string;
   description: string;
   merchant_name?: string | null;
+  /** Stable id of the matched bank transaction (same hash used in the tx list). */
+  flag_id?: string;
 }
 
 export type RentReconciled = Record<string, Record<string, RentMatch>>; // month -> key -> match

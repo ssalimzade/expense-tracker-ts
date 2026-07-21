@@ -8,6 +8,7 @@ export interface BalanceData {
   amex: number;
   barclays: number;
   diff_in_bills: number;
+  diff_in_bills_manual: boolean;
 }
 
 export type BalanceValues = Omit<BalanceData, "month">;

@@ -40,6 +40,8 @@ export default function App() {
   const [tab, setTab] = useState<TabKey>(initialTab);
   const [month, setMonth] = useState<string>(toMonthKey(new Date()));
   const [transactionSearch, setTransactionSearch] = useState("");
+  // A new object per rent-link click so the tx table re-scrolls even on re-click.
+  const [txFocus, setTxFocus] = useState<{ flagId: string } | null>(null);
 
   // Hidden transaction IDs, persisted to localStorage so they survive reloads.
   const { hiddenFor, hide, restore, restoreAll, pruneStale } = useHiddenTransactions();
@@ -57,7 +59,20 @@ export default function App() {
   const restoreAllInMonth = () => restoreAll(month);
   const pruneStaleInMonth = (validIds: Set<string>) => pruneStale(month, validIds);
   const openRentMatch = (match: RentMatch) => {
-    setTransactionSearch(match.merchant_name || match.description || "");
+    // The matched payment can live in a different month than the one currently
+    // selected (bills are offset from the rent row they reconcile to), so jump
+    // to the month the transaction actually posted in.
+    const payMonth = (match.date ?? "").slice(0, 7);
+    if (/^\d{4}-\d{2}$/.test(payMonth)) setMonth(payMonth);
+    if (match.flag_id) {
+      // Precise: clear filters and highlight/scroll to the exact row.
+      setTransactionSearch("");
+      setTxFocus({ flagId: match.flag_id });
+    } else {
+      // Fallback for older data with no id: best-effort search.
+      setTransactionSearch(match.merchant_name || match.description || "");
+      setTxFocus(null);
+    }
     setTab("transactions");
   };
 
@@ -83,6 +98,7 @@ export default function App() {
             onRestoreAll={restoreAllInMonth}
             onPruneStale={pruneStaleInMonth}
             searchOverride={transactionSearch}
+            focus={txFocus}
           />
         )}
         {tab === "planner"     && <PlannerTab />}
