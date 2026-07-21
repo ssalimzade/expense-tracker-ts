@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useBalance, useSaveBalance } from "../../hooks/useBalance";
 import { useRent } from "../../hooks/useRent";
 import MoneyInput from "../MoneyInput";
@@ -20,69 +20,108 @@ function DiffBreakdown({
   overridden: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const timer = useRef<number | null>(null);
+  const cancel = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+  };
+  const openNow = () => {
+    cancel();
+    setOpen(true);
+  };
+  const closeSoon = () => {
+    cancel();
+    timer.current = window.setTimeout(() => setOpen(false), 160);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+  useEffect(() => cancel, []);
+
+  const neg = "text-red-500 dark:text-red-400";
+  const pos = "text-emerald-500 dark:text-emerald-400";
+
+  // The wrapper spans the card (pointer-events-none) so the panel can anchor to
+  // the card's right edge on mobile and stay on-screen; the button sits at the
+  // top-left corner.
   return (
-    <div
-      className="absolute left-1 top-1"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <div className="pointer-events-none absolute inset-x-0 top-0">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onMouseEnter={openNow}
+        onMouseLeave={closeSoon}
+        onClick={() => (open ? setOpen(false) : openNow())}
         title="How this is calculated"
-        className="flex h-4 w-4 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+        className="pointer-events-auto absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-200"
       >
         <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
           <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm0 3.25a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8ZM7.1 7.2h1.4a.4.4 0 0 1 .4.4v3.4h.5a.4.4 0 0 1 0 .8H6.6a.4.4 0 0 1 0-.8h.5V8H7.1a.4.4 0 0 1 0-.8Z" />
         </svg>
       </button>
       {open && (
-        <div className="absolute left-0 top-6 z-50 w-max max-w-[280px] cursor-default rounded-xl border border-gray-200 bg-white p-3 text-left shadow-xl dark:border-gray-700 dark:bg-gray-800">
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Bills paid in {formatMonthLabel(month)}
-          </p>
-          {parts.length === 0 ? (
-            <p className="text-xs text-gray-400">No matched bill payments yet.</p>
-          ) : (
-            <table className="text-xs tabular-nums">
-              <thead>
-                <tr className="text-gray-400">
-                  <th className="pr-3 text-left font-medium">Bill</th>
-                  <th className="px-2 text-right font-medium">Set aside</th>
-                  <th className="px-2 text-right font-medium">Paid</th>
-                  <th className="pl-2 text-right font-medium">Diff</th>
-                </tr>
-              </thead>
-              <tbody>
-                {parts.map((p) => (
-                  <tr key={p.label} className="text-gray-700 dark:text-gray-300">
-                    <td className="pr-3 text-left">{p.label}</td>
-                    <td className="px-2 text-right">{gbp(p.allocated)}</td>
-                    <td className="px-2 text-right">{gbp(p.paid)}</td>
-                    <td className={`pl-2 text-right font-semibold ${p.diff < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                      {gbp(p.diff)}
+        <>
+          {/* Outside-tap catcher (mobile) — desktop relies on hover-out. */}
+          <span
+            onClick={() => setOpen(false)}
+            className="pointer-events-auto fixed inset-0 z-40 sm:hidden"
+          />
+          <div
+            onMouseEnter={cancel}
+            onMouseLeave={closeSoon}
+            className="pointer-events-auto absolute right-1 top-9 z-50 w-max min-w-[13rem] max-w-[calc(100vw-1.5rem)] cursor-default rounded-xl border border-gray-200 bg-white p-3 text-left shadow-2xl dark:border-gray-700 dark:bg-gray-800 sm:left-1 sm:right-auto"
+          >
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              Bills paid in {formatMonthLabel(month)}
+            </p>
+            {parts.length === 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                No bill differences this month.
+              </p>
+            ) : (
+              <table className="w-full border-collapse text-xs tabular-nums">
+                <thead>
+                  <tr className="text-[10px] uppercase tracking-wide text-gray-400">
+                    <th className="pb-1.5 pr-4 text-left font-medium">Bill</th>
+                    <th className="px-2 pb-1.5 text-right font-medium">Allocated</th>
+                    <th className="px-2 pb-1.5 text-right font-medium">Paid</th>
+                    <th className="pl-3 pb-1.5 text-right font-medium">Diff</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parts.map((p) => (
+                    <tr key={p.label}>
+                      <td className="py-[3px] pr-4 text-left font-medium text-gray-700 dark:text-gray-200">{p.label}</td>
+                      <td className="px-2 py-[3px] text-right text-gray-500 dark:text-gray-400">{gbp(p.allocated)}</td>
+                      <td className="px-2 py-[3px] text-right text-gray-500 dark:text-gray-400">{gbp(p.paid)}</td>
+                      <td className={`py-[3px] pl-3 text-right font-semibold ${p.diff < 0 ? neg : pos}`}>{gbp(p.diff)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={3} className="border-t border-gray-200 pt-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-300">
+                      Total
+                    </td>
+                    <td className={`border-t border-gray-200 pl-3 pt-2 text-right text-sm font-bold dark:border-gray-600 ${total < 0 ? neg : pos}`}>
+                      {gbp0(total)}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-gray-200 font-semibold text-gray-900 dark:border-gray-600 dark:text-white">
-                  <td className="pr-3 pt-1.5 text-left" colSpan={3}>
-                    Total (rounded)
-                  </td>
-                  <td className={`pl-2 pt-1.5 text-right ${total < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                    {gbp0(total)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          )}
-          {overridden && (
-            <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] text-amber-600 dark:border-gray-700 dark:text-amber-400">
-              Manual override active — showing your entered value. Clear it to use this auto total.
-            </p>
-          )}
-        </div>
+                </tfoot>
+              </table>
+            )}
+            {overridden && (
+              <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] leading-snug text-amber-600 dark:border-gray-700/60 dark:text-amber-400">
+                Manual override in use — clear the field to switch to this total.
+              </p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -162,7 +201,8 @@ export default function BalanceSection({ month }: { month: string }) {
         const allocated = months[rowMonth]?.[key]?.amount ?? 0;
         const diff = allocated - m.amount;
         raw += diff;
-        parts.push({ label: labelOf[key] ?? key, allocated, paid: m.amount, diff });
+        // Only surface bills that actually differ; exact matches add nothing.
+        if (Math.abs(diff) >= 0.005) parts.push({ label: labelOf[key] ?? key, allocated, paid: m.amount, diff });
       }
     }
     parts.sort((a, b) => a.label.localeCompare(b.label));

@@ -79,6 +79,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
                     <MoneyInput
                       value={row[c.field]}
                       onCommit={(n) => onProjectionField(row.month, c.field, n)}
+                      allowNegative
                     />
                   </td>
                 ))}
@@ -94,6 +95,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
                   <MoneyInput
                     value={row.rent}
                     onCommit={(n) => onProjectionField(row.month, "housing_costs", n)}
+                    allowNegative
                   />
                 </td>
               ))}
@@ -109,6 +111,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
                     <MoneyInput
                       value={row[c.field]}
                       onCommit={(n) => onAllocation(row.month, c.field, n)}
+                      allowNegative
                     />
                   </td>
                 ))}
@@ -172,10 +175,10 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
       {/* Mobile cards — one per month */}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
         {rows.map((row) => {
-          const field = (label: string, value: number, onCommit: (n: number) => void, color?: string, allowNegative?: boolean) => (
+          const field = (label: string, value: number, onCommit: (n: number) => void, color?: string) => (
             <div className="flex items-center justify-between gap-2">
               <span className="text-gray-400">{label}</span>
-              <MoneyInput value={value} onCommit={onCommit} color={color} allowNegative={allowNegative} className="!w-16 !px-1 !text-right" />
+              <MoneyInput value={value} onCommit={onCommit} color={color} allowNegative className="!w-16 !px-1 !text-right" />
             </div>
           );
           return (
@@ -195,7 +198,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
                   {field("Home", row.home_contributions, (n) => onAllocation(row.month, "home_contributions", n))}
                   {field("Savings", row.savings, (n) => onAllocation(row.month, "savings", n))}
                   {field("Investments", row.investments, (n) => onAllocation(row.month, "investments", n))}
-                  {field("Other P/L", row.other_pl, (n) => onProjectionField(row.month, "other_pl", n), undefined, true)}
+                  {field("Other P/L", row.other_pl, (n) => onProjectionField(row.month, "other_pl", n))}
                 </div>
               </div>
               <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2 dark:border-gray-800">
