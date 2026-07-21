@@ -28,14 +28,21 @@ interface Props {
   onRestoreRow: (flagId: string) => void;
   onRestoreAll: () => void;
   onPruneStale: (validIds: Set<string>) => void;
+  searchOverride?: string;
 }
 
-export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, onRestoreAll, onPruneStale }: Props) {
+export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, onRestoreAll, onPruneStale, searchOverride }: Props) {
   const txQuery = useTransactions(month);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchOverride ?? "");
   const [category, setCategory] = useState("");
   const [source, setSource] = useState("");
   const [showRestorePanel, setShowRestorePanel] = useState(false);
+
+  useEffect(() => {
+    if (searchOverride !== undefined && searchOverride !== search) {
+      setSearch(searchOverride);
+    }
+  }, [searchOverride]);
 
   const hiddenRows = useMemo<Transaction[]>(() => {
     const all = txQuery.data ?? [];
@@ -54,7 +61,10 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
     const all = (txQuery.data ?? []).filter((t) => !hidden.has(t.flag_id));
     const q = search.trim().toLowerCase();
     return all.filter((t) => {
-      if (q && !t.description.toLowerCase().includes(q)) return false;
+      if (q) {
+        const haystack = `${t.description} ${t.merchant_name ?? ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       if (category && t.category !== category) return false;
       if (source && t.source !== source) return false;
       return true;

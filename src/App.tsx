@@ -12,6 +12,7 @@ import RentTab from "./components/rent/RentTab";
 import RemunerationTab from "./components/remuneration/RemunerationTab";
 import HistoryTab from "./components/history/HistoryTab";
 import NotesTab from "./components/notes/NotesTab";
+import type { RentMatch } from "./types/rent";
 import { Toaster } from "./lib/toast";
 import { useAutoArchive } from "./hooks/useAutoArchive";
 import { useHiddenTransactions } from "./hooks/useHiddenTransactions";
@@ -38,6 +39,7 @@ function AutoArchive() {
 export default function App() {
   const [tab, setTab] = useState<TabKey>(initialTab);
   const [month, setMonth] = useState<string>(toMonthKey(new Date()));
+  const [transactionSearch, setTransactionSearch] = useState("");
 
   // Hidden transaction IDs, persisted to localStorage so they survive reloads.
   const { hiddenFor, hide, restore, restoreAll, pruneStale } = useHiddenTransactions();
@@ -54,6 +56,10 @@ export default function App() {
   const restoreTransaction = (flagId: string) => restore(month, flagId);
   const restoreAllInMonth = () => restoreAll(month);
   const pruneStaleInMonth = (validIds: Set<string>) => pruneStale(month, validIds);
+  const openRentMatch = (match: RentMatch) => {
+    setTransactionSearch(match.merchant_name || match.description || "");
+    setTab("transactions");
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950">
@@ -76,13 +82,14 @@ export default function App() {
             onRestoreRow={restoreTransaction}
             onRestoreAll={restoreAllInMonth}
             onPruneStale={pruneStaleInMonth}
+            searchOverride={transactionSearch}
           />
         )}
         {tab === "planner"     && <PlannerTab />}
         {tab === "repayments"  && <RepaymentsTab />}
         {tab === "savings"     && <SavingsTab />}
         {tab === "projections" && <ProjectionsTab />}
-        {tab === "rent"        && <RentTab />}
+        {tab === "rent"        && <RentTab onOpenTransactions={openRentMatch} />}
         {tab === "remuneration" && <RemunerationTab />}
         {tab === "history"     && <HistoryTab />}
         {tab === "notes"       && <NotesTab />}

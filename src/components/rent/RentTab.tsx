@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRent } from "../../hooks/useRent";
 import { useRemuneration } from "../../hooks/useRemuneration";
 import { QueryState } from "../common";
-import type { RentData, RentLineItem } from "../../types/rent";
+import type { RentData, RentLineItem, RentMatch } from "../../types/rent";
 import { gbp0 } from "../../lib/format";
 import RentTable from "./RentTable";
 import { CostBreakdownChart, PaidProgressChart } from "./RentCharts";
@@ -14,7 +14,11 @@ const currentMonth = (() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 })();
 
-export default function RentTab() {
+interface Props {
+  onOpenTransactions?: (match: RentMatch) => void;
+}
+
+export default function RentTab({ onOpenTransactions }: Props) {
   const query = useRent();
   const remQuery = useRemuneration();
   const currentYear = String(new Date().getFullYear());
@@ -106,7 +110,7 @@ export default function RentTab() {
             </div>
 
             {months.length > 0 ? (
-              <RentTable data={data} months={months} />
+              <RentTable data={data} months={months} onOpenMatch={onOpenTransactions} />
             ) : (
               <div className="rounded-2xl border border-dashed border-gray-200 p-10 text-center text-sm text-gray-400 dark:border-gray-700">
                 No rent data for {year}.

@@ -27,22 +27,26 @@ function PaidToggle({
   auto,
   match,
   onToggle,
+  onOpenMatch,
 }: {
   paid: boolean;
   auto: boolean;
   match?: RentMatch;
   onToggle: () => void;
+  onOpenMatch?: (match: RentMatch) => void;
 }) {
   if (auto && match) {
     return (
-      <span
-        title={`Auto-paid ${gbp0(match.amount)} on ${match.date} (${match.description})`}
+      <button
+        type="button"
+        onClick={() => onOpenMatch?.(match)}
+        title={`Auto-paid ${gbp0(match.amount)} on ${match.date} (${match.description}) — click to view transaction`}
         className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-sky-500 text-white"
       >
         <svg viewBox="0 0 16 16" fill="currentColor" className="h-2.5 w-2.5">
           <path d="M7.78 3.16a2.75 2.75 0 0 1 3.89 3.89l-1.6 1.6a.75.75 0 0 1-1.06-1.06l1.6-1.6a1.25 1.25 0 0 0-1.77-1.77l-1.6 1.6A.75.75 0 1 1 6.18 4.76l1.6-1.6Zm.5 4.02a.75.75 0 0 1 0 1.06l-1.6 1.6a1.25 1.25 0 0 0 1.77 1.77l1.6-1.6a.75.75 0 1 1 1.06 1.06l-1.6 1.6a2.75 2.75 0 0 1-3.89-3.89l1.6-1.6a.75.75 0 0 1 1.06 0Z" />
         </svg>
-      </span>
+      </button>
     );
   }
   return (
@@ -66,9 +70,10 @@ function PaidToggle({
 interface Props {
   data: RentData;
   months: string[]; // months in the selected year, ascending
+  onOpenMatch?: (match: RentMatch) => void;
 }
 
-export default function RentTable({ data, months }: Props) {
+export default function RentTable({ data, months, onOpenMatch }: Props) {
   const save = useSaveRentMonth();
   const items = data.items;
   const reconciled = data.reconciled ?? {};
@@ -106,7 +111,7 @@ export default function RentTable({ data, months }: Props) {
     const m = match(month, it.key);
     return (
       <div key={it.key} className="flex items-center gap-1.5">
-        <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => update(month, it.key, { paid: !c.paid })} />
+        <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => update(month, it.key, { paid: !c.paid })} onOpenMatch={onOpenMatch} />
         <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
         <MoneyInput value={c.amount} onCommit={(n) => update(month, it.key, { amount: n })} color={it.saved ? "#d97706" : undefined} className="!w-14 !px-1 !text-right" />
       </div>
@@ -179,6 +184,7 @@ export default function RentTable({ data, months }: Props) {
                             auto={!!m}
                             match={m}
                             onToggle={() => update(month, it.key, { paid: !c.paid })}
+                            onOpenMatch={onOpenMatch}
                           />
                         </div>
                       </td>

@@ -238,7 +238,12 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
       const amount = Math.round(Math.abs(rawAmount) * 100) / 100;
       const existing = bucket[itemKey];
       if (existing == null || amount > existing.amount) {
-        bucket[itemKey] = { amount, date: r.created_date, description: r.description };
+        bucket[itemKey] = {
+          amount,
+          date: r.created_date,
+          description: r.description,
+          merchant_name: r.merchant_name ?? null,
+        };
       }
     }
   }

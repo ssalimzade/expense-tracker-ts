@@ -17,6 +17,7 @@ export interface RentMatch {
   amount: number;
   date: string;
   description: string;
+  merchant_name?: string | null;
 }
 
 export type RentReconciled = Record<string, Record<string, RentMatch>>; // month -> key -> match

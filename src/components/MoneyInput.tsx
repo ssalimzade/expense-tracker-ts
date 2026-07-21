@@ -34,7 +34,8 @@ export default function MoneyInput({
   const touched = useRef(false);
 
   const rounded = Math.round(value);
-  const fmt = `${pound ? "£" : ""}${rounded.toLocaleString("en-GB")}`;
+  const isWhole = Math.abs(value - rounded) < 1e-9;
+  const fmt = `${pound ? "£" : ""}${isWhole ? rounded.toLocaleString("en-GB") : value.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   if (readOnly) {
     return (
@@ -56,7 +57,7 @@ export default function MoneyInput({
       onFocus={() => {
         setEditing(true);
         touched.current = false;
-        setRaw(value === 0 ? "" : String(rounded));
+        setRaw(value === 0 ? "" : String(value));
       }}
       onChange={(e) => {
         touched.current = true;
