@@ -33,9 +33,9 @@ export default function MoneyInput({
   // (which can re-round a decimal value) must not trigger a save.
   const touched = useRef(false);
 
+  // All editable amounts display as whole pounds (no decimals) everywhere.
   const rounded = Math.round(value);
-  const isWhole = Math.abs(value - rounded) < 1e-9;
-  const fmt = `${pound ? "£" : ""}${isWhole ? rounded.toLocaleString("en-GB") : value.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmt = `${pound ? "£" : ""}${rounded.toLocaleString("en-GB")}`;
 
   if (readOnly) {
     return (
@@ -51,13 +51,15 @@ export default function MoneyInput({
   return (
     <input
       type="text"
-      inputMode="decimal"
+      // Negative-capable fields need the full keyboard: the mobile "decimal"
+      // keypad has no minus key, so "-" can't be typed there.
+      inputMode={allowNegative ? "text" : "decimal"}
       value={editing ? raw : fmt}
       style={color ? { color } : undefined}
       onFocus={() => {
         setEditing(true);
         touched.current = false;
-        setRaw(value === 0 ? "" : String(value));
+        setRaw(value === 0 ? "" : String(rounded));
       }}
       onChange={(e) => {
         touched.current = true;
