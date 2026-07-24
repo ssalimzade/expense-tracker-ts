@@ -221,8 +221,7 @@ const RECONCILE_COLS =
 
 export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
   const rules = (await loadRules(sql)) as Rules;
-  // Per-transaction categories the user set by hand, keyed month -> flag id.
-  const allFlags = await loadAllFlags(sql);
+  const allFlags = await loadAllFlags(sql); // month -> flagId -> flag
   const out: Row = {};
   for (const t of ALL_TABLES) {
     const rows = await sql.query(
@@ -231,25 +230,32 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
     );
     for (const r of rows) {
       const rawAmount = Number(r.amount ?? 0);
-      // Rent bills are money going out, so only negative rows can settle one. A
-      // positive amount is a refund or credit and must never auto-link.
+      // Only real payments (debits) reconcile. A positive amount is a
+      // credit/refund (e.g. a Thames Water refund) and must never be linked.
       if (!Number.isFinite(rawAmount) || rawAmount >= 0) continue;
-      let sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
-      let mapping = SUBCAT_TO_RENT_ITEM[sub];
-      if (!mapping) continue;
 
-      // flag_id matches the id serializeTransactions computes, so the UI can
-      // jump straight to this exact bank row.
-      const flag_id = await makeTransactionId(r.description ?? "", r.created_iso ?? "");
-      // A category set by hand on the transaction beats the keyword guess, the
-      // same way the transactions list treats it — so a row moved out of a rent
-      // category stops settling that bill.
-      const flag = allFlags[shiftMonth(r.yr, r.mo, 0)]?.[flag_id];
-      if (flag && "subcategory" in flag) {
-        sub = flag.subcategory;
-        mapping = SUBCAT_TO_RENT_ITEM[sub];
-        if (!mapping) continue;
+      // Effective sub-category = the manual per-transaction override (the same
+      // one the transactions tab applies) when present, else the rules-based
+      // guess. This is what lets re-categorising a row to "Uncategorized"
+      // unlink it here too. flag_id (needed both to look up the override and to
+      // link the row in the UI) is computed lazily.
+      const txMonth = `${r.yr}-${String(r.mo).padStart(2, "0")}`;
+      const monthFlags = allFlags[txMonth];
+      let flagId: string | undefined;
+      let sub: string;
+      if (monthFlags) {
+        flagId = await makeTransactionId(r.description ?? "", r.created_iso ?? "");
+        const flag = monthFlags[flagId] ?? {};
+        sub =
+          "subcategory" in flag
+            ? flag.subcategory
+            : categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
+      } else {
+        sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
       }
+
+      const mapping = SUBCAT_TO_RENT_ITEM[sub];
+      if (!mapping) continue;
       const [itemKey, offset] = mapping;
       const targetMonth = shiftMonth(r.yr, r.mo, offset);
       if (!targetMonth.startsWith(String(year))) continue;
@@ -257,12 +263,15 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
       const amount = Math.round(Math.abs(rawAmount) * 100) / 100;
       const existing = bucket[itemKey];
       if (existing == null || amount > existing.amount) {
+        // flag_id matches the id serializeTransactions computes, so the UI can
+        // jump straight to this exact bank row.
+        flagId ??= await makeTransactionId(r.description ?? "", r.created_iso ?? "");
         bucket[itemKey] = {
           amount,
           date: r.created_date,
           description: r.description,
           merchant_name: r.merchant_name ?? null,
-          flag_id,
+          flag_id: flagId,
         };
       }
     }

@@ -28,6 +28,9 @@ export async function getFlagsForMonth(sql: Sql, month: string): Promise<Dict> {
   const all = await loadAllFlags(sql);
   return all[month] ?? {};
 }
+
+/** The whole per-transaction flag blob: month -> flagId -> flag. One DB read. */
+export const loadAllFlags = (sql: Sql) => kvGet<Dict>(sql, "one_time_flags", {});
 export async function setFlagsForMonth(sql: Sql, month: string, monthFlags: Dict) {
   const all = await kvGet<Dict>(sql, "one_time_flags", {});
   all[month] = monthFlags;
