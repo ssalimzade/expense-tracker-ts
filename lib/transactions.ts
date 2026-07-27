@@ -228,7 +228,9 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
     );
     for (const r of rows) {
       const rawAmount = Number(r.amount ?? 0);
-      if (!Number.isFinite(rawAmount) || rawAmount === 0) continue;
+      // Rent bills are money going out, so only negative rows can settle one. A
+      // positive amount is a refund or credit and must never auto-link.
+      if (!Number.isFinite(rawAmount) || rawAmount >= 0) continue;
       const sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
       const mapping = SUBCAT_TO_RENT_ITEM[sub];
       if (!mapping) continue;
