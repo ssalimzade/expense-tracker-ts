@@ -81,9 +81,18 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   const get = (month: string): RentMonthEntry => data.months[month] ?? {};
   const cell = (month: string, key: string): RentLineItem => get(month)[key] ?? blank;
   const match = (month: string, key: string): RentMatch | undefined => reconciled[month]?.[key];
-  const effectiveAmount = (month: string, key: string) => match(month, key)?.amount ?? cell(month, key).amount;
+  // What the bill actually cost: a matched transaction wins, then a hand-entered
+  // paid amount, else the allocation.
+  const effectiveAmount = (month: string, key: string) => {
+    const c = cell(month, key);
+    return match(month, key)?.amount ?? (c.paid ? c.paid_amount ?? c.amount : c.amount);
+  };
   // Effective paid = manually ticked OR a matching transaction exists.
   const isPaid = (month: string, key: string) => cell(month, key).paid || !!match(month, key);
+  // Ticked by hand with no matching transaction — the only case where we need to
+  // ask what was really paid.
+  const needsPaidAmount = (month: string, key: string) =>
+    cell(month, key).paid && !match(month, key);
 
   const update = (month: string, key: string, patch: Partial<RentLineItem>) => {
     const entry: RentMonthEntry = {};
@@ -93,6 +102,14 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
     }
     save.mutate({ month, entry });
   };
+
+  // Equal-to-allocated is stored as null so the paid figure keeps tracking
+  // `amount` if the allocation is edited later.
+  const savePaidAmount = (month: string, key: string, n: number) =>
+    update(month, key, { paid_amount: n === cell(month, key).amount ? null : n });
+  // Unticking drops the hand-entered figure so it can't linger as a stale diff.
+  const togglePaid = (month: string, key: string) =>
+    update(month, key, cell(month, key).paid ? { paid: false, paid_amount: null } : { paid: true });
 
   const monthTotal = (month: string) => items.reduce((s, it) => s + effectiveAmount(month, it.key), 0);
   const monthPaid = (month: string) =>
@@ -111,15 +128,27 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
     const c = cell(month, it.key);
     const m = match(month, it.key);
     return (
-      <div key={it.key} className="flex items-center gap-1.5">
-        <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => update(month, it.key, { paid: !c.paid })} onOpenMatch={onOpenMatch} />
-        <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
-        <MoneyInput
-          value={m?.amount ?? c.amount}
-          onCommit={(n) => update(month, it.key, { amount: n })}
-          color={it.saved ? "#d97706" : undefined}
-          className="!w-14 !px-1 !text-right"
-        />
+      <div key={it.key}>
+        <div className="flex items-center gap-1.5">
+          <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => togglePaid(month, it.key)} onOpenMatch={onOpenMatch} />
+          <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
+          <MoneyInput
+            value={m?.amount ?? c.amount}
+            onCommit={(n) => update(month, it.key, { amount: n })}
+            color={it.saved ? "#d97706" : undefined}
+            className="!w-14 !px-1 !text-right"
+          />
+        </div>
+        {needsPaidAmount(month, it.key) && (
+          <div className="flex items-center justify-end gap-1">
+            <span className="text-[9px] uppercase tracking-wide text-gray-400">paid</span>
+            <MoneyInput
+              value={c.paid_amount ?? c.amount}
+              onCommit={(n) => savePaidAmount(month, it.key, n)}
+              className="!w-14 !px-1 !py-0 !text-[11px] !text-right !text-gray-500 dark:!text-gray-400"
+            />
+          </div>
+        )}
       </div>
     );
   };
@@ -189,10 +218,20 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                             paid={c.paid}
                             auto={!!m}
                             match={m}
-                            onToggle={() => update(month, it.key, { paid: !c.paid })}
+                            onToggle={() => togglePaid(month, it.key)}
                             onOpenMatch={onOpenMatch}
                           />
                         </div>
+                        {needsPaidAmount(month, it.key) && (
+                          <div className="mt-0.5 flex items-center justify-center gap-1 pr-6">
+                            <span className="text-[9px] uppercase tracking-wide text-gray-400">paid</span>
+                            <MoneyInput
+                              value={c.paid_amount ?? c.amount}
+                              onCommit={(n) => savePaidAmount(month, it.key, n)}
+                              className="!w-14 !px-1 !py-0 !text-[11px] !text-gray-500 dark:!text-gray-400"
+                            />
+                          </div>
+                        )}
                       </td>
                     );
                   })}

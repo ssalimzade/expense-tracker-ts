@@ -6,8 +6,15 @@ export interface RentItemDef {
 }
 
 export interface RentLineItem {
+  /** What the bill was budgeted at — the "allocated" side of Diff in bills. */
   amount: number;
   paid: boolean;
+  /**
+   * What was actually paid, for items ticked by hand (a matched transaction
+   * supplies this on its own). Null/absent means "paid exactly what was
+   * allocated", so the two stay in step when `amount` is edited later.
+   */
+  paid_amount?: number | null;
 }
 
 export type RentMonthEntry = Record<string, RentLineItem>;

@@ -223,16 +223,30 @@ export default function BalanceSection({ month }: { month: string }) {
     const labelOf: Record<string, string> = {};
     for (const it of data.items ?? []) labelOf[it.key] = it.label;
     let raw = 0;
+    const add = (key: string, allocated: number, paid: number) => {
+      const diff = allocated - paid;
+      raw += diff;
+      // Only surface bills that actually differ; exact matches add nothing.
+      if (Math.abs(diff) >= 0.005) parts.push({ label: labelOf[key] ?? key, allocated, paid, diff });
+    };
+
     for (const [rowMonth, matches] of Object.entries(reconciled)) {
       for (const [key, m] of Object.entries(matches)) {
         if (!m?.date || m.date.slice(0, 7) !== month) continue; // paid this month
-        const allocated = months[rowMonth]?.[key]?.amount ?? 0;
-        const diff = allocated - m.amount;
-        raw += diff;
-        // Only surface bills that actually differ; exact matches add nothing.
-        if (Math.abs(diff) >= 0.005) parts.push({ label: labelOf[key] ?? key, allocated, paid: m.amount, diff });
+        add(key, months[rowMonth]?.[key]?.amount ?? 0, m.amount);
       }
     }
+
+    // Bills ticked by hand never reach `reconciled`, so read them off the rent
+    // rows too. There's no payment date to group by, so they count against the
+    // row's own month. A null paid_amount means "paid what was allocated", which
+    // nets to zero and drops out below.
+    for (const [key, item] of Object.entries(months[month] ?? {})) {
+      if (!item?.paid || reconciled[month]?.[key]) continue; // matched rows counted above
+      const allocated = item.amount ?? 0;
+      add(key, allocated, item.paid_amount ?? allocated);
+    }
+
     parts.sort((a, b) => a.label.localeCompare(b.label));
     return { total: Math.round(raw), parts };
   }, [rentQuery.data, month]);

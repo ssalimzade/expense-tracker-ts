@@ -240,7 +240,12 @@ app.post("/rent", async (c) => {
   const entry: Record<string, any> = {};
   for (const [k, v] of Object.entries(b.entry ?? {})) {
     const item = v as any;
-    entry[k] = { amount: item.amount ?? 0, paid: item.paid ?? false };
+    entry[k] = {
+      amount: item.amount ?? 0,
+      paid: item.paid ?? false,
+      // Null means "paid what was allocated" — kept distinct from a real £0.
+      paid_amount: item.paid_amount ?? null,
+    };
   }
   return c.json(await upsertRentMonth(sqlOf(c), b.month, entry));
 });
