@@ -95,7 +95,21 @@ export async function upsertRentMonth(sql: Sql, month: string, entry: Dict) {
     months: {},
   });
   if (!data.months) data.months = {};
-  data.months[month] = entry;
+  // Merge rather than replace: a month may hold keys the caller didn't send
+  // (an item hidden from its view), and those must survive the write.
+  data.months[month] = { ...(data.months[month] ?? {}), ...entry };
+  await kvSet(sql, "rent_data", data);
+  return data;
+}
+
+/** Replace one pot's settlement history (savings pots for quarterly bills). */
+export async function upsertRentPot(sql: Sql, key: string, settlements: Dict[]) {
+  const data = await kvGet<Dict>(sql, "rent_data", {
+    items: RENT_DEFAULT_ITEMS,
+    months: {},
+  });
+  if (!data.pots) data.pots = {};
+  data.pots[key] = { settlements };
   await kvSet(sql, "rent_data", data);
   return data;
 }

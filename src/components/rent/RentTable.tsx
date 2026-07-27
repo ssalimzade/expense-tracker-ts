@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useSaveRentMonth } from "../../hooks/useRent";
 import type { RentData, RentItemDef, RentLineItem, RentMonthEntry, RentMatch } from "../../types/rent";
 import { gbp0 } from "../../lib/format";
+import { potViews } from "../../lib/pots";
 import { Card } from "../common";
 import MoneyInput from "../MoneyInput";
 
@@ -141,6 +142,20 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
 
   const get = (month: string): RentMonthEntry => data.months[month] ?? {};
   const cell = (month: string, key: string): RentLineItem => get(month)[key] ?? blank;
+
+  // A settled pot with nothing left in it stops appearing for later months — the
+  // months it actually funded keep showing it, so history reads unchanged.
+  const settledAt = new Map(
+    potViews(data, months[months.length - 1] ?? currentMonth)
+      .filter((p) => p.lastSettled)
+      .map((p) => [p.key, p.lastSettled as string]),
+  );
+  const isRetired = (month: string, key: string) => {
+    const settled = settledAt.get(key);
+    return settled != null && month > settled && (get(month)[key]?.amount ?? 0) === 0;
+  };
+  // A column can only be dropped when it is retired for every month on screen.
+  const visibleItems = items.filter((it) => months.some((m) => !isRetired(m, it.key)));
   const match = (month: string, key: string): RentMatch | undefined => reconciled[month]?.[key];
   // What the bill actually cost: a matched transaction wins, then a hand-entered
   // paid amount, else the allocation.
@@ -209,6 +224,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   // One category row in a mobile card: paid/linked toggle on the left, then the
   // label, then the amount aligned right.
   const renderRow = (month: string, it: RentItemDef) => {
+    if (isRetired(month, it.key)) return null;
     const c = cell(month, it.key);
     const m = match(month, it.key);
     return (
@@ -259,7 +275,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Month</th>
-              {items.map((it: RentItemDef) => (
+              {visibleItems.map((it: RentItemDef) => (
                 <th key={it.key} className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
                   <span className={it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-600 dark:text-white"}>
                     {it.label}
@@ -286,9 +302,18 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                   <td className="px-6 py-2.5 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
                     {mo(month)}
                   </td>
-                  {items.map((it) => {
+                  {visibleItems.map((it) => {
                     const c = cell(month, it.key);
                     const m = match(month, it.key);
+                    // Keep the column aligned, but leave the cell blank for
+                    // months after this pot was settled.
+                    if (isRetired(month, it.key)) {
+                      return (
+                        <td key={it.key} className="px-3 py-2.5 text-center text-gray-300 dark:text-gray-700">
+                          —
+                        </td>
+                      );
+                    }
                     return (
                       <td key={it.key} className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-1.5">

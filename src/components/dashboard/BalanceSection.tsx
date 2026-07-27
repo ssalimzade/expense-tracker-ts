@@ -3,6 +3,7 @@ import { useBalance, useSaveBalance, useAccountBalances } from "../../hooks/useB
 import { useRent } from "../../hooks/useRent";
 import MoneyInput from "../MoneyInput";
 import { gbp, gbp0, formatMonthLabel, toMonthKey } from "../../lib/format";
+import { settlementsIn } from "../../lib/pots";
 import type { BalanceValues } from "../../api/balance";
 
 // Cards whose default value is the live account balance (updated daily).
@@ -223,11 +224,11 @@ export default function BalanceSection({ month }: { month: string }) {
     const labelOf: Record<string, string> = {};
     for (const it of data.items ?? []) labelOf[it.key] = it.label;
     let raw = 0;
-    const add = (key: string, allocated: number, paid: number) => {
+    const add = (key: string, allocated: number, paid: number, label?: string) => {
       const diff = allocated - paid;
       raw += diff;
       // Only surface bills that actually differ; exact matches add nothing.
-      if (Math.abs(diff) >= 0.005) parts.push({ label: labelOf[key] ?? key, allocated, paid, diff });
+      if (Math.abs(diff) >= 0.005) parts.push({ label: label ?? labelOf[key] ?? key, allocated, paid, diff });
     };
 
     for (const [rowMonth, matches] of Object.entries(reconciled)) {
@@ -245,6 +246,13 @@ export default function BalanceSection({ month }: { month: string }) {
       if (!item?.paid || reconciled[month]?.[key]) continue; // matched rows counted above
       const allocated = item.amount ?? 0;
       add(key, allocated, item.paid_amount ?? allocated);
+    }
+
+    // Settling a savings pot is the same shape: the balance that had built up is
+    // what was allocated, the bill is what was actually paid. A surplus stays in
+    // savings, a shortfall comes out of it.
+    for (const s of settlementsIn(data, month)) {
+      add(s.key, s.accrued, s.bill, `${s.label} (pot)`);
     }
 
     parts.sort((a, b) => a.label.localeCompare(b.label));

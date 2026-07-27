@@ -5,6 +5,8 @@ import { QueryState } from "../common";
 import type { RentData, RentLineItem, RentMatch } from "../../types/rent";
 import { gbp0 } from "../../lib/format";
 import RentTable from "./RentTable";
+import RentPots from "./RentPots";
+import { potViews, potsTotal } from "../../lib/pots";
 import { CostBreakdownChart, PaidProgressChart } from "./RentCharts";
 
 const blank: RentLineItem = { amount: 0, paid: false };
@@ -28,7 +30,6 @@ export default function RentTab({ onOpenTransactions }: Props) {
     <QueryState isLoading={query.isLoading} error={query.error}>
       {(() => {
         const data: RentData = query.data ?? { items: [], months: {} };
-        const savedKeys = new Set(data.items.filter((i) => i.saved).map((i) => i.key));
         const reconciled = data.reconciled ?? {};
 
         const allMonths = [...new Set([...Object.keys(data.months), ...Object.keys(reconciled)])];
@@ -44,16 +45,21 @@ export default function RentTab({ onOpenTransactions }: Props) {
         const ytdMonths = months.filter((m) => m <= currentMonth);
 
         let costYtd = 0;
-        let setAsideYtd = 0;
         let outstanding = 0; // unpaid amounts to date
         for (const m of ytdMonths) {
           for (const it of data.items) {
             const amount = matchedAmount(m, it.key);
             costYtd += amount;
-            if (savedKeys.has(it.key)) setAsideYtd += amount;
             if (!isPaid(m, it.key)) outstanding += amount;
           }
         }
+
+        // Set aside is a live balance, not a running total: it counts what is
+        // sitting in the pots right now, across all time, so a pot that has been
+        // settled into savings stops being counted.
+        const pots = potViews(data, currentMonth);
+        const setAside = potsTotal(pots);
+        const openPots = pots.filter((p) => !p.closed).length;
         const activeMonths = ytdMonths.filter((m) =>
           data.items.some((it) => matchedAmount(m, it.key) > 0)
         ).length || 1;
@@ -66,7 +72,7 @@ export default function RentTab({ onOpenTransactions }: Props) {
 
         const stats = [
           { label: "Cost YTD", short: "Cost YTD", value: gbp0(costYtd), sub: `${gbp0(costYtd / activeMonths)}/mo avg`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
-          { label: "Set Aside to Savings", short: "Set Aside", value: gbp0(setAsideYtd), sub: "year to date", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
+          { label: "In Savings Pots", short: "In Pots", value: gbp0(setAside), sub: openPots === 1 ? "1 open pot" : `${openPots} open pots`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
           { label: "Outstanding (to date)", short: "Outstanding", value: gbp0(outstanding), sub: outstanding > 0 ? "not yet paid" : "all settled", color: outstanding > 0 ? "text-red-600 dark:text-red-400" : "text-teal-600 dark:text-teal-400", bg: "bg-rose-50/60 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900" },
           { label: "Rent to Salary", short: "Rent/Salary", value: `${rentToSalary.toFixed(0)}%`, sub: "current month", color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
         ];
@@ -103,6 +109,8 @@ export default function RentTab({ onOpenTransactions }: Props) {
                 </div>
               ))}
             </div>
+
+            <RentPots data={data} upTo={currentMonth} />
 
             <div className="grid gap-4 lg:grid-cols-2">
               <CostBreakdownChart data={data} months={months} />

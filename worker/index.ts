@@ -12,6 +12,7 @@ import {
   upsertRemunerationRow,
   loadRentData,
   upsertRentMonth,
+  upsertRentPot,
   upsertNote,
   deleteNote,
   savePlanner,
@@ -248,6 +249,18 @@ app.post("/rent", async (c) => {
     };
   }
   return c.json(await upsertRentMonth(sqlOf(c), b.month, entry));
+});
+
+app.post("/rent/pot", async (c) => {
+  const b = await c.req.json();
+  const settlements = (Array.isArray(b.settlements) ? b.settlements : [])
+    .filter((s: any) => MONTH_RE.test(String(s?.month ?? "")))
+    .map((s: any) => ({
+      month: String(s.month),
+      bill: round2(Number(s.bill) || 0),
+      note: String(s.note ?? ""),
+    }));
+  return c.json(await upsertRentPot(sqlOf(c), String(b.key), settlements));
 });
 
 // ── Remuneration ────────────────────────────────────────────────────────────
