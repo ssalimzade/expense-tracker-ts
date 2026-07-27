@@ -16,8 +16,15 @@ export function useRemuneration() {
 export function useSaveRemunerationRow() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ row, originalPeriod }: { row: RemunerationRow; originalPeriod?: string }) =>
-      saveRemunerationRow(row, originalPeriod),
+    mutationFn: ({
+      row,
+      originalPeriod,
+      index,
+    }: {
+      row: RemunerationRow;
+      originalPeriod?: string;
+      index?: number;
+    }) => saveRemunerationRow(row, originalPeriod, index),
     meta: { success: "Remuneration saved", error: "Couldn't save remuneration" },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["remuneration"] }),
   });
@@ -27,7 +34,7 @@ export function useDeleteRemunerationRow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (period: string) => deleteRemunerationRow(period),
-    meta: { success: "Salary period removed", error: "Couldn't remove it" },
+    meta: { error: "Couldn't remove it" },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["remuneration"] }),
   });
 }

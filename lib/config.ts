@@ -85,11 +85,15 @@ export async function upsertRemunerationRow(
   sql: Sql,
   row: Dict,
   originalPeriod?: string,
+  index?: number,
 ): Promise<Dict[]> {
   let rows = await kvGet<Dict[]>(sql, "remuneration_data", []);
   const key = originalPeriod ?? row.period;
   const i = rows.findIndex((r) => r.period === key);
   if (i >= 0) rows[i] = row;
+  // Undoing a delete puts the period back where it was, so the order — and with
+  // it which row counts as current — is unchanged.
+  else if (index != null && index >= 0 && index <= rows.length) rows.splice(index, 0, row);
   else rows.push(row);
   rows = normalizeCurrent(rows);
   await kvSet(sql, "remuneration_data", rows);

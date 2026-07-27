@@ -3,6 +3,7 @@ import type { RemunerationRow, RemunerationDerived } from "../../types/remunerat
 import { resolvePay, isPinned } from "../../lib/remuneration";
 import { gbp0 } from "../../lib/format";
 import { commitOnEnter } from "../../lib/keys";
+import { toast } from "../../lib/toast";
 import { Card } from "../common";
 import MoneyInput from "../MoneyInput";
 
@@ -35,6 +36,15 @@ export default function RemunerationTable({ rows }: Props) {
     const auto = resolvePay({ ...row, [field]: null })[field];
     const pin = value !== 0 && Math.round(value) !== Math.round(auto);
     commit(row, { [field]: pin ? value : null });
+  };
+
+  /** Delete, offering the row straight back at the position it came from. */
+  const remove = (row: RemunerationRow) => {
+    const index = rows.findIndex((r) => r.period === row.period);
+    del.mutate(row.period, {
+      onSuccess: () =>
+        toast.undo(`Removed ${row.period}`, () => save.mutate({ row, index })),
+    });
   };
 
   const addUpdate = () => {
@@ -167,7 +177,7 @@ export default function RemunerationTable({ rows }: Props) {
                 </td>
                 <td className="px-3 py-2.5 text-center">
                   <button
-                    onClick={() => del.mutate(row.period)}
+                    onClick={() => remove(row)}
                     title="Remove this salary period"
                     className="rounded-lg px-2 py-1 text-xs font-medium text-red-400 opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
                   >
@@ -234,7 +244,7 @@ export default function RemunerationTable({ rows }: Props) {
             </div>
 
             <button
-              onClick={() => del.mutate(row.period)}
+              onClick={() => remove(row)}
               className="mt-2 text-xs font-medium text-red-400 hover:text-red-600"
             >
               Delete

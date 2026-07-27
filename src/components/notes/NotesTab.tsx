@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNotes, useSaveNote, useDeleteNote } from "../../hooks/useNotes";
+import { toast } from "../../lib/toast";
 import { QueryState } from "../common";
 import type { Note } from "../../types/note";
 import NoteCard from "./NoteCard";
@@ -37,8 +38,10 @@ export default function NotesTab() {
   }, [notes, search, typeFilter]);
 
   function handleDelete(note: Note) {
-    if (window.confirm(`Delete this note${note.title ? ` "${note.title}"` : ""}? This can't be undone.`)) {
-      deleteNote.mutate(note.id);
+    if (window.confirm(`Delete this note${note.title ? ` "${note.title}"` : ""}?`)) {
+      deleteNote.mutate(note.id, {
+        onSuccess: () => toast.undo("Note deleted", () => saveNote.mutate(note)),
+      });
     }
   }
 

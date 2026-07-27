@@ -283,7 +283,8 @@ app.post("/remuneration", async (c) => {
     net_pm: num(b.net_pm),
   };
   const original = b.original_period ? String(b.original_period) : undefined;
-  return c.json(await upsertRemunerationRow(sqlOf(c), row, original));
+  const index = Number.isInteger(b.index) ? Number(b.index) : undefined;
+  return c.json(await upsertRemunerationRow(sqlOf(c), row, original, index));
 });
 app.delete("/remuneration/:period", async (c) =>
   c.json(await deleteRemunerationRow(sqlOf(c), decodeURIComponent(c.req.param("period")))),

@@ -2,10 +2,16 @@ import { useSyncExternalStore } from "react";
 
 export type ToastType = "success" | "error";
 
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
 export interface Toast {
   id: number;
   type: ToastType;
   message: string;
+  action?: ToastAction;
 }
 
 // Module-level store so toasts can be fired from anywhere — including the
@@ -19,18 +25,32 @@ function remove(id: number) {
   listeners.forEach((l) => l());
 }
 
-function push(type: ToastType, message: string) {
+function push(type: ToastType, message: string, action?: ToastAction, ttl?: number) {
   const id = nextId++;
-  toasts = [...toasts, { id, type, message }];
+  toasts = [...toasts, { id, type, message, action }];
   listeners.forEach((l) => l());
   // Errors linger a little longer than confirmations.
-  const ttl = type === "error" ? 5000 : 2500;
-  setTimeout(() => remove(id), ttl);
+  setTimeout(() => remove(id), ttl ?? (type === "error" ? 5000 : 2500));
+  return id;
 }
 
 export const toast = {
   success: (message: string) => push("success", message),
   error: (message: string) => push("error", message),
+  /**
+   * A confirmation you can take back. Stays up longer than a plain toast, since
+   * it is only useful for as long as it is on screen.
+   */
+  undo: (message: string, run: () => void) => {
+    const id = push("success", message, {
+      label: "Undo",
+      run: () => {
+        remove(id);
+        run();
+      },
+    }, 8000);
+    return id;
+  },
   dismiss: remove,
 };
 
@@ -49,16 +69,25 @@ export function Toaster() {
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-md:bottom-20">
       {items.map((t) => (
-        <button
+        <div
           key={t.id}
-          onClick={() => toast.dismiss(t.id)}
           className={`pointer-events-auto flex max-w-xs items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-lg transition ${
             t.type === "success" ? "bg-emerald-600" : "bg-red-600"
           }`}
         >
-          <span>{t.type === "success" ? "✓" : "⚠"}</span>
-          <span className="text-left">{t.message}</span>
-        </button>
+          <button onClick={() => toast.dismiss(t.id)} className="flex flex-1 items-center gap-2 text-left">
+            <span>{t.type === "success" ? "✓" : "⚠"}</span>
+            <span>{t.message}</span>
+          </button>
+          {t.action && (
+            <button
+              onClick={t.action.run}
+              className="shrink-0 rounded-md bg-white/20 px-2 py-1 text-xs font-semibold uppercase tracking-wide transition-colors hover:bg-white/30"
+            >
+              {t.action.label}
+            </button>
+          )}
+        </div>
       ))}
     </div>
   );

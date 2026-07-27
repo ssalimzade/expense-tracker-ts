@@ -22,7 +22,7 @@ export function useDeleteNote() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteNote(id),
-    meta: { success: "Note deleted", error: "Couldn't delete note" },
+    meta: { error: "Couldn't delete note" },
     onSuccess: (notes) => qc.setQueryData(["notes"], notes),
   });
 }
