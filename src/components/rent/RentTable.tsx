@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useSaveRentMonth } from "../../hooks/useRent";
 import type { RentData, RentItemDef, RentLineItem, RentMonthEntry, RentMatch } from "../../types/rent";
 import { gbp0 } from "../../lib/format";
@@ -26,13 +28,16 @@ function PaidToggle({
   paid,
   auto,
   match,
+  hint = "",
   onToggle,
   onOpenMatch,
 }: {
   paid: boolean;
   auto: boolean;
   match?: RentMatch;
-  onToggle: () => void;
+  /** Appended to the title when paid — surfaces the allocation it's hiding. */
+  hint?: string;
+  onToggle: (anchor: DOMRect) => void;
   onOpenMatch?: (match: RentMatch) => void;
 }) {
   if (auto && match) {
@@ -52,8 +57,8 @@ function PaidToggle({
   return (
     <button
       type="button"
-      onClick={onToggle}
-      title={paid ? "Paid — click to mark unpaid" : "Unpaid — click to mark paid"}
+      onClick={(e) => onToggle(e.currentTarget.getBoundingClientRect())}
+      title={paid ? `Paid${hint} — click to mark unpaid` : "Unpaid — click to mark paid"}
       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
         paid
           ? "border-emerald-500 bg-emerald-500 text-white"
@@ -64,6 +69,62 @@ function PaidToggle({
         <path d="M2.5 6.2 4.7 8.5 9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
+  );
+}
+
+/**
+ * Asks what actually left the account when a bill is ticked by hand, pre-filled
+ * with the allocation so the common "paid what I budgeted" case is one Enter.
+ * Portalled with fixed positioning so the table's scroll container can't clip
+ * it. Enter or clicking away commits; Escape leaves the bill unticked.
+ */
+function PaidPrompt({
+  anchor,
+  label,
+  allocated,
+  onConfirm,
+  onCancel,
+}: {
+  anchor: DOMRect;
+  label: string;
+  allocated: number;
+  onConfirm: (paid: number) => void;
+  onCancel: () => void;
+}) {
+  const [raw, setRaw] = useState(String(Math.round(allocated)));
+  const commit = () => onConfirm(parseFloat(raw.replace(/[^0-9.-]/g, "")) || 0);
+
+  const WIDTH = 176;
+  const top = Math.min(anchor.bottom + 6, window.innerHeight - 120);
+  const left = Math.min(Math.max(8, anchor.left - 8), window.innerWidth - WIDTH - 8);
+
+  return createPortal(
+    <>
+      {/* Clicking away is a commit, matching the commit-on-blur money inputs. */}
+      <span className="fixed inset-0 z-[9998]" onClick={commit} />
+      <div
+        style={{ position: "fixed", top, left, width: WIDTH }}
+        className="z-[9999] rounded-xl border border-gray-200 bg-white p-3 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+      >
+        <p className="mb-1.5 truncate text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+          {label} — paid
+        </p>
+        <input
+          autoFocus
+          inputMode="decimal"
+          value={raw}
+          onChange={(e) => setRaw(e.target.value)}
+          onFocus={(e) => e.currentTarget.select()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") onCancel();
+          }}
+          className="w-full rounded-lg border border-gray-200 bg-transparent px-2 py-1.5 text-center text-sm tabular-nums focus:border-indigo-400 focus:outline-none dark:border-gray-600"
+        />
+        <p className="mt-1.5 text-[10px] text-gray-400">Allocated {gbp0(allocated)}</p>
+      </div>
+    </>,
+    document.body,
   );
 }
 
@@ -89,18 +150,15 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   };
   // Effective paid = manually ticked OR a matching transaction exists.
   const isPaid = (month: string, key: string) => cell(month, key).paid || !!match(month, key);
-  // Ticked by hand with no matching transaction — the only case where we need to
-  // ask what was really paid.
-  const needsPaidAmount = (month: string, key: string) =>
+  // Ticked by hand with no matching transaction — here the cell's number is what
+  // was paid, so edits land on `paid_amount` rather than the allocation.
+  const isManualPaid = (month: string, key: string) =>
     cell(month, key).paid && !match(month, key);
-  // A paid figure deliberately set to something other than the allocation. Only
-  // these are worth showing at rest; the rest would just repeat the amount, so
-  // they stay hidden until the cell is focused.
-  const hasPaidOverride = (month: string, key: string) => cell(month, key).paid_amount != null;
-  // Named group: the desktop <tr> is itself a `group`, so an unnamed variant
-  // would reveal every cell's paid row whenever any cell took focus.
-  const paidRowClass = (month: string, key: string) =>
-    hasPaidOverride(month, key) ? "flex" : "hidden group-focus-within/cell:flex";
+  // Reminds you of the allocation the cell is currently hiding.
+  const paidHint = (month: string, key: string) => {
+    const c = cell(month, key);
+    return c.paid_amount != null ? ` ${gbp0(c.paid_amount)} of ${gbp0(c.amount)} allocated` : "";
+  };
 
   const update = (month: string, key: string, patch: Partial<RentLineItem>) => {
     const entry: RentMonthEntry = {};
@@ -115,9 +173,27 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   // `amount` if the allocation is edited later.
   const savePaidAmount = (month: string, key: string, n: number) =>
     update(month, key, { paid_amount: n === cell(month, key).amount ? null : n });
-  // Unticking drops the hand-entered figure so it can't linger as a stale diff.
-  const togglePaid = (month: string, key: string) =>
-    update(month, key, cell(month, key).paid ? { paid: false, paid_amount: null } : { paid: true });
+
+  // Ticking asks what actually left the account; unticking drops that figure so
+  // it can't linger as a stale diff.
+  const [prompt, setPrompt] = useState<
+    { month: string; key: string; label: string; allocated: number; anchor: DOMRect } | null
+  >(null);
+
+  const onTogglePaid = (month: string, it: RentItemDef, anchor: DOMRect) => {
+    const c = cell(month, it.key);
+    if (c.paid) return update(month, it.key, { paid: false, paid_amount: null });
+    setPrompt({ month, key: it.key, label: it.label, allocated: c.amount, anchor });
+  };
+
+  const confirmPrompt = (paid: number) => {
+    if (!prompt) return;
+    update(prompt.month, prompt.key, {
+      paid: true,
+      paid_amount: paid === prompt.allocated ? null : paid,
+    });
+    setPrompt(null);
+  };
 
   const monthTotal = (month: string) => items.reduce((s, it) => s + effectiveAmount(month, it.key), 0);
   const monthPaid = (month: string) =>
@@ -136,27 +212,26 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
     const c = cell(month, it.key);
     const m = match(month, it.key);
     return (
-      <div key={it.key} className="group/cell">
-        <div className="flex items-center gap-1.5">
-          <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => togglePaid(month, it.key)} onOpenMatch={onOpenMatch} />
-          <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
-          <MoneyInput
-            value={m?.amount ?? c.amount}
-            onCommit={(n) => update(month, it.key, { amount: n })}
-            color={it.saved ? "#d97706" : undefined}
-            className="!w-14 !px-1 !text-right"
-          />
-        </div>
-        {needsPaidAmount(month, it.key) && (
-          <div className={`${paidRowClass(month, it.key)} items-center justify-end gap-1 pr-1`}>
-            <span className="text-[9px] uppercase tracking-wider text-gray-400/70">paid</span>
-            <MoneyInput
-              value={c.paid_amount ?? c.amount}
-              onCommit={(n) => savePaidAmount(month, it.key, n)}
-              className="!w-11 !px-0 !py-0 !text-[11px] !text-right !text-gray-500 dark:!text-gray-400"
-            />
-          </div>
-        )}
+      <div key={it.key} className="flex items-center gap-1.5">
+        <PaidToggle
+          paid={c.paid}
+          auto={!!m}
+          match={m}
+          hint={paidHint(month, it.key)}
+          onToggle={(anchor) => onTogglePaid(month, it, anchor)}
+          onOpenMatch={onOpenMatch}
+        />
+        <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
+        <MoneyInput
+          value={effectiveAmount(month, it.key)}
+          onCommit={(n) =>
+            isManualPaid(month, it.key)
+              ? savePaidAmount(month, it.key, n)
+              : update(month, it.key, { amount: n })
+          }
+          color={it.saved ? "#d97706" : undefined}
+          className="!w-14 !px-1 !text-right"
+        />
       </div>
     );
   };
@@ -215,31 +290,26 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                     const c = cell(month, it.key);
                     const m = match(month, it.key);
                     return (
-                      <td key={it.key} className="group/cell px-3 py-2.5">
+                      <td key={it.key} className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-1.5">
                           <MoneyInput
-                            value={m?.amount ?? c.amount}
-                            onCommit={(n) => update(month, it.key, { amount: n })}
+                            value={effectiveAmount(month, it.key)}
+                            onCommit={(n) =>
+                              isManualPaid(month, it.key)
+                                ? savePaidAmount(month, it.key, n)
+                                : update(month, it.key, { amount: n })
+                            }
                             color={it.saved ? "#d97706" : undefined}
                           />
                           <PaidToggle
                             paid={c.paid}
                             auto={!!m}
                             match={m}
-                            onToggle={() => togglePaid(month, it.key)}
+                            hint={paidHint(month, it.key)}
+                            onToggle={(anchor) => onTogglePaid(month, it, anchor)}
                             onOpenMatch={onOpenMatch}
                           />
                         </div>
-                        {needsPaidAmount(month, it.key) && (
-                          <div className={`${paidRowClass(month, it.key)} mt-0.5 items-center justify-center gap-1 pr-6`}>
-                            <span className="text-[9px] uppercase tracking-wider text-gray-400/70">paid</span>
-                            <MoneyInput
-                              value={c.paid_amount ?? c.amount}
-                              onCommit={(n) => savePaidAmount(month, it.key, n)}
-                              className="!w-11 !px-0 !py-0 !text-[11px] !text-gray-500 dark:!text-gray-400"
-                            />
-                          </div>
-                        )}
                       </td>
                     );
                   })}
@@ -286,6 +356,16 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
           );
         })}
       </ul>
+
+      {prompt && (
+        <PaidPrompt
+          anchor={prompt.anchor}
+          label={prompt.label}
+          allocated={prompt.allocated}
+          onConfirm={confirmPrompt}
+          onCancel={() => setPrompt(null)}
+        />
+      )}
     </Card>
   );
 }
