@@ -1,7 +1,8 @@
 import type { RentData, RentPotSettlement } from "../types/rent";
 
 /**
- * Savings pots for the quarterly bills (the `saved` rent items).
+ * Bills pots: the money set aside each month for the quarterly bills (the
+ * `saved` rent items). It lives in the savings account, but it is earmarked.
  *
  * Money enters a pot when a month's allocation is actually moved across — i.e.
  * the row is ticked or matched, not merely budgeted. Money leaves when the bill

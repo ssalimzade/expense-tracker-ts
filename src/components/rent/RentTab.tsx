@@ -73,7 +73,7 @@ export default function RentTab({ onOpenTransactions }: Props) {
 
         const stats = [
           { label: "Cost YTD", short: "Cost YTD", value: gbp0(costYtd), sub: `${gbp0(costYtd / activeMonths)}/mo avg`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
-          { label: "In Savings Pots", short: "In Pots", value: gbp0(setAside), sub: openPots === 1 ? "1 open pot" : `${openPots} open pots`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
+          { label: "In Bills Pots", short: "In Pots", value: gbp0(setAside), sub: openPots === 1 ? "1 open pot" : `${openPots} open pots`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
           { label: "Outstanding (to date)", short: "Outstanding", value: gbp0(outstanding), sub: outstanding > 0 ? "not yet paid" : "all settled", color: outstanding > 0 ? "text-red-600 dark:text-red-400" : "text-teal-600 dark:text-teal-400", bg: "bg-rose-50/60 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900" },
           { label: "Rent to Salary", short: "Rent/Salary", value: `${rentToSalary.toFixed(0)}%`, sub: "current month", color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
         ];

@@ -248,7 +248,7 @@ export default function BalanceSection({ month }: { month: string }) {
       add(key, allocated, item.paid_amount ?? allocated);
     }
 
-    // Settling a savings pot is the same shape: the balance that had built up is
+    // Settling a bills pot is the same shape: the balance that had built up is
     // what was allocated, the bill is what was actually paid. A surplus stays in
     // savings, a shortfall comes out of it.
     for (const s of settlementsIn(data, month)) {

@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * The savings pots behind the quarterly bills. Each month's allocation goes in;
+ * The pots that fund the quarterly bills. Each month's allocation goes in;
  * settling a pot records what the bill actually came to and empties it, leaving
  * the surplus (or shortfall) to show up in Diff in bills.
  */
@@ -40,7 +40,7 @@ export default function RentPots({ data, upTo }: Props) {
     <Card className="p-0 overflow-hidden max-md:!p-0">
       <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Savings Pots
+          Bills Pots
         </h2>
         <p className="mt-1 text-xs text-gray-400">
           Monthly set-aside builds up here. Settle a pot when its bill lands — what's left over
