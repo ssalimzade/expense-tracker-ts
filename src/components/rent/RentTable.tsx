@@ -16,10 +16,11 @@ const currentMonth = (() => {
 
 const blank: RentLineItem = { amount: 0, paid: false };
 
-// Mobile-card column split: the housing bills on the left, the water group on
-// the right (matching how the user thinks about them).
-const LEFT_KEYS = ["flat", "council_tax", "energy", "wifi"];
-const RIGHT_KEYS = ["water", "water_savings", "hot_water"];
+// Reading order for the mobile card: the housing bills, then the water group
+// (matching how the user thinks about them). The two columns are filled from
+// this order by count rather than from fixed lists, so they stay even as items
+// retire — with the full set that still lands on the original 4/3 split.
+const CARD_ORDER = ["flat", "council_tax", "energy", "wifi", "water", "water_savings", "hot_water"];
 
 /**
  * Marks a line item paid / unpaid. When a real transaction was matched the item
@@ -214,12 +215,23 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   const monthPaid = (month: string) =>
     items.reduce((s, it) => s + (isPaid(month, it.key) ? effectiveAmount(month, it.key) : 0), 0);
 
-  // Ordered item lists for the mobile card's two columns.
-  const orderItems = (keys: string[]) =>
-    keys.map((k) => items.find((i) => i.key === k)).filter(Boolean) as RentItemDef[];
-  const knownKeys = new Set([...LEFT_KEYS, ...RIGHT_KEYS]);
-  const leftItems = orderItems(LEFT_KEYS);
-  const rightItems = [...orderItems(RIGHT_KEYS), ...items.filter((i) => !knownKeys.has(i.key))];
+  // Items in reading order, with anything unrecognised kept at the end.
+  const rank = (key: string) => {
+    const i = CARD_ORDER.indexOf(key);
+    return i === -1 ? CARD_ORDER.length : i;
+  };
+  const orderedItems = [...items].sort((a, b) => rank(a.key) - rank(b.key));
+
+  /**
+   * Split a month's live items across the card's two columns. Balancing by
+   * count keeps the columns even however many items a month actually has, so a
+   * retired pot doesn't leave one side short.
+   */
+  const cardColumns = (month: string) => {
+    const visible = orderedItems.filter((it) => !isRetired(month, it.key));
+    const split = Math.ceil(visible.length / 2);
+    return [visible.slice(0, split), visible.slice(split)];
+  };
 
   // One category row in a mobile card: paid/linked toggle on the left, then the
   // label, then the amount aligned right.
@@ -374,8 +386,11 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                 </span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                <div className="space-y-1">{leftItems.map((it) => renderRow(month, it))}</div>
-                <div className="space-y-1">{rightItems.map((it) => renderRow(month, it))}</div>
+                {cardColumns(month).map((column, i) => (
+                  <div key={i} className="space-y-1">
+                    {column.map((it) => renderRow(month, it))}
+                  </div>
+                ))}
               </div>
             </li>
           );
