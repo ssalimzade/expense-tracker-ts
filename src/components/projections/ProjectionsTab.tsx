@@ -10,6 +10,7 @@ import { deriveView } from "../../types/projections";
 import type { ProjectionRow, ProjectionView, ProjectionInput, AllocationField } from "../../types/projections";
 import type { SavingsRow } from "../../types/savings";
 import { gbp0 } from "../../lib/format";
+import { currentNetMonthly } from "../../lib/remuneration";
 import ProjectionsTable from "./ProjectionsTable";
 import { AllocationChart, SalaryVsCostChart } from "./ProjectionsCharts";
 
@@ -51,7 +52,7 @@ export default function ProjectionsTab() {
         const planner = plannerQuery.data ?? {};
 
         // Current monthly salary from the Salary tab (linked, but editable per month).
-        const currentNetPm = (remuneration.find((r) => r.current) ?? remuneration[remuneration.length - 1])?.net_pm ?? 0;
+        const currentNetPm = currentNetMonthly(remuneration);
 
         const projByMonth = new Map(projections.map((p) => [p.month, p]));
         const savByMonth = new Map(savings.map((s) => [s.start_date.slice(0, 7), s]));

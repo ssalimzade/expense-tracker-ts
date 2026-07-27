@@ -4,6 +4,7 @@ import { useRemuneration } from "../../hooks/useRemuneration";
 import { QueryState } from "../common";
 import type { RentData, RentLineItem, RentMatch } from "../../types/rent";
 import { gbp0 } from "../../lib/format";
+import { currentNetMonthly } from "../../lib/remuneration";
 import RentTable from "./RentTable";
 import RentPots from "./RentPots";
 import { potViews, potsTotal } from "../../lib/pots";
@@ -66,7 +67,7 @@ export default function RentTab({ onOpenTransactions }: Props) {
 
         // Rent-to-salary % for the current month (rent total / current net monthly).
         const remuneration = remQuery.data ?? [];
-        const netPm = (remuneration.find((r) => r.current) ?? remuneration[remuneration.length - 1])?.net_pm ?? 0;
+        const netPm = currentNetMonthly(remuneration);
         const currentRentTotal = data.items.reduce((s, it) => s + matchedAmount(currentMonth, it.key), 0);
         const rentToSalary = netPm > 0 ? (currentRentTotal / netPm) * 100 : 0;
 

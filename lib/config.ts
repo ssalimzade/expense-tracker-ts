@@ -68,13 +68,42 @@ export async function upsertProjectionRow(sql: Sql, row: Dict): Promise<Dict[]> 
 }
 
 // ── remuneration (keyed by period) ──────────────────────────────────────────
-export async function upsertRemunerationRow(sql: Sql, row: Dict): Promise<Dict[]> {
-  const rows = await kvGet<Dict[]>(sql, "remuneration_data", []);
-  const i = rows.findIndex((r) => r.period === row.period);
+
+/** Exactly one row carries the "current" flag; default it to the newest. */
+function normalizeCurrent(rows: Dict[], preferred?: number): Dict[] {
+  if (rows.length === 0) return rows;
+  let winner = preferred != null && rows[preferred] ? preferred : rows.findIndex((r) => r.current);
+  if (winner < 0) winner = rows.length - 1; // newest row is last
+  return rows.map((r, i) => ({ ...r, current: i === winner }));
+}
+
+/**
+ * Upsert one salary period. `originalPeriod` lets a row be renamed in place —
+ * the period doubles as the key, so without it a rename would fork a new row.
+ */
+export async function upsertRemunerationRow(
+  sql: Sql,
+  row: Dict,
+  originalPeriod?: string,
+): Promise<Dict[]> {
+  let rows = await kvGet<Dict[]>(sql, "remuneration_data", []);
+  const key = originalPeriod ?? row.period;
+  const i = rows.findIndex((r) => r.period === key);
   if (i >= 0) rows[i] = row;
   else rows.push(row);
+  rows = normalizeCurrent(rows, row.current ? (i >= 0 ? i : rows.length - 1) : undefined);
   await kvSet(sql, "remuneration_data", rows);
   return rows;
+}
+
+/** Drop a salary period, handing "current" to the newest survivor if needed. */
+export async function deleteRemunerationRow(sql: Sql, period: string): Promise<Dict[]> {
+  const rows = (await kvGet<Dict[]>(sql, "remuneration_data", [])).filter(
+    (r) => r.period !== period,
+  );
+  const next = normalizeCurrent(rows);
+  await kvSet(sql, "remuneration_data", next);
+  return next;
 }
 
 // ── rent ────────────────────────────────────────────────────────────────────

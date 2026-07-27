@@ -1,6 +1,7 @@
 import { useRemuneration } from "../../hooks/useRemuneration";
 import { QueryState } from "../common";
 import { gbp0 } from "../../lib/format";
+import { resolvePay } from "../../lib/remuneration";
 import RemunerationTable from "./RemunerationTable";
 import { PayGrowthChart } from "./RemunerationCharts";
 import TakeHomeCalculator from "./TakeHomeCalculator";
@@ -14,16 +15,20 @@ export default function RemunerationTab() {
         const rows = query.data ?? [];
         const current = rows.find((r) => r.current) ?? rows[rows.length - 1];
         const first = rows[0];
+        const currentPay = current ? resolvePay(current) : null;
+        const firstPay = first ? resolvePay(first) : null;
 
         const totalGrowthPct =
-          first && current && first.net_pm ? (current.net_pm - first.net_pm) / first.net_pm : 0;
+          firstPay && currentPay && firstPay.net_pm
+            ? (currentPay.net_pm - firstPay.net_pm) / firstPay.net_pm
+            : 0;
 
         const stats = current
           ? [
-              { label: "Current Net p.m", short: "Net p.m", value: gbp0(current.net_pm), sub: current.period, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
+              { label: "Current Net p.m", short: "Net p.m", value: gbp0(currentPay!.net_pm), sub: current.period, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
               { label: "Gross + Bonus", short: "Gross+Bonus", value: gbp0(current.gross + current.bonus), sub: `${gbp0(current.gross)} base`, color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
-              { label: "Net p.a", short: "Net p.a", value: gbp0(current.net_pa), sub: "after tax, NI & pension", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900" },
-              { label: "Growth since start", short: "Growth", value: `+${(totalGrowthPct * 100).toFixed(0)}%`, sub: first ? `from ${gbp0(first.net_pm)}/mo` : "", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
+              { label: "Net p.a", short: "Net p.a", value: gbp0(currentPay!.net_pa), sub: "after tax, NI & pension", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900" },
+              { label: "Growth since start", short: "Growth", value: `+${(totalGrowthPct * 100).toFixed(0)}%`, sub: firstPay ? `from ${gbp0(firstPay.net_pm)}/mo` : "", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
             ]
           : [];
 
@@ -50,7 +55,7 @@ export default function RemunerationTab() {
               </div>
               <TakeHomeCalculator
                 defaultAnnual={current?.gross ?? 71500}
-                currentNetMonthly={current?.net_pm}
+                currentNetMonthly={currentPay?.net_pm}
               />
             </div>
 

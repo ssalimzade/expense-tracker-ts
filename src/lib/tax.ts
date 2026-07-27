@@ -17,6 +17,8 @@ export interface TakeHomeInput {
   increasePct: number; // e.g. 0.16 for +16%
   vitality: boolean;
   pension: boolean;
+  /** Contribution rate, when a salary uses something other than the usual 4%. */
+  pensionRate?: number;
 }
 
 export interface TakeHome {
@@ -42,9 +44,9 @@ function nationalInsurance(earnings: number): number {
   return band8 + band2;
 }
 
-export function takeHome({ annual, increasePct, vitality, pension }: TakeHomeInput): TakeHome {
+export function takeHome({ annual, increasePct, vitality, pension, pensionRate }: TakeHomeInput): TakeHome {
   const gross = annual * (1 + increasePct);
-  const pensionAmt = pension ? gross * PENSION_RATE : 0;
+  const pensionAmt = pension ? gross * (pensionRate ?? PENSION_RATE) : 0;
   const totalEarnings = gross - pensionAmt;
   const medTaxable = vitality ? VITALITY_RATE * totalEarnings : 0;
   const paye = payeTax(totalEarnings + medTaxable);

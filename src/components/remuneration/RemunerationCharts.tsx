@@ -3,6 +3,7 @@ import {
   ResponsiveContainer, Legend,
 } from "recharts";
 import type { RemunerationRow } from "../../types/remuneration";
+import { resolvePay } from "../../lib/remuneration";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { Card } from "../common";
@@ -19,7 +20,7 @@ export function PayGrowthChart({ rows }: { rows: RemunerationRow[] }) {
   const isMobile = useIsMobile();
   const data = rows.map((r) => ({
     period: shortLabel(r.period),
-    "Net p.m": Math.round(r.net_pm),
+    "Net p.m": Math.round(resolvePay(r).net_pm),
     "Gross p.a": r.gross,
   }));
 

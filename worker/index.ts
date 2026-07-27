@@ -10,6 +10,7 @@ import {
   upsertSavingsRow,
   upsertProjectionRow,
   upsertRemunerationRow,
+  deleteRemunerationRow,
   loadRentData,
   upsertRentMonth,
   upsertRentPot,
@@ -267,19 +268,26 @@ app.post("/rent/pot", async (c) => {
 app.get("/remuneration", async (c) => c.json(await kvGet(sqlOf(c), "remuneration_data", [])));
 app.post("/remuneration", async (c) => {
   const b = await c.req.json();
+  // Null on a derived field means "use the calculated value" — kept distinct
+  // from a real 0, so these can't be defaulted away.
+  const num = (v: any) => (v == null || v === "" ? null : Number(v));
   const row = {
-    period: b.period,
+    period: String(b.period ?? "").trim() || "Untitled",
     gross: b.gross ?? 0,
-    deductions: b.deductions ?? 0,
-    pension: b.pension ?? 0,
-    pension_pct: b.pension_pct ?? 0,
-    net_pa: b.net_pa ?? 0,
-    net_pm: b.net_pm ?? 0,
     bonus: b.bonus ?? 0,
+    pension_pct: b.pension_pct ?? 0,
     current: b.current ?? false,
+    deductions: num(b.deductions),
+    pension: num(b.pension),
+    net_pa: num(b.net_pa),
+    net_pm: num(b.net_pm),
   };
-  return c.json(await upsertRemunerationRow(sqlOf(c), row));
+  const original = b.original_period ? String(b.original_period) : undefined;
+  return c.json(await upsertRemunerationRow(sqlOf(c), row, original));
 });
+app.delete("/remuneration/:period", async (c) =>
+  c.json(await deleteRemunerationRow(sqlOf(c), decodeURIComponent(c.req.param("period")))),
+);
 
 // ── Archive ─────────────────────────────────────────────────────────────────
 app.get("/archive", async (c) => {
