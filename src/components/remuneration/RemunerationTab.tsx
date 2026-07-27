@@ -1,7 +1,7 @@
 import { useRemuneration } from "../../hooks/useRemuneration";
 import { QueryState } from "../common";
 import { gbp0 } from "../../lib/format";
-import { resolvePay } from "../../lib/remuneration";
+import { resolvePay, currentRow } from "../../lib/remuneration";
 import RemunerationTable from "./RemunerationTable";
 import { PayGrowthChart } from "./RemunerationCharts";
 import TakeHomeCalculator from "./TakeHomeCalculator";
@@ -13,7 +13,7 @@ export default function RemunerationTab() {
     <QueryState isLoading={query.isLoading} error={query.error}>
       {(() => {
         const rows = query.data ?? [];
-        const current = rows.find((r) => r.current) ?? rows[rows.length - 1];
+        const current = currentRow(rows);
         const first = rows[0];
         const currentPay = current ? resolvePay(current) : null;
         const firstPay = first ? resolvePay(first) : null;

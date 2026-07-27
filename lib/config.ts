@@ -69,12 +69,12 @@ export async function upsertProjectionRow(sql: Sql, row: Dict): Promise<Dict[]> 
 
 // ── remuneration (keyed by period) ──────────────────────────────────────────
 
-/** Exactly one row carries the "current" flag; default it to the newest. */
-function normalizeCurrent(rows: Dict[], preferred?: number): Dict[] {
-  if (rows.length === 0) return rows;
-  let winner = preferred != null && rows[preferred] ? preferred : rows.findIndex((r) => r.current);
-  if (winner < 0) winner = rows.length - 1; // newest row is last
-  return rows.map((r, i) => ({ ...r, current: i === winner }));
+/**
+ * The newest salary is the one you're on, so "current" is positional rather
+ * than a flag that can drift out of step with the list.
+ */
+function normalizeCurrent(rows: Dict[]): Dict[] {
+  return rows.map((r, i) => ({ ...r, current: i === rows.length - 1 }));
 }
 
 /**
@@ -91,7 +91,7 @@ export async function upsertRemunerationRow(
   const i = rows.findIndex((r) => r.period === key);
   if (i >= 0) rows[i] = row;
   else rows.push(row);
-  rows = normalizeCurrent(rows, row.current ? (i >= 0 ? i : rows.length - 1) : undefined);
+  rows = normalizeCurrent(rows);
   await kvSet(sql, "remuneration_data", rows);
   return rows;
 }

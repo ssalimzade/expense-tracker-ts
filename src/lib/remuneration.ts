@@ -33,21 +33,34 @@ export function calcPay(row: Pick<RemunerationRow, "gross" | "pension_pct">): De
   return { pension, deductions, net_pa, net_pm: r.netMonthly };
 }
 
+/**
+ * A pinned figure, or null when the field should be calculated. Zero counts as
+ * unset: none of these is ever legitimately 0 on a real salary, and treating it
+ * that way means a field left at 0 recovers itself instead of being stuck —
+ * clearing an input that already reads £0 fires no change event.
+ */
+const pinnedValue = (v: number | null | undefined) => (v != null && v !== 0 ? v : null);
+
 /** The figures a row actually shows: calculated, with any overrides applied. */
 export function resolvePay(row: RemunerationRow): DerivedPay {
   const auto = calcPay(row);
   return {
-    pension: row.pension ?? auto.pension,
-    deductions: row.deductions ?? auto.deductions,
-    net_pa: row.net_pa ?? auto.net_pa,
-    net_pm: row.net_pm ?? auto.net_pm,
+    pension: pinnedValue(row.pension) ?? auto.pension,
+    deductions: pinnedValue(row.deductions) ?? auto.deductions,
+    net_pa: pinnedValue(row.net_pa) ?? auto.net_pa,
+    net_pm: pinnedValue(row.net_pm) ?? auto.net_pm,
   };
 }
 
-export const isPinned = (row: RemunerationRow, field: RemunerationDerived) => row[field] != null;
+export const isPinned = (row: RemunerationRow, field: RemunerationDerived) =>
+  pinnedValue(row[field]) != null;
 
-/** Net monthly for whichever row is current, falling back to the newest. */
+/** The salary you're on now — always the newest row. */
+export const currentRow = (rows: RemunerationRow[]): RemunerationRow | undefined =>
+  rows[rows.length - 1];
+
+/** Net monthly for the current salary. */
 export function currentNetMonthly(rows: RemunerationRow[]): number {
-  const row = rows.find((r) => r.current) ?? rows[rows.length - 1];
+  const row = currentRow(rows);
   return row ? resolvePay(row).net_pm : 0;
 }

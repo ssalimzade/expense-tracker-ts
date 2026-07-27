@@ -26,13 +26,15 @@ export default function RemunerationTable({ rows }: Props) {
   };
 
   /**
-   * Derived fields double as overrides. Committing the calculated value back
-   * clears the pin, so retyping what it already says is the way to undo — the
-   * same gesture the rent and dashboard cards use.
+   * Derived fields double as overrides. Clearing the field — or retyping the
+   * calculated figure — hands it back to the calculation; anything else pins it.
+   * None of these is ever legitimately zero on a real salary, so an empty field
+   * reads as "recalculate", matching how diff in bills behaves.
    */
   const commitDerived = (row: RemunerationRow, field: RemunerationDerived, value: number) => {
-    const auto = resolvePay({ ...row, [field]: null });
-    commit(row, { [field]: Math.round(value) === Math.round(auto[field]) ? null : value });
+    const auto = resolvePay({ ...row, [field]: null })[field];
+    const pin = value !== 0 && Math.round(value) !== Math.round(auto);
+    commit(row, { [field]: pin ? value : null });
   };
 
   const addUpdate = () => {
@@ -65,6 +67,7 @@ export default function RemunerationTable({ rows }: Props) {
       return {
         row,
         pay,
+        isCurrent: i === rows.length - 1, // newest row is always the current one
         hasPrev: !!prev,
         deltaAbs: prev ? pay.net_pm - prevPm : 0,
         deltaPct: prev && prevPm ? (pay.net_pm - prevPm) / prevPm : 0,
@@ -112,11 +115,11 @@ export default function RemunerationTable({ rows }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-            {displayRows.map(({ row, pay, hasPrev, deltaAbs, deltaPct }, i) => (
+            {displayRows.map(({ row, pay, isCurrent, hasPrev, deltaAbs, deltaPct }, i) => (
               <tr
                 key={`${row.period}-${i}`}
                 className={`group hover:bg-gray-50 dark:hover:bg-gray-800/40 ${
-                  row.current ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""
+                  isCurrent ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""
                 }`}
               >
                 <td className="px-6 py-2.5 whitespace-nowrap">
@@ -127,7 +130,7 @@ export default function RemunerationTable({ rows }: Props) {
                       onKeyDown={commitOnEnter(row.period)}
                       className="w-44 rounded-lg border border-transparent bg-transparent px-2 py-1 font-semibold text-gray-700 focus:border-gray-200 focus:outline-none dark:text-gray-300 dark:focus:border-gray-700"
                     />
-                    {row.current && (
+                    {isCurrent && (
                       <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
                         Current
                       </span>
@@ -147,7 +150,6 @@ export default function RemunerationTable({ rows }: Props) {
                       onCommit={(n) => commitDerived(row, field, n)}
                       pound
                       allowNegative
-                      className={isPinned(row, field) ? "!font-semibold !text-gray-900 dark:!text-white" : ""}
                     />
                   </td>
                 ))}
@@ -180,8 +182,8 @@ export default function RemunerationTable({ rows }: Props) {
 
       {/* Mobile cards — most recent first */}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
-        {displayRows.map(({ row, pay, hasPrev, deltaAbs }, i) => (
-          <li key={`${row.period}-${i}`} className={`px-4 py-3 ${row.current ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""}`}>
+        {displayRows.map(({ row, pay, isCurrent, hasPrev, deltaAbs }, i) => (
+          <li key={`${row.period}-${i}`} className={`px-4 py-3 ${isCurrent ? "bg-emerald-50/40 dark:bg-emerald-950/20" : ""}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
                 <input
@@ -190,7 +192,7 @@ export default function RemunerationTable({ rows }: Props) {
                   onKeyDown={commitOnEnter(row.period)}
                   className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1 py-0.5 font-semibold text-gray-700 focus:border-gray-300 focus:outline-none dark:text-gray-300 dark:focus:border-gray-700"
                 />
-                {row.current && (
+                {isCurrent && (
                   <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
                     Current
                   </span>
@@ -225,7 +227,7 @@ export default function RemunerationTable({ rows }: Props) {
                     onCommit={(n) => commitDerived(row, field, n)}
                     pound
                     allowNegative
-                    className={`!w-20 !px-1 !text-right ${isPinned(row, field) ? "!font-semibold !text-gray-900 dark:!text-white" : ""}`}
+                    className="!w-20 !px-1 !text-right"
                   />
                 </div>
               ))}
