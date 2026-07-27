@@ -9,6 +9,7 @@ import {
 import {
   loadRules,
   getFlagsForMonth,
+  loadAllFlags,
   loadRepaymentFlags,
   loadDeletedRepayments,
 } from "./config";
@@ -220,6 +221,8 @@ const RECONCILE_COLS =
 
 export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
   const rules = (await loadRules(sql)) as Rules;
+  // Per-transaction categories the user set by hand, keyed month -> flag id.
+  const allFlags = await loadAllFlags(sql);
   const out: Row = {};
   for (const t of ALL_TABLES) {
     const rows = await sql.query(
@@ -231,9 +234,22 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
       // Rent bills are money going out, so only negative rows can settle one. A
       // positive amount is a refund or credit and must never auto-link.
       if (!Number.isFinite(rawAmount) || rawAmount >= 0) continue;
-      const sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
-      const mapping = SUBCAT_TO_RENT_ITEM[sub];
+      let sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
+      let mapping = SUBCAT_TO_RENT_ITEM[sub];
       if (!mapping) continue;
+
+      // flag_id matches the id serializeTransactions computes, so the UI can
+      // jump straight to this exact bank row.
+      const flag_id = await makeTransactionId(r.description ?? "", r.created_iso ?? "");
+      // A category set by hand on the transaction beats the keyword guess, the
+      // same way the transactions list treats it — so a row moved out of a rent
+      // category stops settling that bill.
+      const flag = allFlags[shiftMonth(r.yr, r.mo, 0)]?.[flag_id];
+      if (flag && "subcategory" in flag) {
+        sub = flag.subcategory;
+        mapping = SUBCAT_TO_RENT_ITEM[sub];
+        if (!mapping) continue;
+      }
       const [itemKey, offset] = mapping;
       const targetMonth = shiftMonth(r.yr, r.mo, offset);
       if (!targetMonth.startsWith(String(year))) continue;
@@ -241,9 +257,6 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
       const amount = Math.round(Math.abs(rawAmount) * 100) / 100;
       const existing = bucket[itemKey];
       if (existing == null || amount > existing.amount) {
-        // flag_id matches the id serializeTransactions computes, so the UI can
-        // jump straight to this exact bank row.
-        const flag_id = await makeTransactionId(r.description ?? "", r.created_iso ?? "");
         bucket[itemKey] = {
           amount,
           date: r.created_date,

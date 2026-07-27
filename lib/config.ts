@@ -22,8 +22,10 @@ export const loadRules = (sql: Sql) =>
 export const saveRules = (sql: Sql, rules: Dict) => kvSet(sql, "category_rules", rules);
 
 // ── one-time flags (per month) ──────────────────────────────────────────────
+/** Every month's flags in one read, for callers that span several months. */
+export const loadAllFlags = (sql: Sql) => kvGet<Dict>(sql, "one_time_flags", {});
 export async function getFlagsForMonth(sql: Sql, month: string): Promise<Dict> {
-  const all = await kvGet<Dict>(sql, "one_time_flags", {});
+  const all = await loadAllFlags(sql);
   return all[month] ?? {};
 }
 export async function setFlagsForMonth(sql: Sql, month: string, monthFlags: Dict) {
