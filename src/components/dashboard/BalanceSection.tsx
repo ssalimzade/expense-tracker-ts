@@ -301,12 +301,12 @@ export default function BalanceSection({ month }: { month: string }) {
     return draft[key];
   };
 
-  // Whether a card is currently pinned to a manual override (shows an "Auto" reset).
-  const isOverridden = (key: BalanceCardKey): boolean => {
-    if (key === "diff_in_bills") return draft.diff_in_bills_manual;
-    if (isAutoSource(key)) return (draft[`${key}_manual`] as boolean) && autoValueFor(key) !== undefined;
-    return false;
-  };
+  // Whether a card needs an explicit reset. Diff in bills doesn't: clearing the
+  // field already returns it to the calculated total, so a button would only sit
+  // on top of the number. A live account balance has no such gesture — 0 is a
+  // real balance there — so those keep one.
+  const isOverridden = (key: BalanceCardKey): boolean =>
+    isAutoSource(key) && (draft[`${key}_manual`] as boolean) && autoValueFor(key) !== undefined;
 
   function commit(key: keyof BalanceValues, value: number) {
     const next: BalanceValues = { ...draft, [key]: value };
@@ -326,14 +326,10 @@ export default function BalanceSection({ month }: { month: string }) {
     save.mutate(next);
   }
 
+  /** Unpin a live-balance card so it tracks the account again. */
   function resetToAuto(key: BalanceCardKey) {
     const next: BalanceValues = { ...draft };
-    if (key === "diff_in_bills") {
-      next.diff_in_bills = autoDiffInBills;
-      next.diff_in_bills_manual = false;
-    } else if (isAutoSource(key)) {
-      (next as Record<string, unknown>)[`${key}_manual`] = false;
-    }
+    (next as Record<string, unknown>)[`${key}_manual`] = false;
     setDraft(next);
     save.mutate(next);
   }
@@ -367,26 +363,25 @@ export default function BalanceSection({ month }: { month: string }) {
               <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                 {label}
               </p>
-              <div className="mt-1.5 flex justify-center">
-                <div className="relative w-full">
-                  <MoneyInput
-                    value={val}
-                    onCommit={(v) => commit(key, v)}
-                    allowNegative
-                    pound
-                    className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
-                  />
-                  {isOverridden(key) && (
-                    <button
-                      type="button"
-                      onClick={() => resetToAuto(key)}
-                      title="Reset to the auto value"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                    >
-                      Auto
-                    </button>
-                  )}
-                </div>
+              {/* The reset sits under the value, never over it. */}
+              <div className="mt-1.5 flex flex-col items-center gap-1">
+                <MoneyInput
+                  value={val}
+                  onCommit={(v) => commit(key, v)}
+                  allowNegative
+                  pound
+                  className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
+                />
+                {isOverridden(key) && (
+                  <button
+                    type="button"
+                    onClick={() => resetToAuto(key)}
+                    title="Track the live account balance again"
+                    className="rounded bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    Auto
+                  </button>
+                )}
               </div>
             </div>
           );

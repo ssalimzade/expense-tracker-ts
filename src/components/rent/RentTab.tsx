@@ -110,12 +110,12 @@ export default function RentTab({ onOpenTransactions }: Props) {
               ))}
             </div>
 
-            <RentPots data={data} upTo={currentMonth} />
-
             <div className="grid gap-4 lg:grid-cols-2">
               <CostBreakdownChart data={data} months={months} />
               <PaidProgressChart data={data} months={months} />
             </div>
+
+            <RentPots data={data} upTo={currentMonth} />
 
             {months.length > 0 ? (
               <RentTable data={data} months={months} onOpenMatch={onOpenTransactions} />
