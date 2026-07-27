@@ -93,6 +93,14 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   // ask what was really paid.
   const needsPaidAmount = (month: string, key: string) =>
     cell(month, key).paid && !match(month, key);
+  // A paid figure deliberately set to something other than the allocation. Only
+  // these are worth showing at rest; the rest would just repeat the amount, so
+  // they stay hidden until the cell is focused.
+  const hasPaidOverride = (month: string, key: string) => cell(month, key).paid_amount != null;
+  // Named group: the desktop <tr> is itself a `group`, so an unnamed variant
+  // would reveal every cell's paid row whenever any cell took focus.
+  const paidRowClass = (month: string, key: string) =>
+    hasPaidOverride(month, key) ? "flex" : "hidden group-focus-within/cell:flex";
 
   const update = (month: string, key: string, patch: Partial<RentLineItem>) => {
     const entry: RentMonthEntry = {};
@@ -128,7 +136,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
     const c = cell(month, it.key);
     const m = match(month, it.key);
     return (
-      <div key={it.key}>
+      <div key={it.key} className="group/cell">
         <div className="flex items-center gap-1.5">
           <PaidToggle paid={c.paid} auto={!!m} match={m} onToggle={() => togglePaid(month, it.key)} onOpenMatch={onOpenMatch} />
           <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>{it.label}</span>
@@ -140,12 +148,12 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
           />
         </div>
         {needsPaidAmount(month, it.key) && (
-          <div className="flex items-center justify-end gap-1">
-            <span className="text-[9px] uppercase tracking-wide text-gray-400">paid</span>
+          <div className={`${paidRowClass(month, it.key)} items-center justify-end gap-1 pr-1`}>
+            <span className="text-[9px] uppercase tracking-wider text-gray-400/70">paid</span>
             <MoneyInput
               value={c.paid_amount ?? c.amount}
               onCommit={(n) => savePaidAmount(month, it.key, n)}
-              className="!w-14 !px-1 !py-0 !text-[11px] !text-right !text-gray-500 dark:!text-gray-400"
+              className="!w-11 !px-0 !py-0 !text-[11px] !text-right !text-gray-500 dark:!text-gray-400"
             />
           </div>
         )}
@@ -207,7 +215,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                     const c = cell(month, it.key);
                     const m = match(month, it.key);
                     return (
-                      <td key={it.key} className="px-3 py-2.5">
+                      <td key={it.key} className="group/cell px-3 py-2.5">
                         <div className="flex items-center justify-center gap-1.5">
                           <MoneyInput
                             value={m?.amount ?? c.amount}
@@ -223,12 +231,12 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                           />
                         </div>
                         {needsPaidAmount(month, it.key) && (
-                          <div className="mt-0.5 flex items-center justify-center gap-1 pr-6">
-                            <span className="text-[9px] uppercase tracking-wide text-gray-400">paid</span>
+                          <div className={`${paidRowClass(month, it.key)} mt-0.5 items-center justify-center gap-1 pr-6`}>
+                            <span className="text-[9px] uppercase tracking-wider text-gray-400/70">paid</span>
                             <MoneyInput
                               value={c.paid_amount ?? c.amount}
                               onCommit={(n) => savePaidAmount(month, it.key, n)}
-                              className="!w-14 !px-1 !py-0 !text-[11px] !text-gray-500 dark:!text-gray-400"
+                              className="!w-11 !px-0 !py-0 !text-[11px] !text-gray-500 dark:!text-gray-400"
                             />
                           </div>
                         )}
