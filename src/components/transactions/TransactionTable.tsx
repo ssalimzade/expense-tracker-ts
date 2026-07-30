@@ -15,6 +15,15 @@ const SOURCE_COLORS: Record<string, string> = {
   hsbc: "bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
 };
 
+const SOURCE_LABELS: Record<string, string> = {
+  monzo: "Monzo",
+  flex: "Flex",
+  amex: "AMEX",
+  chase: "Chase",
+  barclays: "Barclays",
+  hsbc: "HSBC",
+};
+
 interface Props {
   transactions: Transaction[];
   month: string;
@@ -52,8 +61,8 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
       : "";
 
   const sourceBadge = (source: string) => (
-    <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium capitalize ${SOURCE_COLORS[source?.toLowerCase()] ?? ""}`}>
-      {source}
+    <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-medium ${SOURCE_COLORS[source?.toLowerCase()] ?? ""}`}>
+      {SOURCE_LABELS[source] ?? source}
     </span>
   );
   const amount = (t: Transaction) => (
