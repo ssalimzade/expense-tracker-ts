@@ -6,17 +6,17 @@ export interface BalanceData {
   monzo: number;
   chase: number;
   amex: number;
-  barclays: number;
+  hsbc: number;
   diff_in_bills: number;
   diff_in_bills_manual: boolean;
   monzo_manual: boolean;
   chase_manual: boolean;
-  barclays_manual: boolean;
+  hsbc_manual: boolean;
   amex_manual: boolean;
 }
 
-/** Live account balances keyed by source (monzo/chase/barclays/amex). */
-export type AccountBalances = Partial<Record<"monzo" | "chase" | "barclays" | "amex", number>>;
+/** Live account balances keyed by source (monzo/chase/hsbc/amex). */
+export type AccountBalances = Partial<Record<"monzo" | "chase" | "hsbc" | "amex", number>>;
 
 export const fetchAccountBalances = () => api.get<AccountBalances>("/account-balances");
 

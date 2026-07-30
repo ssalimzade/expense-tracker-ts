@@ -8,7 +8,7 @@ import { Card, QueryState } from "../common";
 import TransactionTable from "./TransactionTable";
 import Select, { type SelectOption } from "../Select";
 
-const SOURCES: Source[] = ["monzo", "amex", "chase", "barclays"];
+const SOURCES: Source[] = ["monzo", "amex", "chase", "hsbc"];
 
 const CATEGORY_OPTIONS: SelectOption[] = [
   { value: "", label: "All categories" },

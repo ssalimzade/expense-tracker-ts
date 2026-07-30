@@ -7,7 +7,7 @@ import { settlementsIn } from "../../lib/pots";
 import type { BalanceValues } from "../../api/balance";
 
 // Cards whose default value is the live account balance (updated daily).
-const AUTO_SOURCES = ["monzo", "chase", "barclays", "amex"] as const;
+const AUTO_SOURCES = ["monzo", "chase", "hsbc", "amex"] as const;
 type AutoSource = (typeof AUTO_SOURCES)[number];
 const isAutoSource = (k: string): k is AutoSource =>
   (AUTO_SOURCES as readonly string[]).includes(k);
@@ -141,13 +141,13 @@ function DiffBreakdown({
   );
 }
 
-type BalanceCardKey = "savings" | "monzo" | "chase" | "barclays" | "amex" | "diff_in_bills";
+type BalanceCardKey = "savings" | "monzo" | "chase" | "hsbc" | "amex" | "diff_in_bills";
 
 const ITEMS: { key: BalanceCardKey; label: string }[] = [
   { key: "savings", label: "Savings" },
   { key: "monzo", label: "Monzo" },
   { key: "chase", label: "Chase" },
-  { key: "barclays", label: "Barclays" },
+  { key: "hsbc", label: "HSBC" },
   { key: "amex", label: "AMEX" },
   { key: "diff_in_bills", label: "Diff in bills" },
 ];
@@ -157,12 +157,12 @@ const DEFAULTS: BalanceValues = {
   monzo: 0,
   chase: 0,
   amex: 0,
-  barclays: 0,
+  hsbc: 0,
   diff_in_bills: 0,
   diff_in_bills_manual: false,
   monzo_manual: false,
   chase_manual: false,
-  barclays_manual: false,
+  hsbc_manual: false,
   amex_manual: false,
 };
 
@@ -301,13 +301,6 @@ export default function BalanceSection({ month }: { month: string }) {
     return draft[key];
   };
 
-  // Whether a card needs an explicit reset. Diff in bills doesn't: clearing the
-  // field already returns it to the calculated total, so a button would only sit
-  // on top of the number. A live account balance has no such gesture — 0 is a
-  // real balance there — so those keep one.
-  const isOverridden = (key: BalanceCardKey): boolean =>
-    isAutoSource(key) && (draft[`${key}_manual`] as boolean) && autoValueFor(key) !== undefined;
-
   function commit(key: keyof BalanceValues, value: number) {
     const next: BalanceValues = { ...draft, [key]: value };
     if (key === "diff_in_bills") {
@@ -322,14 +315,6 @@ export default function BalanceSection({ month }: { month: string }) {
       // Editing an auto card pins it as a manual override that persists.
       (next as Record<string, unknown>)[`${key}_manual`] = true;
     }
-    setDraft(next);
-    save.mutate(next);
-  }
-
-  /** Unpin a live-balance card so it tracks the account again. */
-  function resetToAuto(key: BalanceCardKey) {
-    const next: BalanceValues = { ...draft };
-    (next as Record<string, unknown>)[`${key}_manual`] = false;
     setDraft(next);
     save.mutate(next);
   }
@@ -363,25 +348,16 @@ export default function BalanceSection({ month }: { month: string }) {
               <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                 {label}
               </p>
-              {/* The reset sits under the value, never over it. */}
-              <div className="mt-1.5 flex flex-col items-center gap-1">
-                <MoneyInput
-                  value={val}
-                  onCommit={(v) => commit(key, v)}
-                  allowNegative
-                  pound
-                  className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
-                />
-                {isOverridden(key) && (
-                  <button
-                    type="button"
-                    onClick={() => resetToAuto(key)}
-                    title="Track the live account balance again"
-                    className="rounded bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                  >
-                    Auto
-                  </button>
-                )}
+              <div className="mt-1.5 flex justify-center">
+                <div className="relative w-full">
+                  <MoneyInput
+                    value={val}
+                    onCommit={(v) => commit(key, v)}
+                    allowNegative
+                    pound
+                    className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
+                  />
+                </div>
               </div>
             </div>
           );

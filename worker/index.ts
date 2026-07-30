@@ -54,13 +54,13 @@ const BALANCE_DEFAULTS = {
   savings: 0,
   monzo: 0,
   chase: 0,
-  barclays: 0,
+  hsbc: 0,
   amex: 0,
   diff_in_bills: 0,
   diff_in_bills_manual: false,
   monzo_manual: false,
   chase_manual: false,
-  barclays_manual: false,
+  hsbc_manual: false,
   amex_manual: false,
 };
 const MONTH_RE = /^\d{4}-\d{2}$/;

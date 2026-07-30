@@ -12,6 +12,7 @@ const SOURCE_COLORS: Record<string, string> = {
   amex: "bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
   chase: "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   barclays: "bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
+  hsbc: "bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
 };
 
 interface Props {

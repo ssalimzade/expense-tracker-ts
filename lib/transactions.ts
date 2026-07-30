@@ -37,14 +37,14 @@ const MONTH_TABLES = [
   "monzo_transactions",
   "chase_transactions",
   "amex_transactions",
-  "barclays_transactions",
+  "hsbc_transactions",
 ];
 const ALL_TABLES = [
   "monzo_transactions",
   "flex_transactions",
   "chase_transactions",
   "amex_transactions",
-  "barclays_transactions",
+  "hsbc_transactions",
 ];
 
 async function fetchTxRows(sql: Sql, month?: string): Promise<Row[]> {
