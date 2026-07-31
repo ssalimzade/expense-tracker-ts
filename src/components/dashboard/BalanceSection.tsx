@@ -312,8 +312,13 @@ export default function BalanceSection({ month }: { month: string }) {
         next.diff_in_bills_manual = true;
       }
     } else if (isAutoSource(key)) {
-      // Editing an auto card pins it as a manual override that persists.
-      (next as Record<string, unknown>)[`${key}_manual`] = true;
+      if (value === 0) {
+        // Cleared the field → fall back to the live account balance.
+        (next as Record<string, unknown>)[`${key}_manual`] = false;
+      } else {
+        // Editing an auto card pins it as a manual override that persists.
+        (next as Record<string, unknown>)[`${key}_manual`] = true;
+      }
     }
     setDraft(next);
     save.mutate(next);
