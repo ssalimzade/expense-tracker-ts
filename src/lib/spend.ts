@@ -76,8 +76,10 @@ export function dailySpendSeries(
   // Committed spend that lands on the 1st (Flex repayments) is not something the
   // month can be paced into, so the pace line starts there and spreads only what
   // is left. Without this, day 1 always reads as "ahead of pace".
+  // Day 1 is the baseline itself — the remainder spreads over the days after it,
+  // so the line launches from the repayments floor and still ends on the budget.
   const paceBase = Math.max(0, Math.min(baseline, totalBudget));
-  const paceSpread = totalBudget - paceBase;
+  const paceStep = (totalBudget - paceBase) / Math.max(1, daysInMonth - 1);
 
   const now = new Date();
   const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -135,7 +137,7 @@ export function dailySpendSeries(
       cumulative: inFuture ? null : Math.round(spent * 100) / 100,
       pace:
         totalBudget > 0
-          ? Math.round((paceBase + (paceSpread * d) / daysInMonth) * 100) / 100
+          ? Math.round((paceBase + paceStep * (d - 1)) * 100) / 100
           : 0,
       projection,
     });
