@@ -4,6 +4,7 @@ import { useBudget, useSaveBudget } from "../../hooks/useBudget";
 import { useArchive } from "../../hooks/useArchive";
 import { spendByCategory, totalSpend } from "../../lib/spend";
 import type { BudgetMap } from "../../types/budget";
+import { MAIN_CATEGORIES } from "../../types/categories";
 import { QueryState } from "../common";
 import MetricsBar from "./MetricsBar";
 import BudgetSummaryTable from "./BudgetSummaryTable";
@@ -53,7 +54,9 @@ export default function DashboardTab({ month }: { month: string }) {
           ? archiveRows.reduce((s, r) => s + r["Spent (£)"], 0)
           : totalSpend(transactions);
 
-        const totalBudget = Object.values(draft).reduce((a, b) => a + b, 0);
+        // Only the categories the breakdown table actually renders — a stale key
+        // left in the saved map must not inflate the headline.
+        const totalBudget = MAIN_CATEGORIES.reduce((a, cat) => a + (draft[cat] ?? 0), 0);
 
         const setCategory = (category: string, value: number) =>
           setDraft((prev) => ({ ...prev, [category]: value }));
