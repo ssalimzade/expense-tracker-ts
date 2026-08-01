@@ -32,6 +32,13 @@ export default function SyntheticRepaymentsPanel({ visibleMonths }: Props) {
 
   const busy = sync.isPending || remove.isPending;
 
+  // The repayment window skips to next month from the 8th, but the current
+  // month is the one that auto-pushes — keep it listed so its state is visible
+  // and it can be re-synced all month, not just in the first week.
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const months = [...new Set([thisMonth, ...visibleMonths])].sort();
+
   return (
     <Card className="p-0 overflow-hidden max-md:!p-0">
       <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
@@ -50,7 +57,7 @@ export default function SyntheticRepaymentsPanel({ visibleMonths }: Props) {
       </div>
 
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
-        {visibleMonths.map((month) => {
+        {months.map((month) => {
           const entries = (byMonth.get(month) ?? []).slice().sort((a, b) =>
             a.category.localeCompare(b.category),
           );
@@ -75,7 +82,7 @@ export default function SyntheticRepaymentsPanel({ visibleMonths }: Props) {
                 <div className="flex items-center gap-2">
                   <button
                     disabled={busy}
-                    onClick={() => sync.mutate({ month, force: synced })}
+                    onClick={() => sync.mutate(month)}
                     className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-950 dark:text-indigo-300"
                   >
                     {synced ? "Re-sync" : "Sync"}

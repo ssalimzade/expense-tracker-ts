@@ -6,8 +6,8 @@ export const fetchRepayments = () => api.get<Repayment[]>("/repayments");
 export const fetchSyntheticRepayments = () =>
   api.get<SyntheticRepayment[]>("/repayments/synthetic");
 
-export const syncSyntheticRepayments = (month: string, force = false) =>
-  api.post<SyntheticRepayment[]>("/repayments/synthetic/sync", { month, force });
+export const syncSyntheticRepayments = (month: string) =>
+  api.post<SyntheticRepayment[]>("/repayments/synthetic/sync", { month });
 
 export const deleteSyntheticRepayments = (month: string) =>
   api.del(`/repayments/synthetic/${month}`);

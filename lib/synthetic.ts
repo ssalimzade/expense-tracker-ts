@@ -103,9 +103,13 @@ export async function listSynthetic(sql: Sql): Promise<Row[]> {
   return out;
 }
 
-export async function syncMonth(sql: Sql, month: string, force = false): Promise<Row[]> {
+/**
+ * Rebuild a month's synthetic rows from its repayment totals as they stand now.
+ * Always recomputes — any rows from an earlier sync are dropped first — so a
+ * month whose repayments have changed since picks up the new figures.
+ */
+export async function syncMonth(sql: Sql, month: string): Promise<Row[]> {
   const marker = await loadMarker(sql);
-  if (month in marker && !force) return listSynthetic(sql);
   if (month in marker) {
     await deleteMonzoByIds(sql, marker[month]);
     delete marker[month];
@@ -130,15 +134,36 @@ export async function syncMonth(sql: Sql, month: string, force = false): Promise
     ids.push(id);
   }
 
-  marker[month] = ids;
+  // A month that pushed nothing is left unmarked: recording it would read as
+  // "already done" and stop the month from ever being pushed once repayments
+  // for it are categorised.
+  if (ids.length) marker[month] = ids;
   await saveMarker(sql, marker);
   return listSynthetic(sql);
 }
 
+// The user's month, not the worker's. `toISOString()` is UTC, so through BST the
+// month rolls over an hour late and the 1st's push would be skipped until 01:00
+// local — for a month whose rows are dated the 1st, that is the whole window.
+const MONTH_FMT = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/London",
+  year: "numeric",
+  month: "2-digit",
+});
+
+/** Today's YYYY-MM where the user lives, whatever order the locale prints in. */
+function currentMonth(): string {
+  const parts = MONTH_FMT.formatToParts(new Date());
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}`;
+}
+
 export async function autoSyncCurrent(sql: Sql): Promise<void> {
-  const month = new Date().toISOString().slice(0, 7); // UTC YYYY-MM
+  const month = currentMonth();
   const marker = await loadMarker(sql);
-  if (!(month in marker)) await syncMonth(sql, month);
+  // Keyed on rows actually pushed, not on the key existing, so a month left
+  // empty by an earlier sync is retried rather than written off as done.
+  if (!marker[month]?.length) await syncMonth(sql, month);
 }
 
 export async function deleteMonth(sql: Sql, month: string): Promise<void> {
