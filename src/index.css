@@ -16,6 +16,38 @@
   .tight-legend .recharts-legend-item { margin-right: 8px !important; }
 }
 
+/* Popovers/menus grow out of the control that opened them. Kept short and
+   eased-out so it reads as responsive rather than animated. */
+@keyframes popover-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-popover {
+  animation: popover-in 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+}
+/* Flipped above its anchor — grow from the bottom edge instead. */
+.animate-popover-up { transform-origin: bottom left; }
+
+/* Phones get a bottom sheet rather than a floating card, so it rises from the
+   edge it's attached to. */
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+.animate-sheet { animation: sheet-in 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-backdrop { animation: backdrop-in 200ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-popover,
+  .animate-sheet,
+  .animate-backdrop { animation: none; }
+}
+
 body {
   @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
   margin: 0;

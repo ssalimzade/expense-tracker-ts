@@ -4,6 +4,7 @@ import { useRent } from "../../hooks/useRent";
 import MoneyInput from "../MoneyInput";
 import { gbp, gbp0, formatMonthLabel, toMonthKey } from "../../lib/format";
 import { settlementsIn } from "../../lib/pots";
+import { rentIsPaid, rentShare } from "../../lib/rent";
 import type { BalanceValues } from "../../api/balance";
 
 // Cards whose default value is the live account balance (updated daily).
@@ -269,14 +270,13 @@ export default function BalanceSection({ month }: { month: string }) {
     const data = rentQuery.data;
     if (!data) return { current: 0, previous: 0, total: 0 };
     const items = data.items ?? [];
+    // Your share, matching the rent table's "… left": a bill a flatmate part-
+    // covers only commits you to the net figure.
     const outstandingFor = (m: string) => {
       let sum = 0;
       for (const it of items) {
-        const matchAmt = data.reconciled?.[m]?.[it.key]?.amount; // matched txn amount
-        const cell = data.months?.[m]?.[it.key];
-        const isPaid = Boolean(cell?.paid) || matchAmt != null; // ticked OR matched
-        if (isPaid) continue;
-        sum += matchAmt ?? cell?.amount ?? 0;
+        if (rentIsPaid(data, m, it.key)) continue; // ticked OR matched
+        sum += rentShare(data, m, it.key);
       }
       return sum;
     };

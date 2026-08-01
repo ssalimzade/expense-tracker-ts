@@ -15,6 +15,22 @@ export interface RentLineItem {
    * allocated", so the two stay in step when `amount` is edited later.
    */
   paid_amount?: number | null;
+  /**
+   * The slice of this bill someone else covers — e.g. rent leaves the account
+   * at £1,900 but £200 comes back from a flatmate, so the real cost is £1,700.
+   *
+   * Deliberately separate from `amount`: the allocation has to keep matching
+   * what the bank actually paid, or Diff in bills reads the contribution as a
+   * shortfall every month. Netting it here instead keeps that diff at zero
+   * while the tab still reports what the month truly cost you.
+   */
+  contribution?: number | null;
+  /**
+   * Ignore the auto-matched transaction for this one month — for a match that
+   * is simply wrong (a payment that isn't this bill). Not the way to record a
+   * shared bill: the link is right there, `contribution` is.
+   */
+  unlinked?: boolean;
 }
 
 export type RentMonthEntry = Record<string, RentLineItem>;
@@ -49,6 +65,12 @@ export interface RentData {
   items: RentItemDef[];
   months: Record<string, RentMonthEntry>; // keyed by "YYYY-MM"
   reconciled?: RentReconciled;
+  /**
+   * Matches the user unlinked, set aside rather than dropped so the table can
+   * still offer to relink them. Filled in client-side by `useRent`; the server
+   * never sends it.
+   */
+  unlinked_matches?: RentReconciled;
   /** Settlement history per saved item — absent until a pot is first settled. */
   pots?: RentPots;
 }

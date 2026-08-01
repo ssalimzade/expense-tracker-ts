@@ -2,15 +2,14 @@ import { useState } from "react";
 import { useRent } from "../../hooks/useRent";
 import { useRemuneration } from "../../hooks/useRemuneration";
 import { QueryState } from "../common";
-import type { RentData, RentLineItem, RentMatch } from "../../types/rent";
+import type { RentData, RentMatch } from "../../types/rent";
 import { gbp0 } from "../../lib/format";
 import { currentNetMonthly } from "../../lib/remuneration";
+import { rentIsPaid, rentShare } from "../../lib/rent";
 import RentTable from "./RentTable";
 import RentPots from "./RentPots";
 import { potViews, potsTotal } from "../../lib/pots";
 import { CostBreakdownChart, PaidProgressChart } from "./RentCharts";
-
-const blank: RentLineItem = { amount: 0, paid: false };
 
 const currentMonth = (() => {
   const d = new Date();
@@ -37,10 +36,10 @@ export default function RentTab({ onOpenTransactions }: Props) {
         const years = [...new Set(allMonths.map((m) => m.slice(0, 4)))].sort();
         if (years.length === 0) years.push(currentYear);
         const months = allMonths.filter((m) => m.startsWith(year)).sort();
-        const cell = (m: string, k: string): RentLineItem => data.months[m]?.[k] ?? blank;
-        const matchedAmount = (m: string, k: string) => reconciled[m]?.[k]?.amount ?? cell(m, k).amount;
-        // Effective paid = manually ticked OR a matching transaction exists.
-        const isPaid = (m: string, k: string) => cell(m, k).paid || !!reconciled[m]?.[k];
+        // Every headline figure reports your share — the bill net of anything a
+        // flatmate covers — so the tab answers "what did this cost me".
+        const cost = (m: string, k: string) => rentShare(data, m, k);
+        const isPaid = (m: string, k: string) => rentIsPaid(data, m, k);
 
         // Year-to-date only: months up to and including the current month.
         const ytdMonths = months.filter((m) => m <= currentMonth);
@@ -49,7 +48,7 @@ export default function RentTab({ onOpenTransactions }: Props) {
         let outstanding = 0; // unpaid amounts to date
         for (const m of ytdMonths) {
           for (const it of data.items) {
-            const amount = matchedAmount(m, it.key);
+            const amount = cost(m, it.key);
             costYtd += amount;
             if (!isPaid(m, it.key)) outstanding += amount;
           }
@@ -62,13 +61,13 @@ export default function RentTab({ onOpenTransactions }: Props) {
         const setAside = potsTotal(pots);
         const openPots = pots.filter((p) => !p.closed).length;
         const activeMonths = ytdMonths.filter((m) =>
-          data.items.some((it) => matchedAmount(m, it.key) > 0)
+          data.items.some((it) => cost(m, it.key) > 0)
         ).length || 1;
 
         // Rent-to-salary % for the current month (rent total / current net monthly).
         const remuneration = remQuery.data ?? [];
         const netPm = currentNetMonthly(remuneration);
-        const currentRentTotal = data.items.reduce((s, it) => s + matchedAmount(currentMonth, it.key), 0);
+        const currentRentTotal = data.items.reduce((s, it) => s + cost(currentMonth, it.key), 0);
         const rentToSalary = netPm > 0 ? (currentRentTotal / netPm) * 100 : 0;
 
         const stats = [

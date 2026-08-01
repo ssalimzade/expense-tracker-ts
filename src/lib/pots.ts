@@ -1,4 +1,5 @@
 import type { RentData, RentPotSettlement } from "../types/rent";
+import { rentIsPaid, rentShare } from "./rent";
 
 /**
  * Bills pots: the money set aside each month for the quarterly bills (the
@@ -14,13 +15,13 @@ import type { RentData, RentPotSettlement } from "../types/rent";
  * whatever has accrued since the last one.
  */
 
-/** What actually reached the pot for one month — 0 until the money moves. */
+/**
+ * What actually reached the pot for one month — 0 until the money moves, and
+ * only your share of it: a pot holds your money, so a bill someone else part-
+ * covers accrues at the net figure.
+ */
 export function potInflow(data: RentData, key: string, month: string): number {
-  const matched = data.reconciled?.[month]?.[key]?.amount;
-  if (matched != null) return matched;
-  const cell = data.months?.[month]?.[key];
-  if (!cell?.paid) return 0;
-  return cell.paid_amount ?? cell.amount ?? 0;
+  return rentIsPaid(data, month, key) ? rentShare(data, month, key) : 0;
 }
 
 export interface PotSettlementView extends RentPotSettlement {

@@ -247,6 +247,10 @@ app.post("/rent", async (c) => {
       paid: item.paid ?? false,
       // Null means "paid what was allocated" — kept distinct from a real £0.
       paid_amount: item.paid_amount ?? null,
+      // The slice someone else covers. Null (not 0) means "not split", so the
+      // cell keeps tracking the bill on its own.
+      contribution: item.contribution ?? null,
+      unlinked: item.unlinked ?? false,
     };
   }
   return c.json(await upsertRentMonth(sqlOf(c), b.month, entry));

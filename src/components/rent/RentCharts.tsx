@@ -2,13 +2,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
 } from "recharts";
-import type { RentData, RentLineItem } from "../../types/rent";
+import type { RentData } from "../../types/rent";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
+import { rentIsPaid, rentShare } from "../../lib/rent";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { Card } from "../common";
 
 const mo = (m: string) => new Date(`${m}-01`).toLocaleString("en-GB", { month: "short" });
-const blank: RentLineItem = { amount: 0, paid: false };
 
 // Distinct hues per line item; saved (quarterly) items lean amber.
 const ITEM_COLORS: Record<string, string> = {
@@ -24,12 +24,9 @@ const ITEM_COLORS: Record<string, string> = {
 export function CostBreakdownChart({ data, months }: { data: RentData; months: string[] }) {
   const isMobile = useIsMobile();
   const rows = months.map((m) => {
-    const entry = data.months[m] ?? {};
-    const reconciled = data.reconciled ?? {};
     const row: Record<string, number | string> = { month: mo(m) };
-    for (const it of data.items) {
-      row[it.label] = reconciled[m]?.[it.key]?.amount ?? (entry[it.key] ?? blank).amount;
-    }
+    // Your share, not the gross bill — the chart tracks what the months cost you.
+    for (const it of data.items) row[it.label] = rentShare(data, m, it.key);
     return row;
   });
 
@@ -70,15 +67,12 @@ export function CostBreakdownChart({ data, months }: { data: RentData; months: s
 /** Paid vs still-outstanding per month (auto-matched transactions count as paid). */
 export function PaidProgressChart({ data, months }: { data: RentData; months: string[] }) {
   const isMobile = useIsMobile();
-  const reconciled = data.reconciled ?? {};
   const rows = months.map((m) => {
-    const entry = data.months[m] ?? {};
     let paid = 0;
     let outstanding = 0;
     for (const it of data.items) {
-      const c = entry[it.key] ?? blank;
-      const amount = reconciled[m]?.[it.key]?.amount ?? c.amount;
-      if (c.paid || reconciled[m]?.[it.key]) paid += amount;
+      const amount = rentShare(data, m, it.key);
+      if (rentIsPaid(data, m, it.key)) paid += amount;
       else outstanding += amount;
     }
     return { month: mo(m), Paid: paid, Outstanding: outstanding };
