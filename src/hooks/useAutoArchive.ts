@@ -8,7 +8,7 @@ import { spendByCategory } from "../lib/spend";
 import { MAIN_CATEGORIES } from "../types/categories";
 import { toMonthKey } from "../lib/format";
 
-/** Returns month keys (YYYY-MM) that are past their 7-day window and not yet archived. */
+/** Returns month keys (YYYY-MM) that are past their 1-day window and not yet archived. */
 function monthsToArchive(archived: Set<string>): string[] {
   const today = new Date();
   const current = toMonthKey(today);
@@ -17,8 +17,8 @@ function monthsToArchive(archived: Set<string>): string[] {
   let d = new Date(2025, 4, 1); // start from 2025-05
   while (toMonthKey(d) < current) {
     const key = toMonthKey(d);
-    // Auto-archive 7 days after month end (i.e. on the 7th of the next month)
-    const archiveAfter = new Date(d.getFullYear(), d.getMonth() + 1, 7);
+    // Auto-archive 1 day after month end (i.e. on the 1st of the next month)
+    const archiveAfter = new Date(d.getFullYear(), d.getMonth() + 1, 1);
     if (!archived.has(key) && today >= archiveAfter) {
       result.push(key);
     }
