@@ -60,6 +60,7 @@ export function dailySpendSeries(
   transactions: Transaction[],
   month: string,
   totalBudget: number,
+  baseline = 0,
 ): DailySpendPoint[] {
   // Raw net per day: negative = net spending, positive = net refund
   const byDay = new Map<string, number>();
@@ -71,6 +72,12 @@ export function dailySpendSeries(
 
   const [y, m] = month.split("-").map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
+
+  // Committed spend that lands on the 1st (Flex repayments) is not something the
+  // month can be paced into, so the pace line starts there and spreads only what
+  // is left. Without this, day 1 always reads as "ahead of pace".
+  const paceBase = Math.max(0, Math.min(baseline, totalBudget));
+  const paceSpread = totalBudget - paceBase;
 
   const now = new Date();
   const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -126,7 +133,10 @@ export function dailySpendSeries(
       date,
       day: d,
       cumulative: inFuture ? null : Math.round(spent * 100) / 100,
-      pace: totalBudget > 0 ? Math.round((totalBudget * d / daysInMonth) * 100) / 100 : 0,
+      pace:
+        totalBudget > 0
+          ? Math.round((paceBase + (paceSpread * d) / daysInMonth) * 100) / 100
+          : 0,
       projection,
     });
   }

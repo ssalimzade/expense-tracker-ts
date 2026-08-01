@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTransactions } from "../../hooks/useTransactions";
 import { useBudget, useSaveBudget } from "../../hooks/useBudget";
 import { useArchive } from "../../hooks/useArchive";
+import { useSyntheticRepayments } from "../../hooks/useRepayments";
 import { spendByCategory, totalSpend } from "../../lib/spend";
 import type { BudgetMap } from "../../types/budget";
 import { MAIN_CATEGORIES } from "../../types/categories";
@@ -20,6 +21,7 @@ export default function DashboardTab({ month }: { month: string }) {
   const budgetQuery = useBudget(month);
   // For past months, fetch the frozen archive snapshot instead of computing live.
   const archiveQuery = useArchive(isPastMonth ? month : null);
+  const syntheticQuery = useSyntheticRepayments();
   const saveBudget = useSaveBudget(month);
 
   const [draft, setDraft] = useState<BudgetMap>({});
@@ -58,6 +60,12 @@ export default function DashboardTab({ month }: { month: string }) {
         // left in the saved map must not inflate the headline.
         const totalBudget = MAIN_CATEGORIES.reduce((a, cat) => a + (draft[cat] ?? 0), 0);
 
+        // Flex repayments are pushed in as synthetic rows dated the 1st, so they
+        // are spend the month opens with rather than spend it can pace into.
+        const repaymentsBaseline = (syntheticQuery.data ?? [])
+          .filter((r) => r.month === month)
+          .reduce((s, r) => s + Math.abs(r.amount), 0);
+
         const setCategory = (category: string, value: number) =>
           setDraft((prev) => ({ ...prev, [category]: value }));
 
@@ -74,6 +82,7 @@ export default function DashboardTab({ month }: { month: string }) {
               transactions={transactions}
               month={month}
               totalBudget={totalBudget}
+              repaymentsBaseline={repaymentsBaseline}
             />
             <BalanceSection month={month} />
             <BudgetSummaryTable

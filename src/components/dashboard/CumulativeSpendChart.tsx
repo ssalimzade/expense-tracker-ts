@@ -12,10 +12,17 @@ interface Props {
   transactions: Transaction[];
   month: string;
   totalBudget: number;
+  /** Repayments committed on the 1st — where the budget pace line starts. */
+  repaymentsBaseline?: number;
 }
 
-export default function CumulativeSpendChart({ transactions, month, totalBudget }: Props) {
-  const data = dailySpendSeries(transactions, month, totalBudget);
+export default function CumulativeSpendChart({
+  transactions,
+  month,
+  totalBudget,
+  repaymentsBaseline = 0,
+}: Props) {
+  const data = dailySpendSeries(transactions, month, totalBudget, repaymentsBaseline);
 
   // Latest actual cumulative + how it compares to the budget pace at that point.
   const lastActual = [...data].reverse().find((d) => d.cumulative !== null);
