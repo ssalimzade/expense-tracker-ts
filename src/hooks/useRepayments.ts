@@ -29,8 +29,7 @@ export function useSyntheticRepayments() {
 export function useSyncSyntheticRepayments() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ month, force }: { month: string; force?: boolean }) =>
-      syncSyntheticRepayments(month, force),
+    mutationFn: (month: string) => syncSyntheticRepayments(month),
     meta: { success: "Synced to Monzo", error: "Couldn't sync repayments" },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["repayments", "synthetic"] }),
   });

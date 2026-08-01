@@ -168,7 +168,7 @@ app.post("/repayments", async (c) => {
 app.get("/repayments/synthetic", async (c) => c.json(await listSynthetic(sqlOf(c))));
 app.post("/repayments/synthetic/sync", async (c) => {
   const b = await c.req.json();
-  return c.json(await syncMonth(sqlOf(c), b.month, b.force ?? false));
+  return c.json(await syncMonth(sqlOf(c), b.month));
 });
 app.delete("/repayments/synthetic/:month", async (c) => {
   await deleteMonth(sqlOf(c), c.req.param("month"));
