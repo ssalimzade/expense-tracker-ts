@@ -122,13 +122,19 @@ app.get("/category-rules", async (c) => c.json(await loadRules(sqlOf(c))));
 
 app.post("/category-rules", async (c) => {
   const b = await c.req.json();
+  const description = String(b.description ?? "").trim();
+  const subcategory = String(b.subcategory ?? "");
+  if (!description) return c.json({ detail: "description is required" }, 400);
   const rules = await loadRules(sqlOf(c));
-  rules[b.description] = { subcategory: b.subcategory };
+  // An empty sub-category means the row was cleared back to Uncategorized, so
+  // the remembered rule is dropped rather than stored as a blank mapping.
+  if (subcategory) rules[description] = { subcategory };
+  else delete rules[description];
   await saveRules(sqlOf(c), rules);
   return c.json({
-    description: b.description,
-    subcategory: b.subcategory,
-    category: subcategoryToCategory[b.subcategory] ?? "Uncategorized",
+    description,
+    subcategory,
+    category: subcategoryToCategory[subcategory] ?? "Uncategorized",
   });
 });
 

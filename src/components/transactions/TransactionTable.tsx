@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Transaction } from "../../types/transaction";
-import { useSetFlag } from "../../hooks/useTransactions";
+import { useSetFlag, useSetCategory } from "../../hooks/useTransactions";
 import { gbp, shortDate } from "../../lib/format";
 import { commitOnEnter } from "../../lib/keys";
 import CategoryDropdown from "./CategoryDropdown";
@@ -35,6 +35,10 @@ interface Props {
 
 export default function TransactionTable({ transactions, month, onHide, anomalies, focus }: Props) {
   const setFlag = useSetFlag(month);
+  const setCategory = useSetCategory(month);
+
+  const changeCategory = (t: Transaction, subcategory: string) =>
+    setCategory.mutate({ flagId: t.flag_id, description: t.description, subcategory });
 
   // Scroll to and briefly highlight a transaction requested from another tab
   // (e.g. a rent auto-paid link). Waits until the row is actually loaded, and
@@ -121,7 +125,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
                 </td>
                 <td className="px-6 py-3">{sourceBadge(t.source)}</td>
                 <td className="px-6 py-3">
-                  <CategoryDropdown value={t.subcategory} onChange={(subcategory) => setFlag.mutate({ flagId: t.flag_id, update: { month, subcategory } })} />
+                  <CategoryDropdown value={t.subcategory} onChange={(subcategory) => changeCategory(t, subcategory)} />
                 </td>
                 <td className="px-6 py-3">
                   <Tooltip label={t.notes} className="block">
@@ -179,7 +183,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
 
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
-                <CategoryDropdown value={t.subcategory} onChange={(subcategory) => setFlag.mutate({ flagId: t.flag_id, update: { month, subcategory } })} />
+                <CategoryDropdown value={t.subcategory} onChange={(subcategory) => changeCategory(t, subcategory)} />
               </div>
               <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                 <input

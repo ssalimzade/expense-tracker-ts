@@ -1,10 +1,13 @@
 // Port of services/categorize.py. Object key order is preserved (JS keeps
-// insertion order for string keys), which matters: the first substring match wins.
+// insertion order for string keys), which matters: the first keyword match wins.
 
 export const RENT_UTILITY_CATEGORY = "Rent & Utilities";
 
 export const subCategoryKeywords: Record<string, string[]> = {
-  Groceries: ["M&S", "Bens", "Waitrose", "TESCO", "KAVANAGHS", "CO-OP", "SAINSBURY'S"],
+  Groceries: [
+    "M&S", "MARKS&SPENCER", "MARKS AND SPENCER", "Bens", "Waitrose", "TESCO",
+    "KAVANAGHS", "CO-OP", "SAINSBURY'S", "SAINSBURYS",
+  ],
   Lunch: ["SALAD KITCHEN", "URBAN FOOD", "ITSU", "MEALPAL", "YACOB's", "Birley"],
   "Going Out": ["FIVE GUYS", "MCDONALDS", "MCDONALD'S"],
   Dating: [
@@ -61,39 +64,75 @@ export const subcategoryToCategory: Record<string, string> = {
 
 export type Rules = Record<string, { subcategory: string }>;
 
+/**
+ * Banks spell the same merchant several ways: HSBC sends "CO- OP GROUP FOOD
+ * LONDON GB" one day and "CO-OP GROUP FOOD R LONDON GB" the next, where Monzo
+ * sends a tidy merchant_name. Raw substring matching missed those, so both
+ * descriptions and keywords are reduced to lower-case words with punctuation
+ * treated as a separator — "CO-OP", "CO- OP" and "Co Op" all become ["co","op"].
+ */
+function toWords(value?: string | null): string[] {
+  return (value ?? "").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
 function normalizeText(value?: string | null): string {
-  return (value ?? "").toLowerCase().trim();
+  return toWords(value).join(" ");
+}
+
+// Keyword lists are static, so their word forms are only computed once.
+const wordCache = new Map<string, string[]>();
+function keywordWords(keyword: string): string[] {
+  let words = wordCache.get(keyword);
+  if (!words) wordCache.set(keyword, (words = toWords(keyword)));
+  return words;
+}
+
+/**
+ * True when `needle` appears in `haystack` as consecutive whole words. Whole
+ * words matter now that punctuation is stripped: "M&S" becomes ["m","s"], which
+ * as a plain substring would also hit "PROGRAM SOMETHING".
+ */
+function containsWords(haystack: string[], needle: string[]): boolean {
+  if (!needle.length || needle.length > haystack.length) return false;
+  for (let i = 0; i <= haystack.length - needle.length; i++) {
+    let hit = true;
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) {
+        hit = false;
+        break;
+      }
+    }
+    if (hit) return true;
+  }
+  return false;
 }
 
 export function categorizeRow(desc: string, rules: Rules, merchant?: string | null): string {
-  const candidates = [normalizeText(desc), normalizeText(merchant)].filter(Boolean);
+  const candidates = [toWords(desc), toWords(merchant)].filter((w) => w.length);
 
   // Priority 1: exact match against user rules
   for (const candidate of candidates) {
+    const joined = candidate.join(" ");
     for (const [keyword, val] of Object.entries(rules)) {
-      if (candidate === normalizeText(keyword)) return val.subcategory;
+      if (joined === normalizeText(keyword)) return val.subcategory;
     }
   }
 
-  // Priority 2: keyword substring match
+  // Priority 2: keyword match on whole words
   for (const candidate of candidates) {
     for (const [subcat, keywords] of Object.entries(subCategoryKeywords)) {
       for (const keyword of keywords) {
-        if (subcat === "Mobile" && keyword === "EE") {
-          if (/\bEE\b/i.test(candidate)) return subcat;
-        } else if (candidate.includes(keyword.toLowerCase())) {
-          return subcat;
-        }
+        if (containsWords(candidate, keywordWords(keyword))) return subcat;
       }
     }
   }
 
   // Priority 3: Rent & Utilities ("rent" is exact-match only)
-  if (candidates.includes("rent")) return "Rent";
+  if (candidates.some((c) => c.length === 1 && c[0] === "rent")) return "Rent";
   for (const candidate of candidates) {
     for (const [subcat, keywords] of Object.entries(rentSubcategoryKeywords)) {
       for (const keyword of keywords) {
-        if (candidate.includes(keyword.toLowerCase())) return subcat;
+        if (containsWords(candidate, keywordWords(keyword))) return subcat;
       }
     }
   }
