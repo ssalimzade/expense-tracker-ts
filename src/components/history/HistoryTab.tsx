@@ -132,7 +132,7 @@ export default function HistoryTab() {
                     y={avgSpend}
                     stroke="#9ca3af"
                     strokeDasharray="4 2"
-                    label={{ value: "avg", position: "right", fontSize: 10, fill: "#9ca3af" }}
+                    label={{ value: "avg", position: "insideTopRight", fontSize: 10, fill: "#9ca3af" }}
                   />
                 )}
                 <Area type="monotone" dataKey="budget" stroke="#4f46e5" strokeWidth={2.5} fill="url(#historySpendGradient)" dot={{ r: 3, fill: "#4f46e5" }} activeDot={{ r: 5 }} />
