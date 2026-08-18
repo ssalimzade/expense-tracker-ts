@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Transaction } from "../../types/transaction";
-import { useSetFlag, useSetCategory } from "../../hooks/useTransactions";
+import { useSetFlag, useSetCategory, useDeleteFlag } from "../../hooks/useTransactions";
 import { gbp, shortDate } from "../../lib/format";
 import { commitOnEnter } from "../../lib/keys";
 import CategoryDropdown from "./CategoryDropdown";
@@ -36,9 +36,27 @@ interface Props {
 export default function TransactionTable({ transactions, month, onHide, anomalies, focus }: Props) {
   const setFlag = useSetFlag(month);
   const setCategory = useSetCategory(month);
+  const clearOverride = useDeleteFlag(month);
 
   const changeCategory = (t: Transaction, subcategory: string) =>
     setCategory.mutate({ flagId: t.flag_id, description: t.description, subcategory });
+
+  /**
+   * Drops the row's manual category so it follows the categoriser again.
+   * Picking from the dropdown can only ever replace one override with another —
+   * including "Uncategorized", which pins the row blank — so without this there
+   * is no way back to the categoriser's own answer.
+   */
+  const resetCategory = (t: Transaction) => (
+    <button
+      onClick={() => clearOverride.mutate(t.flag_id)}
+      title="Use the categoriser's own category for this row"
+      aria-label="Reset category"
+      className="shrink-0 rounded-lg px-1.5 py-1 text-sm leading-none text-gray-400 hover:bg-gray-100 hover:text-indigo-600 dark:hover:bg-gray-700 dark:hover:text-indigo-400"
+    >
+      ↺
+    </button>
+  );
 
   // Scroll to and briefly highlight a transaction requested from another tab
   // (e.g. a rent auto-paid link). Waits until the row is actually loaded, and
@@ -125,7 +143,12 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
                 </td>
                 <td className="px-6 py-3">{sourceBadge(t.source)}</td>
                 <td className="px-6 py-3">
-                  <CategoryDropdown value={t.subcategory} onChange={(subcategory) => changeCategory(t, subcategory)} />
+                  <div className="flex items-center gap-1">
+                    <div className="min-w-0 flex-1">
+                      <CategoryDropdown value={t.subcategory} onChange={(subcategory) => changeCategory(t, subcategory)} />
+                    </div>
+                    {t.overridden && resetCategory(t)}
+                  </div>
                 </td>
                 <td className="px-6 py-3">
                   <Tooltip label={t.notes} className="block">
@@ -185,6 +208,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
               <div className="min-w-0 flex-1">
                 <CategoryDropdown value={t.subcategory} onChange={(subcategory) => changeCategory(t, subcategory)} />
               </div>
+              {t.overridden && resetCategory(t)}
               <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                 <input
                   type="checkbox"

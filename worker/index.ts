@@ -27,7 +27,7 @@ import {
   loadHidden,
   saveHiddenMonth,
 } from "../lib/config";
-import { subcategoryToCategory } from "../lib/categorize";
+import { subcategoryToCategory, categorizeRow, type Rules } from "../lib/categorize";
 import {
   serializeTransactions,
   fetchFlexRows,
@@ -125,10 +125,20 @@ app.post("/category-rules", async (c) => {
   const description = String(b.description ?? "").trim();
   const subcategory = String(b.subcategory ?? "");
   if (!description) return c.json({ detail: "description is required" }, 400);
-  const rules = await loadRules(sqlOf(c));
+  const rules = (await loadRules(sqlOf(c))) as Rules;
+  // A rule pins one exact spelling, and banks send a merchant under several.
+  // Storing one that only repeats what the keyword list already says is how a
+  // single shop ends up split across categories: the spellings the keywords
+  // cover stay right while the pinned one follows a rule that has drifted. So
+  // a rule is kept only where it actually changes the answer — and re-saving a
+  // row the keywords now get right clears the stale rule instead.
+  const withoutSelf: Rules = { ...rules };
+  delete withoutSelf[description];
+  const byKeyword = categorizeRow(description, withoutSelf);
+
   // An empty sub-category means the row was cleared back to Uncategorized, so
   // the remembered rule is dropped rather than stored as a blank mapping.
-  if (subcategory) rules[description] = { subcategory };
+  if (subcategory && subcategory !== byKeyword) rules[description] = { subcategory };
   else delete rules[description];
   await saveRules(sqlOf(c), rules);
   return c.json({

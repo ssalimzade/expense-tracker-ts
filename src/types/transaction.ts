@@ -15,6 +15,7 @@ export interface Transaction {
   category: string;
   notes: string;
   one_time: boolean;
+  overridden: boolean; // subcategory is a manual override, not the categoriser's
 }
 
 export interface FlagUpdate {

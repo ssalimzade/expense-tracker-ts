@@ -142,6 +142,9 @@ export async function serializeTransactions(sql: Sql, month?: string): Promise<R
       category,
       notes: "notes" in flag ? flag.notes : "",
       one_time: Boolean("one_time" in flag ? flag.one_time : false),
+      // Whether the sub-category above is a manual override rather than the
+      // categoriser's own answer, so the UI can offer to drop it.
+      overridden: "subcategory" in flag,
     });
   }
   // sort by created desc, stable (matches Python sort(reverse=True))
