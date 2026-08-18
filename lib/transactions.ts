@@ -1,5 +1,5 @@
 import type { Sql } from "./db";
-import { makeTransactionId } from "./hash";
+import { makeTransactionId, sha256Hex } from "./hash";
 import {
   categorizeOne,
   categorizeRow,
@@ -71,16 +71,55 @@ async function fetchTxRows(sql: Sql, month?: string): Promise<Row[]> {
   return out;
 }
 
+/**
+ * One flag_id per row.
+ *
+ * The id is a hash of description + created, which identifies a row only while
+ * that pair is unique. Banks that send date-only timestamps (HSBC) stamp every
+ * purchase that day 00:00:00, so two visits to the same shop on one day are
+ * identical in both fields and collapse onto a single flag — ticking One-time
+ * on one shows it on the other, and a category set on one lands on both.
+ *
+ * Duplicates are separated by the bank's own row id, which is unique and does
+ * not change between pulls. The first row of a group keeps the plain hash so
+ * every flag, note and hidden row already stored against it stays attached;
+ * only the extra rows in a group — the ones sharing a flag today — take a new
+ * id, and they take the same one on every request.
+ */
+async function flagIdsFor(rows: Row[]): Promise<Map<Row, string>> {
+  const groups = new Map<string, Row[]>();
+  for (const t of rows) {
+    const key = `${t.description ?? ""}|${t.created_iso ?? ""}`;
+    const group = groups.get(key);
+    if (group) group.push(t);
+    else groups.set(key, [t]);
+  }
+
+  const ids = new Map<Row, string>();
+  for (const [key, group] of groups) {
+    if (group.length === 1) {
+      ids.set(group[0], await sha256Hex(key));
+      continue;
+    }
+    const ordered = [...group].sort((a, b) => cmp(String(a.id), String(b.id)));
+    for (let i = 0; i < ordered.length; i++) {
+      ids.set(ordered[i], await sha256Hex(i === 0 ? key : `${key}|${ordered[i].id}`));
+    }
+  }
+  return ids;
+}
+
 export async function serializeTransactions(sql: Sql, month?: string): Promise<Row[]> {
   const rows = await fetchTxRows(sql, month);
   const rules = (await loadRules(sql)) as Rules;
   const monthFlags = month ? await getFlagsForMonth(sql, month) : {};
+  const flagIds = await flagIdsFor(rows);
 
   const result: Row[] = [];
   for (const t of rows) {
     if ((t.description ?? "").trim() === "TFL TRAVEL CHARGE") continue;
     const createdIso: string | null = t.created_iso ?? null;
-    const flagId = await makeTransactionId(t.description ?? "", createdIso ?? "");
+    const flagId = flagIds.get(t)!;
 
     let [subcategory, category] = categorizeOne(t.description ?? "", rules, t.merchant_name ?? "");
     const flag = monthFlags[flagId] ?? {};
