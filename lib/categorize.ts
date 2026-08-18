@@ -8,7 +8,10 @@ export const subCategoryKeywords: Record<string, string[]> = {
     "M&S", "MARKS&SPENCER", "MARKS AND SPENCER", "Bens", "Waitrose", "TESCO",
     "KAVANAGHS", "CO-OP", "SAINSBURY'S", "SAINSBURYS",
   ],
-  Lunch: ["SALAD KITCHEN", "URBAN FOOD", "ITSU", "MEALPAL", "YACOB's", "Birley"],
+  // "PRET" alone, not "PRET A MANGER": the branch and city trail the name in
+  // every spelling the banks send, and whole-word matching keeps it off
+  // anything else.
+  Lunch: ["SALAD KITCHEN", "URBAN FOOD", "ITSU", "MEALPAL", "YACOB's", "Birley", "PRET"],
   "Going Out": ["FIVE GUYS", "MCDONALDS", "MCDONALD'S"],
   Dating: [
     "WATCHHOUSE", "EUPHORIUM", "UBER EATS", "CAFFE NERO", "GAIL_S", "GELATI",
