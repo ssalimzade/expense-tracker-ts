@@ -110,14 +110,17 @@ async function flagIdsFor(rows: Row[]): Promise<Map<Row, string>> {
 }
 
 export async function serializeTransactions(sql: Sql, month?: string): Promise<Row[]> {
-  const rows = await fetchTxRows(sql, month);
+  // Dropped before the ids are built rather than inside the loop: these rows
+  // are never rendered, so hashing them is pure cost.
+  const rows = (await fetchTxRows(sql, month)).filter(
+    (t) => (t.description ?? "").trim() !== "TFL TRAVEL CHARGE",
+  );
   const rules = (await loadRules(sql)) as Rules;
   const monthFlags = month ? await getFlagsForMonth(sql, month) : {};
   const flagIds = await flagIdsFor(rows);
 
   const result: Row[] = [];
   for (const t of rows) {
-    if ((t.description ?? "").trim() === "TFL TRAVEL CHARGE") continue;
     const createdIso: string | null = t.created_iso ?? null;
     const flagId = flagIds.get(t)!;
 
@@ -265,10 +268,34 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
   const rules = (await loadRules(sql)) as Rules;
   const allFlags = await loadAllFlags(sql); // month -> flagId -> flag
   const out: Row = {};
+  // Only months that can land inside `year` are worth reading. A row counts
+  // towards its own month shifted by the item's offset, and those run from -1
+  // to +1, so December of the year before through January of the year after
+  // covers every row that can contribute. Reading the whole history instead
+  // meant hashing every transaction ever recorded, in all five tables, to
+  // discard almost all of them — which is what put this over the Worker's CPU
+  // limit as the history grew.
+  const from = `${year - 1}-12-01`;
+  const until = `${year + 1}-02-01`;
+
+  // Whether a month holds any override naming a rent item — the only way a row
+  // the rules read as something else can be pulled in. Answered once per month.
+  const pullsIn = new Map<string, boolean>();
+  const monthPullsIn = (month: string): boolean => {
+    let known = pullsIn.get(month);
+    if (known === undefined) {
+      known = Object.values(allFlags[month] ?? {}).some(
+        (f: any) => f && "subcategory" in f && SUBCAT_TO_RENT_ITEM[f.subcategory],
+      );
+      pullsIn.set(month, known);
+    }
+    return known;
+  };
+
   for (const t of ALL_TABLES) {
     const rows = await sql.query(
-      `SELECT ${RECONCILE_COLS} FROM ${t} WHERE created IS NOT NULL`,
-      [],
+      `SELECT ${RECONCILE_COLS} FROM ${t} WHERE created >= $1 AND created < $2`,
+      [from, until],
     );
     for (const r of rows) {
       const rawAmount = Number(r.amount ?? 0);
@@ -281,19 +308,20 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
       // guess. This is what lets re-categorising a row to "Uncategorized"
       // unlink it here too. flag_id (needed both to look up the override and to
       // link the row in the UI) is computed lazily.
+      //
+      // Looking an override up costs a hash, so it is only worth doing where
+      // one could change the outcome: on a row the rules already read as a rent
+      // bill (the override may unlink it), or in a month that has an override
+      // naming a rent item at all (it may pull a row in). Everything else keeps
+      // the rules' answer either way, and skips the hash.
       const txMonth = `${r.yr}-${String(r.mo).padStart(2, "0")}`;
       const monthFlags = allFlags[txMonth];
       let flagId: string | undefined;
-      let sub: string;
-      if (monthFlags) {
+      let sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
+      if (monthFlags && (SUBCAT_TO_RENT_ITEM[sub] || monthPullsIn(txMonth))) {
         flagId = await makeTransactionId(r.description ?? "", r.created_iso ?? "");
         const flag = monthFlags[flagId] ?? {};
-        sub =
-          "subcategory" in flag
-            ? flag.subcategory
-            : categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
-      } else {
-        sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
+        if ("subcategory" in flag) sub = flag.subcategory;
       }
 
       const mapping = SUBCAT_TO_RENT_ITEM[sub];
