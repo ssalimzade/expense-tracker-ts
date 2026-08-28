@@ -42,7 +42,7 @@ export default function RepaymentsTab() {
 
         return (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium uppercase tracking-wider text-gray-400">Showing</span>
               <span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
                 {monthLabel}

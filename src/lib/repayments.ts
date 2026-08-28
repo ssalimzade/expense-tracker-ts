@@ -58,8 +58,8 @@ export function leftToPay(r: Repayment): number {
 /**
  * Months to display in the repayments view.
  *
- * If today is within the first 7 days of the month: current month + next 2.
- * Otherwise: next month + 2 months after that (3 months total from next month).
+ * If today is within the first 7 days of the month: current month + next 3.
+ * Otherwise: next month + 3 months after that (4 months total from next month).
  */
 export function visibleRepaymentMonths(): string[] {
   const today = new Date();
@@ -69,7 +69,7 @@ export function visibleRepaymentMonths(): string[] {
 
   const startOffset = day <= 7 ? 0 : 1;
   const months: string[] = [];
-  for (let i = startOffset; i < startOffset + 3; i++) {
+  for (let i = startOffset; i < startOffset + 4; i++) {
     const d = new Date(y, m + i, 1);
     months.push(
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,

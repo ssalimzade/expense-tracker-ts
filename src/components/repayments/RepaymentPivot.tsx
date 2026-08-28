@@ -30,7 +30,7 @@ export default function RepaymentPivot({ repayments, visibleMonths }: Props) {
         <table className="w-full table-fixed text-sm md:table-auto">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
-              <th className="w-[28%] pb-2 pr-1 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white md:w-auto md:pr-4">Category</th>
+              <th className="w-[24%] pb-2 pr-1 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white md:w-auto md:pr-4">Category</th>
               {months.map((m) => (
                 <th key={m} className="pb-2 pr-1 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white md:w-auto md:whitespace-nowrap md:pr-4">
                   <span className="md:hidden">{formatMonthLabelShort(m)}</span>
