@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { Transaction } from "../../types/transaction";
-import { useSetFlag, useSetCategory, useDeleteFlag } from "../../hooks/useTransactions";
+import {
+  useSetFlag,
+  useSetCategory,
+  useSetOneTime,
+  useDeleteFlag,
+} from "../../hooks/useTransactions";
 import { gbp, shortDate } from "../../lib/format";
 import { commitOnEnter } from "../../lib/keys";
 import CategoryDropdown from "./CategoryDropdown";
@@ -36,10 +41,24 @@ interface Props {
 export default function TransactionTable({ transactions, month, onHide, anomalies, focus }: Props) {
   const setFlag = useSetFlag(month);
   const setCategory = useSetCategory(month);
+  const setOneTime = useSetOneTime(month);
   const clearOverride = useDeleteFlag(month);
 
   const changeCategory = (t: Transaction, subcategory: string) =>
-    setCategory.mutate({ flagId: t.flag_id, description: t.description, subcategory });
+    setCategory.mutate({
+      flagId: t.flag_id,
+      description: t.description,
+      subcategory,
+      // A one-time row is an exception, so its category is not remembered for
+      // the merchant — the other rows spelled the same keep what they had.
+      oneTime: t.one_time,
+    });
+
+  const toggleOneTime = (t: Transaction, oneTime: boolean) =>
+    setOneTime.mutate({ flagId: t.flag_id, description: t.description, oneTime });
+
+  const ONE_TIME_HINT =
+    "One-time: any category set on this row applies to it alone, not to the merchant";
 
   /**
    * Drops the row's manual category so it follows the categoriser again.
@@ -122,7 +141,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Source</th>
               <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Category</th>
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Notes</th>
-              <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">One-time</th>
+              <th title={ONE_TIME_HINT} className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">One-time</th>
               <th className="px-6 py-3" />
             </tr>
           </thead>
@@ -165,7 +184,8 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
                   <input
                     type="checkbox"
                     checked={t.one_time}
-                    onChange={(e) => setFlag.mutate({ flagId: t.flag_id, update: { month, one_time: e.target.checked } })}
+                    title={ONE_TIME_HINT}
+                    onChange={(e) => toggleOneTime(t, e.target.checked)}
                     className="h-4 w-4 rounded border-gray-300 accent-indigo-600"
                   />
                 </td>
@@ -209,11 +229,11 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
                 <CategoryDropdown value={t.subcategory} onChange={(subcategory) => changeCategory(t, subcategory)} />
               </div>
               {t.overridden && resetCategory(t)}
-              <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <label title={ONE_TIME_HINT} className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                 <input
                   type="checkbox"
                   checked={t.one_time}
-                  onChange={(e) => setFlag.mutate({ flagId: t.flag_id, update: { month, one_time: e.target.checked } })}
+                  onChange={(e) => toggleOneTime(t, e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 accent-indigo-600"
                 />
                 One-time

@@ -122,13 +122,26 @@ function containsWords(haystack: string[], needle: string[]): boolean {
   return false;
 }
 
+function ruleKeyForWords(joined: string, rules: Rules): string | undefined {
+  for (const key of Object.keys(rules)) {
+    if (normalizeText(key) === joined) return key;
+  }
+  return undefined;
+}
+
+/**
+ * The key a rule for this description is stored under, if there is one. Rules
+ * match on normalised text, so the key can be spelled differently to the
+ * description that finds it.
+ */
+export const ruleKeyFor = (desc: string, rules: Rules): string | undefined =>
+  ruleKeyForWords(normalizeText(desc), rules);
+
 /** The rule whose description matches this row exactly, if there is one. */
 function matchingRule(candidates: string[][], rules: Rules): Rules[string] | undefined {
   for (const candidate of candidates) {
-    const joined = candidate.join(" ");
-    for (const [keyword, val] of Object.entries(rules)) {
-      if (joined === normalizeText(keyword)) return val;
-    }
+    const key = ruleKeyForWords(candidate.join(" "), rules);
+    if (key) return rules[key];
   }
   return undefined;
 }

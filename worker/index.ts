@@ -5,6 +5,7 @@ import {
   saveBudgetForMonth,
   loadRules,
   saveRules,
+  unpinRule,
   getFlagsForMonth,
   setFlagsForMonth,
   upsertSavingsRow,
@@ -89,6 +90,16 @@ app.post("/transactions/:flag_id/flag", async (c) => {
   if (b.one_time != null) entry.one_time = b.one_time;
   monthFlags[flagId] = entry;
   await setFlagsForMonth(sqlOf(c), b.month, monthFlags);
+
+  // One-time says this row's category is an exception, so the merchant must not
+  // stay pinned to it. Ticking the box before picking the category is the plain
+  // case — no rule is ever written. Ticking it afterwards has to undo the rule
+  // that change left behind, which is what this does: only while the rule still
+  // says what this row says, since one reading anything else was set from a
+  // different row and is none of this row's business.
+  if (b.one_time === true && entry.subcategory && b.description) {
+    await unpinRule(sqlOf(c), String(b.description), entry.subcategory);
+  }
   return c.json({ flag_id: flagId, month: b.month, ...entry });
 });
 

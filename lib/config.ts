@@ -1,5 +1,6 @@
 import type { Sql } from "./db";
 import { kvGet, kvSet } from "./kv";
+import { ruleKeyFor, type Rules } from "./categorize";
 
 // Config stores in app_config. Each function mirrors a Python services/*_utils.py
 // helper so read/write behavior is identical.
@@ -17,9 +18,28 @@ export async function saveBudgetForMonth(sql: Sql, month: string, budgets: Dict)
 }
 
 // ── category rules ──────────────────────────────────────────────────────────
-export const loadRules = (sql: Sql) =>
-  kvGet<Record<string, { subcategory: string }>>(sql, "category_rules", {});
+export const loadRules = (sql: Sql) => kvGet<Rules>(sql, "category_rules", {});
 export const saveRules = (sql: Sql, rules: Dict) => kvSet(sql, "category_rules", rules);
+
+/**
+ * Drops the rule pinning `description` to `subcategory` — but only while that
+ * is still what it says. Used when a row is marked one-time after its category
+ * was changed: the category is meant for that row alone, so the merchant is
+ * unpinned, while a rule reading something else was set from a different row
+ * and is left where it is. Returns whether anything was dropped.
+ */
+export async function unpinRule(
+  sql: Sql,
+  description: string,
+  subcategory: string,
+): Promise<boolean> {
+  const rules = await loadRules(sql);
+  const key = ruleKeyFor(description, rules);
+  if (key === undefined || rules[key].subcategory !== subcategory) return false;
+  delete rules[key];
+  await saveRules(sql, rules);
+  return true;
+}
 
 // ── one-time flags (per month) ──────────────────────────────────────────────
 /** Every month's flags in one read, for callers that span several months. */
