@@ -5,6 +5,7 @@ import {
   saveBudgetForMonth,
   loadRules,
   saveRules,
+  unpinRule,
   getFlagsForMonth,
   setFlagsForMonth,
   upsertSavingsRow,
@@ -89,6 +90,16 @@ app.post("/transactions/:flag_id/flag", async (c) => {
   if (b.one_time != null) entry.one_time = b.one_time;
   monthFlags[flagId] = entry;
   await setFlagsForMonth(sqlOf(c), b.month, monthFlags);
+
+  // One-time says this row's category is an exception, so the merchant must not
+  // stay pinned to it. Ticking the box before picking the category is the plain
+  // case — no rule is ever written. Ticking it afterwards has to undo the rule
+  // that change left behind, which is what this does: only while the rule still
+  // says what this row says, since one reading anything else was set from a
+  // different row and is none of this row's business.
+  if (b.one_time === true && entry.subcategory && b.description) {
+    await unpinRule(sqlOf(c), String(b.description), entry.subcategory);
+  }
   return c.json({ flag_id: flagId, month: b.month, ...entry });
 });
 
@@ -132,14 +143,18 @@ app.post("/category-rules", async (c) => {
   // cover stay right while the pinned one follows a rule that has drifted. So
   // a rule is kept only where it actually changes the answer — and re-saving a
   // row the keywords now get right clears the stale rule instead.
-  const withoutSelf: Rules = { ...rules };
-  delete withoutSelf[description];
-  const byKeyword = categorizeRow(description, withoutSelf);
+  const byKeyword = categorizeRow(description, {});
 
   // An empty sub-category means the row was cleared back to Uncategorized, so
   // the remembered rule is dropped rather than stored as a blank mapping.
-  if (subcategory && subcategory !== byKeyword) rules[description] = { subcategory };
-  else delete rules[description];
+  //
+  // `since` is what keeps the rule off the rows already on screen: it applies
+  // to transactions that arrive from now on, and to older rows only where the
+  // keyword lists have nothing to say. Re-saving refreshes it, so a rule never
+  // reaches further back than the moment it was last chosen.
+  if (subcategory && subcategory !== byKeyword) {
+    rules[description] = { subcategory, since: new Date().toISOString().slice(0, 19) };
+  } else delete rules[description];
   await saveRules(sqlOf(c), rules);
   return c.json({
     description,

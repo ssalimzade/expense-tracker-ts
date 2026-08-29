@@ -23,4 +23,7 @@ export interface FlagUpdate {
   notes?: string;
   subcategory?: string;
   one_time?: boolean;
+  // Sent alongside one_time so marking a row as an exception can unpin the
+  // merchant rule its own category change had left behind.
+  description?: string;
 }
