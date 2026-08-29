@@ -29,6 +29,52 @@ Cloudflare Access → gates the whole site (free, email login)
 | `lib/kv.ts` | `app_config` key-value access (mirrors the Python `kv.py`) |
 | `wrangler.toml` | Pages config |
 
+## Categorising
+
+A row's category is not stored on the transaction — it is worked out on every
+read (`serializeTransactions` in `lib/transactions.ts`) from three sources, in
+this order:
+
+1. **The row's own override** — the category picked on that one line, stored
+   against its `flag_id`. Beats everything else; the ↺ beside the dropdown drops
+   it and hands the row back to the categoriser.
+2. **Merchant rules** (`app_config.category_rules`) — a description pinned to a
+   sub-category, saved whenever a category is picked, so the same merchant maps
+   itself next time it comes in. A rule is only stored where it disagrees with
+   the keyword lists; re-saving a row the keywords now get right clears it.
+3. **Keyword lists** — `subCategoryKeywords` and `rentSubcategoryKeywords` in
+   `lib/categorize.ts`, matched as whole words against the description and the
+   merchant name, with punctuation treated as a separator so "CO-OP", "CO- OP"
+   and "Co Op" all match.
+
+Each rule carries `since`, the moment it was saved, and outranks the keyword
+lists only for transactions that arrived after that. On older rows it can fill a
+gap the keywords leave — so categorising one Uncategorized row still catches its
+siblings — but never overwrite an answer they already gave. Without that, one
+rule reached backwards and re-categorised rows already on screen.
+
+`flag_id` identifies one transaction: a hash of description + `created`, with
+duplicates (two visits to the same shop on a day, which HSBC stamps identically)
+separated by the bank's own row id.
+
+### One-time
+
+Ticking **One-time** says this row is an exception rather than a new answer for
+the merchant:
+
+- Picking a category on a one-time row writes the per-row override and **no
+  merchant rule** — that CO-OP visit becomes Other while every other CO-OP line
+  keeps Groceries.
+- Ticking the box *after* changing the category unpins the rule that change
+  wrote, so either order gives the same result. Only a rule that still says what
+  the row says is unpinned; one reading anything else was set from a different
+  row and is left alone.
+- The row is also kept out of its category's average in the anomaly highlighter,
+  so a one-off does not make the rest of the category look normal.
+
+It does not affect spend totals, budgets or projections — one-time rows count as
+spend like any other (`src/lib/spend.ts`).
+
 ## Local dev
 
 ```bash
