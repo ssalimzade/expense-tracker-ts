@@ -29,9 +29,10 @@ export function useSetFlag(month: string) {
 
 /**
  * Categorising a row from the transactions table does two things: it flags this
- * exact row (flag_id is a hash of description + timestamp, so it only ever
- * matches this one transaction) and it saves a category rule keyed on the
- * description, so the same merchant maps itself next time it comes in.
+ * exact row (flag_id identifies one transaction and nothing else) and it saves
+ * a category rule keyed on the description, so the same merchant maps itself
+ * next time it comes in. The rule is stamped with the time it was saved and
+ * applies from there on, so rows already on screen keep the category they had.
  */
 export function useSetCategory(month: string) {
   const qc = useQueryClient();

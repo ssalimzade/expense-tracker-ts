@@ -132,14 +132,18 @@ app.post("/category-rules", async (c) => {
   // cover stay right while the pinned one follows a rule that has drifted. So
   // a rule is kept only where it actually changes the answer — and re-saving a
   // row the keywords now get right clears the stale rule instead.
-  const withoutSelf: Rules = { ...rules };
-  delete withoutSelf[description];
-  const byKeyword = categorizeRow(description, withoutSelf);
+  const byKeyword = categorizeRow(description, {});
 
   // An empty sub-category means the row was cleared back to Uncategorized, so
   // the remembered rule is dropped rather than stored as a blank mapping.
-  if (subcategory && subcategory !== byKeyword) rules[description] = { subcategory };
-  else delete rules[description];
+  //
+  // `since` is what keeps the rule off the rows already on screen: it applies
+  // to transactions that arrive from now on, and to older rows only where the
+  // keyword lists have nothing to say. Re-saving refreshes it, so a rule never
+  // reaches further back than the moment it was last chosen.
+  if (subcategory && subcategory !== byKeyword) {
+    rules[description] = { subcategory, since: new Date().toISOString().slice(0, 19) };
+  } else delete rules[description];
   await saveRules(sqlOf(c), rules);
   return c.json({
     description,

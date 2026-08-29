@@ -124,7 +124,12 @@ export async function serializeTransactions(sql: Sql, month?: string): Promise<R
     const createdIso: string | null = t.created_iso ?? null;
     const flagId = flagIds.get(t)!;
 
-    let [subcategory, category] = categorizeOne(t.description ?? "", rules, t.merchant_name ?? "");
+    let [subcategory, category] = categorizeOne(
+      t.description ?? "",
+      rules,
+      t.merchant_name ?? "",
+      createdIso,
+    );
     const flag = monthFlags[flagId] ?? {};
     if ("subcategory" in flag) {
       subcategory = flag.subcategory;
@@ -317,7 +322,12 @@ export async function reconcileRent(sql: Sql, year: number): Promise<Row> {
       const txMonth = `${r.yr}-${String(r.mo).padStart(2, "0")}`;
       const monthFlags = allFlags[txMonth];
       let flagId: string | undefined;
-      let sub = categorizeRow(r.description ?? "", rules, r.merchant_name ?? "");
+      let sub = categorizeRow(
+        r.description ?? "",
+        rules,
+        r.merchant_name ?? "",
+        r.created_iso ?? null,
+      );
       if (monthFlags && (SUBCAT_TO_RENT_ITEM[sub] || monthPullsIn(txMonth))) {
         flagId = await makeTransactionId(r.description ?? "", r.created_iso ?? "");
         const flag = monthFlags[flagId] ?? {};

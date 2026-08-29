@@ -65,7 +65,19 @@ export const subcategoryToCategory: Record<string, string> = {
   Rent: RENT_UTILITY_CATEGORY,
 };
 
-export type Rules = Record<string, { subcategory: string }>;
+export type Rules = Record<
+  string,
+  {
+    subcategory: string;
+    /**
+     * When the rule was saved, second-precision and in the same shape as a
+     * transaction's `created`. A rule only outranks the keyword list for rows
+     * that arrived after this moment. Absent on rules stored before it was
+     * recorded, which are treated as gap-fill only.
+     */
+    since?: string;
+  }
+>;
 
 /**
  * Banks spell the same merchant several ways: HSBC sends "CO- OP GROUP FOOD
@@ -110,18 +122,19 @@ function containsWords(haystack: string[], needle: string[]): boolean {
   return false;
 }
 
-export function categorizeRow(desc: string, rules: Rules, merchant?: string | null): string {
-  const candidates = [toWords(desc), toWords(merchant)].filter((w) => w.length);
-
-  // Priority 1: exact match against user rules
+/** The rule whose description matches this row exactly, if there is one. */
+function matchingRule(candidates: string[][], rules: Rules): Rules[string] | undefined {
   for (const candidate of candidates) {
     const joined = candidate.join(" ");
     for (const [keyword, val] of Object.entries(rules)) {
-      if (joined === normalizeText(keyword)) return val.subcategory;
+      if (joined === normalizeText(keyword)) return val;
     }
   }
+  return undefined;
+}
 
-  // Priority 2: keyword match on whole words
+/** The keyword lists' own answer, ignoring user rules. */
+function byKeywords(candidates: string[][]): string {
   for (const candidate of candidates) {
     for (const [subcat, keywords] of Object.entries(subCategoryKeywords)) {
       for (const keyword of keywords) {
@@ -130,7 +143,7 @@ export function categorizeRow(desc: string, rules: Rules, merchant?: string | nu
     }
   }
 
-  // Priority 3: Rent & Utilities ("rent" is exact-match only)
+  // Rent & Utilities ("rent" is exact-match only)
   if (candidates.some((c) => c.length === 1 && c[0] === "rent")) return "Rent";
   for (const candidate of candidates) {
     for (const [subcat, keywords] of Object.entries(rentSubcategoryKeywords)) {
@@ -143,7 +156,50 @@ export function categorizeRow(desc: string, rules: Rules, merchant?: string | nu
   return "Uncategorized";
 }
 
-export function categorizeOne(desc: string, rules: Rules, merchant?: string | null): [string, string] {
-  const sub = categorizeRow(desc, rules, merchant);
+// Timestamps are compared as text, so both sides are cut to the same
+// second-precision shape first: `created` arrives as 2026-08-29T23:08:00 and an
+// ISO stamp carries milliseconds and a Z on the end.
+const stamp = (value: string) => value.slice(0, 19);
+
+/**
+ * `createdIso` — when the row arrived, in the same shape as `created`. Rules
+ * outrank the keyword lists only from the moment they were saved onward; a row
+ * without a timestamp (or a rule saved before they were recorded) gets the
+ * gap-fill treatment described below.
+ */
+export function categorizeRow(
+  desc: string,
+  rules: Rules,
+  merchant?: string | null,
+  createdIso?: string | null,
+): string {
+  const candidates = [toWords(desc), toWords(merchant)].filter((w) => w.length);
+  const rule = matchingRule(candidates, rules);
+
+  // A rule pins one exact description, and several rows can carry it — two
+  // visits to the same shop on one day, or every month's copy of a standing
+  // payment. Letting a rule reach backwards re-categorised those neighbours
+  // behind the user's back: setting one CO-OP row to Other moved the other one
+  // off Groceries too, and nothing on screen explained why. So a rule only
+  // outranks the keyword lists for rows that arrived after it was saved. On
+  // older rows it may fill a gap the keywords leave — which is what makes
+  // categorising one Uncategorized row catch its siblings — but never overwrite
+  // an answer they already gave. The row the user actually picked carries its
+  // own per-row override, so it changes either way.
+  if (rule?.since && createdIso && stamp(createdIso) >= stamp(rule.since)) {
+    return rule.subcategory;
+  }
+
+  const keyword = byKeywords(candidates);
+  return keyword === "Uncategorized" ? rule?.subcategory ?? "Uncategorized" : keyword;
+}
+
+export function categorizeOne(
+  desc: string,
+  rules: Rules,
+  merchant?: string | null,
+  createdIso?: string | null,
+): [string, string] {
+  const sub = categorizeRow(desc, rules, merchant, createdIso);
   return [sub, subcategoryToCategory[sub] ?? "Uncategorized"];
 }
