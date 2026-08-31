@@ -8,6 +8,9 @@ dist/
 # Wrangler / Cloudflare local state
 .wrangler/
 
+# Local tooling state — leaks absolute home paths, and is machine-specific
+.claude/
+
 # Local secrets — never commit (holds DATABASE_URL for local dev)
 .dev.vars
 *.env
