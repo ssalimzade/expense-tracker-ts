@@ -29,12 +29,12 @@ jobs:
     steps:                        # run top to bottom. A non-zero exit fails
                                   # the job and skips every remaining step.
 
-      - uses: actions/checkout@v4 # `uses` = run someone else's prebuilt action.
+      - uses: actions/checkout@v5 # `uses` = run someone else's prebuilt action.
                                   # This one git-clones your repo into the VM.
-                                  # Without it the VM is empty. @v4 pins the
+                                  # Without it the VM is empty. @v5 pins the
                                   # major version so it can't break on you.
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:                     # `with` = inputs to the action above.
           node-version: 22        # which Node to install. 22 is the current LTS
                                   # and matches what Workers targets.
@@ -72,8 +72,8 @@ jobs:
                                           # Nothing carries over, which is why
                                           # the next four steps repeat.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -82,7 +82,7 @@ jobs:
                                           # [assets] block points at it, so this
                                           # must exist before wrangler deploy.
 
-      - uses: cloudflare/wrangler-action@v3
+      - uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
                                           # ${{ }} is GitHub's expression syntax,

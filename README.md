@@ -1,5 +1,7 @@
 # expense-tracker-ts
 
+[![CI/CD](https://github.com/ssalimzade/expense-tracker-ts/actions/workflows/deploy.yml/badge.svg)](https://github.com/ssalimzade/expense-tracker-ts/actions/workflows/deploy.yml)
+
 TypeScript port of the personal finance dashboard, running as a single
 **Cloudflare Worker** (Hono) that serves the built React SPA as static assets and
 reads the same **Neon Postgres** database (transactions + the `app_config` config
@@ -101,14 +103,10 @@ takes `src/` (DOM libs, JSX) and `tsconfig.worker.json` takes `lib/` and
 types without checking them, so without that second pass those files ship
 unverified.
 
-Two version pins are load-bearing, and re-resolving them will break the build:
-
-- **`wrangler`** floats on `^4.107.0`, but releases past 4.127 want
-  `@cloudflare/workers-types` v5 against the v4 pinned here. Deleting
-  `package-lock.json` and reinstalling therefore dies on `ERESOLVE`.
-- **`vitest`** is held on 2.x. Version 4 pulls its own Vite 7 and a second
-  esbuild alongside this project's Vite 5, and the lockfile that produces is one
-  `npm ci` cannot install.
+One version pin is load-bearing: **`vitest`** is held on the 2.x line. Version 4
+pulls its own Vite 7 and a second esbuild alongside this project's Vite 5, and
+the lockfile that produces is one `npm ci` cannot install. Moving off 2.x means
+upgrading Vite first.
 
 ## Tests
 
@@ -122,17 +120,23 @@ Two version pins are load-bearing, and re-resolving them will break the build:
 | `src/lib/spend.test.ts` | per-category and total spend with refunds netted, month lengths, and both budget-pace invariants — day 1 sits at the repayments baseline, the last day lands exactly on the budget |
 | `lib/categorize.test.ts` | tokenising ("CO-OP" / "CO- OP" / "Co Op"), whole-word matching, rule `since` vs gap-fill, and that every sub-category maps to a parent category |
 | `src/lib/tax.test.ts` | PAYE and NI band edges, pension taken before tax, and the Vitality benefit raising PAYE while leaving NI alone |
+| `lib/transactions.test.ts` | `reconcileRent`: the per-item month offsets, refunds never linking, largest-payment-wins, the read window, and how per-row overrides link, unlink and move a bill |
 
-These are the money calculations, and they are all pure — no database, no
-mocking. Where a function reads `new Date()` the tests move the clock with
-`vi.setSystemTime` rather than the code taking a date parameter it does not
-otherwise need.
+The pure suites need nothing but their inputs; where a function reads
+`new Date()` the tests move the clock with `vi.setSystemTime` rather than the
+code taking a date parameter it does not otherwise need.
 
-Deliberately not covered yet: anything taking a `sql` object
-(`serializeTransactions`, `reconcileRent`, `categoryTotals`), which needs a fake
-query layer first, and the React components.
+`reconcileRent` takes a `sql` object, so `lib/testSql.ts` stands in for the Neon
+client. It answers both shapes the codebase uses — the tagged template `kv.ts`
+sends and the `.query(text, params)` the rest use — and serves plain fixtures
+instead of parsing SQL. Fixtures carry one `created` timestamp and the fake
+derives the columns Postgres would compute from it, so a fixture cannot quietly
+disagree with the real query.
 
-## Deploy (Cloudflare)
+Not covered yet: `serializeTransactions` and `categoryTotals`, both of which the
+fake now makes cheap, and the React components.
+
+## CI/CD & deploy
 
 Pushing to `main` deploys. `.github/workflows/deploy.yml` runs `check` — install
 from the lockfile, typecheck, build, test — and then `deploy`, which starts only
