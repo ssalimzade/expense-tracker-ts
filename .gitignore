@@ -2,6 +2,9 @@
 node_modules/
 dist/
 
+# Incremental-build caches — churn on every `tsc -b`, never worth committing
+*.tsbuildinfo
+
 # Wrangler / Cloudflare local state
 .wrangler/
 

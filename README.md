@@ -28,7 +28,10 @@ Cloudflare Access → gates the whole site (free, email login)
 | `lib/` | Server-side logic shared by the routes: the categoriser, transaction serialisation, `app_config` access |
 | `lib/db.ts` | Neon serverless client |
 | `lib/kv.ts` | `app_config` key-value access (mirrors the Python `kv.py`) |
+| `*.test.ts` | Vitest suites, beside the code they cover |
 | `wrangler.toml` | Worker + static-assets config |
+| `tsconfig.worker.json` | Typechecks `lib/` + `worker/` — the main `tsconfig.json` covers only `src/` |
+| `.github/workflows/deploy.yml` | CI: typecheck, build and test on every push and PR; deploy on a green `main` |
 
 ## Categorising
 
@@ -82,7 +85,9 @@ spend like any other (`src/lib/spend.ts`).
 npm install
 npm run dev            # Vite on :5173 — SPA only (proxies /api elsewhere, below)
 npm run wdev           # build the SPA, then wrangler dev — Worker + /api together
-npm run build          # tsc -b, then build the SPA into dist/
+npm run build          # typecheck src/ + lib/ + worker/, then build the SPA into dist/
+npm test               # run the test suites once
+npm run test:watch     # re-run them as files change
 ```
 
 `wrangler dev` reads `DATABASE_URL` from `.dev.vars` (gitignored — never
@@ -90,11 +95,67 @@ committed). `npm run dev` serves the SPA only: it proxies `/api` to the Python
 app on `:8000` (see `vite.config.ts`), so use `wdev` to run against this repo's
 own routes.
 
+`npm run build` typechecks twice, because one project cannot cover both: `tsc -b`
+takes `src/` (DOM libs, JSX) and `tsconfig.worker.json` takes `lib/` and
+`worker/` (Workers types, no DOM). Wrangler bundles the Worker by stripping
+types without checking them, so without that second pass those files ship
+unverified.
+
+Two version pins are load-bearing, and re-resolving them will break the build:
+
+- **`wrangler`** floats on `^4.107.0`, but releases past 4.127 want
+  `@cloudflare/workers-types` v5 against the v4 pinned here. Deleting
+  `package-lock.json` and reinstalling therefore dies on `ERESOLVE`.
+- **`vitest`** is held on 2.x. Version 4 pulls its own Vite 7 and a second
+  esbuild alongside this project's Vite 5, and the lockfile that produces is one
+  `npm ci` cannot install.
+
+## Tests
+
+[Vitest](https://vitest.dev), with no config of its own — it reads
+`vite.config.ts`. Suites sit beside the code they cover.
+
+| Suite | What it pins down |
+|---|---|
+| `src/lib/rent.test.ts` | bill precedence (matched transaction → hand-entered → allocation), per-month `unlinked`, contribution clamping, and `share` never going negative |
+| `src/lib/pots.test.ts` | pot accrual month by month, settlement banking the balance and resetting it to zero, the `upTo` bound, `isRetired` |
+| `src/lib/spend.test.ts` | per-category and total spend with refunds netted, month lengths, and both budget-pace invariants — day 1 sits at the repayments baseline, the last day lands exactly on the budget |
+| `lib/categorize.test.ts` | tokenising ("CO-OP" / "CO- OP" / "Co Op"), whole-word matching, rule `since` vs gap-fill, and that every sub-category maps to a parent category |
+| `src/lib/tax.test.ts` | PAYE and NI band edges, pension taken before tax, and the Vitality benefit raising PAYE while leaving NI alone |
+
+These are the money calculations, and they are all pure — no database, no
+mocking. Where a function reads `new Date()` the tests move the clock with
+`vi.setSystemTime` rather than the code taking a date parameter it does not
+otherwise need.
+
+Deliberately not covered yet: anything taking a `sql` object
+(`serializeTransactions`, `reconcileRent`, `categoryTotals`), which needs a fake
+query layer first, and the React components.
+
 ## Deploy (Cloudflare)
+
+Pushing to `main` deploys. `.github/workflows/deploy.yml` runs `check` — install
+from the lockfile, typecheck, build, test — and then `deploy`, which starts only
+once `check` is green and only on `main`. Pull requests are checked but never
+shipped.
+
+It needs two repository secrets, set once under **Settings → Secrets and
+variables → Actions**:
+
+| Secret | Where it comes from |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | My Profile → API Tokens → "Edit Cloudflare Workers" template |
+| `CLOUDFLARE_ACCOUNT_ID` | Workers & Pages, right-hand sidebar |
+
+`DATABASE_URL` is deliberately not one of them. It is a Worker secret held by
+Cloudflare, and `wrangler deploy` leaves existing secrets untouched, so CI never
+needs database access at all.
+
+To ship by hand instead — same build, run locally:
 
 ```bash
 npx wrangler secret put DATABASE_URL   # once per environment
-npm run deploy                         # build, then wrangler deploy
+npm run deploy                         # typecheck, build, then wrangler deploy
 ```
 
 Cloudflare Access gates the deployed Worker (free, email login) — set up once in
