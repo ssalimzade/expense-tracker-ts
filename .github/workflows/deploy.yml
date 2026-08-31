@@ -1,0 +1,94 @@
+# The name shown in the Actions tab sidebar and on each run. Cosmetic only.
+name: CI/CD
+
+# ── WHEN this workflow runs ────────────────────────────────────────────────
+on:
+  push:                      # run when commits are pushed...
+    branches: [main]         # ...but only to main. Feature branch pushes are ignored here.
+  pull_request:              # also run on every PR (any branch → any branch).
+                             # No `branches:` filter, so all PRs get checked.
+  workflow_dispatch:         # adds a "Run workflow" button in the Actions tab,
+                             # so you can trigger a deploy by hand with no commit.
+
+# ── Stops two deploys from running at the same time ────────────────────────
+concurrency:
+  group: deploy-production   # any two runs sharing this string are serialised.
+                             # A literal string = one queue for the whole repo.
+  cancel-in-progress: false  # false → a queued run WAITS for the current one.
+                             # true would kill a deploy mid-flight, which can
+                             # leave Cloudflare holding a half-uploaded version.
+
+# ── The actual work. Jobs run in parallel unless linked by `needs`. ────────
+jobs:
+
+  # ══ JOB 1: verify the code builds ═══════════════════════════════════════
+  check:                          # job ID. Referenced by `needs:` below and
+                                  # by branch protection rules.
+    runs-on: ubuntu-latest        # GitHub gives you a fresh Ubuntu VM. It is
+                                  # destroyed after the job — nothing persists.
+    steps:                        # run top to bottom. A non-zero exit fails
+                                  # the job and skips every remaining step.
+
+      - uses: actions/checkout@v4 # `uses` = run someone else's prebuilt action.
+                                  # This one git-clones your repo into the VM.
+                                  # Without it the VM is empty. @v4 pins the
+                                  # major version so it can't break on you.
+
+      - uses: actions/setup-node@v4
+        with:                     # `with` = inputs to the action above.
+          node-version: 22        # which Node to install. 22 is the current LTS
+                                  # and matches what Workers targets.
+          cache: npm              # caches ~/.npm keyed on package-lock.json.
+                                  # Cuts npm ci from ~40s to ~10s on repeat runs.
+
+      - run: npm ci               # `run` = execute a shell command.
+                                  # `ci` not `install`: installs the EXACT
+                                  # versions in package-lock.json and fails if
+                                  # the lockfile is out of sync with package.json.
+                                  # Deletes node_modules first — fully reproducible.
+
+      - run: npm run build        # tsc -b && vite build. Fails on a type error
+                                  # in src/, or any Vite build failure.
+                                  # NOTE: does not typecheck lib/ or worker/
+                                  # — see the tsconfig note below.
+
+  # ══ JOB 2: ship it ══════════════════════════════════════════════════════
+  deploy:
+    needs: check                          # dependency: this job does not start
+                                          # until `check` finishes green. If
+                                          # check fails, deploy is skipped.
+
+    if: github.ref == 'refs/heads/main'   # condition evaluated before the job
+                                          # runs. `github.ref` is the full ref
+                                          # of whatever triggered this. On a PR
+                                          # it's refs/pull/12/merge, so this is
+                                          # false and the job is skipped —
+                                          # PRs get checked, never deployed.
+
+    runs-on: ubuntu-latest                # a SEPARATE fresh VM from `check`.
+                                          # Nothing carries over, which is why
+                                          # the next four steps repeat.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build                # produces ./dist — wrangler.toml's
+                                          # [assets] block points at it, so this
+                                          # must exist before wrangler deploy.
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                                          # ${{ }} is GitHub's expression syntax,
+                                          # evaluated before the step runs.
+                                          # `secrets.X` pulls from the encrypted
+                                          # repo store you filled in Step 3.
+                                          # Values are masked as *** in logs.
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy                 # what to pass to wrangler. Bare
+                                          # `deploy`, NOT `npm run deploy` —
+                                          # your npm script rebuilds, and the
+                                          # step above already did that.
