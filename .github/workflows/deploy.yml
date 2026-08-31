@@ -47,10 +47,13 @@ jobs:
                                   # the lockfile is out of sync with package.json.
                                   # Deletes node_modules first — fully reproducible.
 
-      - run: npm run build        # tsc -b && vite build. Fails on a type error
-                                  # in src/, or any Vite build failure.
-                                  # NOTE: does not typecheck lib/ or worker/
-                                  # — see the tsconfig note below.
+      - run: npm run build        # tsc -b (src/) && tsc -p tsconfig.worker.json
+                                  # (lib/ + worker/) && vite build. Fails on a
+                                  # type error anywhere, or any Vite failure.
+
+      - run: npm test             # vitest run — the pure money maths: rent
+                                  # splits, bills pots, spend/pace, the
+                                  # categoriser and the take-home calculator.
 
   # ══ JOB 2: ship it ══════════════════════════════════════════════════════
   deploy:
