@@ -121,20 +121,22 @@ upgrading Vite first.
 | `lib/categorize.test.ts` | tokenising ("CO-OP" / "CO- OP" / "Co Op"), whole-word matching, rule `since` vs gap-fill, and that every sub-category maps to a parent category |
 | `src/lib/tax.test.ts` | PAYE and NI band edges, pension taken before tax, and the Vitality benefit raising PAYE while leaving NI alone |
 | `lib/transactions.test.ts` | `reconcileRent`: the per-item month offsets, refunds never linking, largest-payment-wins, the read window, and how per-row overrides link, unlink and move a bill |
+| `lib/serialize.test.ts` | `serializeTransactions`: which tables a month reads, the month window, newest-first ordering, per-row overrides re-deriving the parent category, and the duplicate-row `flag_id` separation that keeps two same-day visits to one shop apart |
+| `lib/synthetic.test.ts` | `categoryTotals`: splits summed into their own month, the internal `Flex` row and deleted repayments skipped, and which categories are eligible — the month's budget when it has one, the defaults when it does not, never `Savings` |
 
 The pure suites need nothing but their inputs; where a function reads
 `new Date()` the tests move the clock with `vi.setSystemTime` rather than the
 code taking a date parameter it does not otherwise need.
 
-`reconcileRent` takes a `sql` object, so `lib/testSql.ts` stands in for the Neon
-client. It answers both shapes the codebase uses — the tagged template `kv.ts`
-sends and the `.query(text, params)` the rest use — and serves plain fixtures
-instead of parsing SQL. Fixtures carry one `created` timestamp and the fake
-derives the columns Postgres would compute from it, so a fixture cannot quietly
-disagree with the real query.
+The three suites under `lib/` take a `sql` object, so `lib/testSql.ts` stands in
+for the Neon client. It answers both shapes the codebase uses — the tagged
+template `kv.ts` sends and the `.query(text, params)` the rest use — and
+recognises each query by the columns it selects rather than parsing SQL.
+Fixtures carry one `created` timestamp and the fake derives the columns Postgres
+would compute from it, so a fixture cannot quietly disagree with the real query.
 
-Not covered yet: `serializeTransactions` and `categoryTotals`, both of which the
-fake now makes cheap, and the React components.
+Not covered: the React components, and the write paths (`syncMonth`,
+`upsertRentMonth` and the other `app_config` writers) — the fake reads only.
 
 ## CI/CD & deploy
 
