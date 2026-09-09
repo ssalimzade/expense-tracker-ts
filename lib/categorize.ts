@@ -122,11 +122,33 @@ function containsWords(haystack: string[], needle: string[]): boolean {
   return false;
 }
 
-function ruleKeyForWords(joined: string, rules: Rules): string | undefined {
-  for (const key of Object.keys(rules)) {
-    if (normalizeText(key) === joined) return key;
+/**
+ * Normalised rule key -> the key as stored, built once per rules object.
+ *
+ * A lookup used to re-normalise every rule key, and both `reconcileRent` and
+ * the transactions list run one per row against the whole rule set — several
+ * hundred regex splits per row, which is what pushed /rent over the Worker's
+ * CPU limit as the rules grew. The rules object is read once per request and
+ * treated as immutable from there, so indexing it once is safe; the WeakMap
+ * lets the index go when the request's copy does.
+ */
+const ruleIndexes = new WeakMap<Rules, Map<string, string>>();
+function ruleIndex(rules: Rules): Map<string, string> {
+  let index = ruleIndexes.get(rules);
+  if (!index) {
+    index = new Map();
+    // First key wins, matching the original scan over insertion order.
+    for (const key of Object.keys(rules)) {
+      const norm = normalizeText(key);
+      if (!index.has(norm)) index.set(norm, key);
+    }
+    ruleIndexes.set(rules, index);
   }
-  return undefined;
+  return index;
+}
+
+function ruleKeyForWords(joined: string, rules: Rules): string | undefined {
+  return ruleIndex(rules).get(joined);
 }
 
 /**
