@@ -1,8 +1,21 @@
 export interface RentItemDef {
   key: string;
   label: string;
-  /** Quarterly bill set aside to a savings pot each month. */
+  /** Has a savings pot: money routed to it accrues instead of paying a biller. */
   saved: boolean;
+  /**
+   * Where a month's money goes when the month doesn't say (see
+   * `RentLineItem.to_pot`).
+   *
+   * A pure pot — Hot Water, which is only ever a set-aside — accrues every
+   * month, so it defaults to the pot. A bill that merely saves ahead some
+   * months — Water, paid quarterly — defaults to being paid out, and the
+   * months that went to the pot say so themselves.
+   *
+   * Absent means `saved`, which is exactly what the original two pot items
+   * relied on before a month could choose, so their history reads unchanged.
+   */
+  pot_default?: boolean;
 }
 
 export interface RentLineItem {
@@ -31,6 +44,15 @@ export interface RentLineItem {
    * shared bill: the link is right there, `contribution` is.
    */
   unlinked?: boolean;
+  /**
+   * Where this month's money went: true into the item's pot, false out to the
+   * biller. Only meaningful on an item that has a pot.
+   *
+   * Null/absent means the month never said, so the item's `pot_default`
+   * answers — which is what every month written before this field existed
+   * relies on.
+   */
+  to_pot?: boolean | null;
 }
 
 export type RentMonthEntry = Record<string, RentLineItem>;

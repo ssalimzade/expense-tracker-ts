@@ -1,5 +1,5 @@
 import type { RentData, RentPotSettlement } from "../types/rent";
-import { rentIsPaid, rentShare } from "./rent";
+import { rentCell, rentIsPaid, rentShare } from "./rent";
 
 /**
  * Bills pots: the money set aside each month for the quarterly bills (the
@@ -16,12 +16,25 @@ import { rentIsPaid, rentShare } from "./rent";
  */
 
 /**
- * What actually reached the pot for one month — 0 until the money moves, and
- * only your share of it: a pot holds your money, so a bill someone else part-
- * covers accrues at the net figure.
+ * Whether a month's money is headed for the pot rather than out to the biller.
+ * The month's own answer wins; with none, the item's default decides.
+ */
+export function goesToPot(data: RentData, key: string, month: string): boolean {
+  const stated = rentCell(data, month, key).to_pot;
+  if (stated != null) return stated;
+  const item = data.items?.find((i) => i.key === key);
+  return item?.pot_default ?? item?.saved ?? false;
+}
+
+/**
+ * What actually reached the pot for one month — 0 until the money moves, only
+ * for months routed to the pot, and only your share of it: a pot holds your
+ * money, so a bill someone else part-covers accrues at the net figure.
  */
 export function potInflow(data: RentData, key: string, month: string): number {
-  return rentIsPaid(data, month, key) ? rentShare(data, month, key) : 0;
+  return rentIsPaid(data, month, key) && goesToPot(data, key, month)
+    ? rentShare(data, month, key)
+    : 0;
 }
 
 export interface PotSettlementView extends RentPotSettlement {

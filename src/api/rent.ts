@@ -8,3 +8,11 @@ export const saveRentMonth = (month: string, entry: RentMonthEntry) =>
 
 export const saveRentPot = (key: string, settlements: RentPotSettlement[]) =>
   api.post<RentData>("/rent/pot", { key, settlements });
+
+/** Add a line item, or change one — chiefly to give it a pot or take one away. */
+export const saveRentItem = (item: {
+  key?: string;
+  label: string;
+  saved: boolean;
+  pot_default?: boolean;
+}) => api.post<RentData>("/rent/item", item);

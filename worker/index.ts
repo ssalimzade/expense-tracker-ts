@@ -14,6 +14,7 @@ import {
   deleteRemunerationRow,
   loadRentData,
   upsertRentMonth,
+  upsertRentItem,
   upsertRentPot,
   upsertNote,
   deleteNote,
@@ -282,9 +283,26 @@ app.post("/rent", async (c) => {
       // cell keeps tracking the bill on its own.
       contribution: item.contribution ?? null,
       unlinked: item.unlinked ?? false,
+      // Which side of a pot item this month landed on. Null (not false) means
+      // the month never said, leaving the item's own default to answer.
+      to_pot: item.to_pot == null ? null : Boolean(item.to_pot),
     };
   }
   return c.json(await upsertRentMonth(sqlOf(c), b.month, entry));
+});
+
+app.post("/rent/item", async (c) => {
+  const b = await c.req.json();
+  const label = String(b.label ?? "").trim();
+  if (!label) return c.json({ detail: "label is required" }, 400);
+  return c.json(
+    await upsertRentItem(sqlOf(c), {
+      key: b.key ? String(b.key) : undefined,
+      label,
+      saved: Boolean(b.saved),
+      pot_default: b.pot_default == null ? undefined : Boolean(b.pot_default),
+    }),
+  );
 });
 
 app.post("/rent/pot", async (c) => {

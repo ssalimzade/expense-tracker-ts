@@ -99,6 +99,14 @@ export function fakeSql(db: FakeDb = {}): Sql {
       const key = values[0] as string;
       return key in config ? [{ value: config[key] }] : [];
     }
+    // kvSet. The blob is serialized on the way in and Postgres hands it back
+    // parsed, so the fake round-trips it the same way — which is what stops a
+    // test seeing writes through a shared object reference the real DB
+    // wouldn't give it.
+    if (/INSERT INTO app_config/.test(text)) {
+      config[values[0] as string] = JSON.parse(values[1] as string);
+      return [];
+    }
     throw new Error(`fakeSql: unhandled template query: ${text}`);
   };
 

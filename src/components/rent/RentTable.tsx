@@ -4,7 +4,7 @@ import { useSaveRentMonth } from "../../hooks/useRent";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import type { RentData, RentItemDef, RentLineItem, RentMonthEntry, RentMatch } from "../../types/rent";
 import { gbp0 } from "../../lib/format";
-import { potViews } from "../../lib/pots";
+import { goesToPot, potViews } from "../../lib/pots";
 import { rentBill, rentCell, rentContribution, rentIsPaid, rentMatch, rentShare } from "../../lib/rent";
 import { Card } from "../common";
 import MoneyInput from "../MoneyInput";
@@ -40,11 +40,14 @@ const SPLITTABLE = new Set(["flat"]);
 function PaidToggle({
   paid,
   auto,
+  toPot = false,
   hint = "",
   onToggle,
 }: {
   paid: boolean;
   auto: boolean;
+  /** This month's money went to the item's pot — amber, matching the column. */
+  toPot?: boolean;
   /** Appended to the title — surfaces what the icon is hiding. */
   hint?: string;
   onToggle: (anchor: DOMRect) => void;
@@ -67,10 +70,16 @@ function PaidToggle({
     <button
       type="button"
       onClick={(e) => onToggle(e.currentTarget.getBoundingClientRect())}
-      title={paid ? `Paid${hint} — click to mark unpaid` : "Unpaid — click to mark paid"}
+      title={
+        paid
+          ? `${toPot ? "Set aside" : "Paid"}${hint} — click to undo`
+          : "Unpaid — click to mark paid"
+      }
       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
         paid
-          ? "border-emerald-500 bg-emerald-500 text-white"
+          ? toPot
+            ? "border-amber-500 bg-amber-500 text-white"
+            : "border-emerald-500 bg-emerald-500 text-white"
           : "border-gray-300 text-transparent hover:border-emerald-400 dark:border-gray-600"
       }`}
     >
@@ -228,6 +237,7 @@ function AmountPrompt({
   title,
   footnote,
   initial,
+  destination,
   onConfirm,
   onCancel,
 }: {
@@ -235,6 +245,12 @@ function AmountPrompt({
   title: string;
   footnote: string;
   initial: number;
+  /**
+   * Offered on an item that has a pot, where ticking is ambiguous: the money
+   * either went out to the biller or into the pot. Absent on everything else,
+   * so the common cell is still one Enter.
+   */
+  destination?: { toPot: boolean; onChange: (toPot: boolean) => void };
   onConfirm: (n: number) => void;
   onCancel: () => void;
 }) {
@@ -242,10 +258,31 @@ function AmountPrompt({
   const commit = () => onConfirm(parseFloat(raw.replace(/[^0-9.-]/g, "")) || 0);
 
   return (
-    <Popover anchor={anchor} width={176} onDismiss={commit}>
+    <Popover anchor={anchor} width={destination ? 208 : 176} onDismiss={commit}>
       <p className="mb-2 truncate text-[10px] font-semibold uppercase tracking-wider text-gray-400 max-md:text-xs">
         {title}
       </p>
+      {destination && (
+        <div className="mb-2 flex gap-1 rounded-xl bg-gray-100/70 p-1 dark:bg-gray-900/50">
+          {[
+            { toPot: false, label: "Paid out", on: "bg-emerald-500 text-white" },
+            { toPot: true, label: "To pot", on: "bg-amber-500 text-white" },
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => destination.onChange(opt.toPot)}
+              className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold transition-colors max-md:py-2 max-md:text-xs ${
+                destination.toPot === opt.toPot
+                  ? opt.on
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
       <input
         autoFocus
         inputMode="decimal"
@@ -317,7 +354,18 @@ function LinkMenu({
 
 /** The active popover — at most one at a time. */
 type Pop =
-  | { kind: "paid"; month: string; key: string; label: string; allocated: number; anchor: DOMRect }
+  | {
+      kind: "paid";
+      month: string;
+      key: string;
+      label: string;
+      allocated: number;
+      /** The item has a pot, so the prompt asks where the money went. */
+      hasPot: boolean;
+      /** Which way that choice currently sits. */
+      toPot: boolean;
+      anchor: DOMRect;
+    }
   | { kind: "split"; month: string; key: string; label: string; bill: number; current: number; anchor: DOMRect }
   | { kind: "alloc"; month: string; key: string; label: string; current: number; paidLabel: string; anchor: DOMRect }
   | { kind: "link"; month: string; key: string; match: RentMatch; anchor: DOMRect };
@@ -358,6 +406,14 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   const share = (month: string, key: string) => rentShare(data, month, key);
   const contribution = (month: string, key: string) => rentContribution(data, month, key);
   const isPaid = (month: string, key: string) => rentIsPaid(data, month, key);
+
+  // Which items have a pot, and — since a bill can now save ahead some months
+  // and pay out in others — which months are bound for one. Amber follows the
+  // destination, not the payment: a future month already earmarked reads amber
+  // before it is ticked, exactly as a pure pot column always did.
+  const hasPot = new Set(items.filter((it) => it.saved).map((it) => it.key));
+  const potBound = (month: string, key: string) =>
+    hasPot.has(key) && goesToPot(data, key, month);
   // Ticked by hand with no matching transaction — here the cell's number is what
   // was paid, so edits land on `paid_amount` rather than the allocation.
   const isManualPaid = (month: string, key: string) =>
@@ -426,7 +482,18 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
     if (m) return setPop({ kind: "link", month, key: it.key, match: m, anchor });
     const c = cell(month, it.key);
     if (c.paid) return update(month, it.key, { paid: false, paid_amount: null });
-    setPop({ kind: "paid", month, key: it.key, label: it.label, allocated: c.amount, anchor });
+    setPop({
+      kind: "paid",
+      month,
+      key: it.key,
+      label: it.label,
+      allocated: c.amount,
+      hasPot: hasPot.has(it.key),
+      // Pre-set to whatever this month would do on its own, so a pure pot is
+      // still one Enter and only the months that differ need a second click.
+      toPot: potBound(month, it.key),
+      anchor,
+    });
   };
 
   const openSplit = (month: string, it: RentItemDef, anchor: DOMRect) =>
@@ -457,6 +524,10 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
       update(pop.month, pop.key, {
         paid: true,
         paid_amount: n === pop.allocated ? null : n,
+        // Recorded only where it was actually asked; elsewhere the cell keeps
+        // deferring to the item, so adding a pot later doesn't have to rewrite
+        // months that were ticked before it existed.
+        ...(pop.hasPot && { to_pot: pop.toPot }),
       });
     } else if (pop.kind === "split") {
       saveContribution(pop.month, pop.key, n);
@@ -542,6 +613,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
         <PaidToggle
           paid={c.paid}
           auto={!!match(month, it.key)}
+          toPot={potBound(month, it.key)}
           hint={paidHint(month, it.key)}
           onToggle={(anchor) => onToggle(month, it, anchor)}
         />
@@ -555,7 +627,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                 ? update(month, it.key, { unlinked: false })
                 : openSplit(month, it, e.currentTarget.getBoundingClientRect())
             }
-            className={`min-w-0 flex-1 truncate text-left ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}
+            className={`min-w-0 flex-1 truncate text-left ${potBound(month, it.key) ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}
           >
             {it.label}
             {drop ? (
@@ -565,7 +637,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
             ) : null}
           </button>
         ) : (
-          <span className={`min-w-0 flex-1 truncate ${it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>
+          <span className={`min-w-0 flex-1 truncate ${potBound(month, it.key) ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>
             {it.label}
           </span>
         )}
@@ -573,7 +645,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
           value={share(month, it.key)}
           onCommit={(n) => commitAmount(month, it.key, n)}
           readOnly={isLocked(month, it.key)}
-          color={it.saved ? "#d97706" : undefined}
+          color={potBound(month, it.key) ? "#d97706" : undefined}
           className="!w-14 !px-1 !text-right"
         />
       </div>
@@ -649,11 +721,12 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                               value={share(month, it.key)}
                               onCommit={(n) => commitAmount(month, it.key, n)}
                               readOnly={isLocked(month, it.key)}
-                              color={it.saved ? "#d97706" : undefined}
+                              color={potBound(month, it.key) ? "#d97706" : undefined}
                             />
                             <PaidToggle
                               paid={c.paid}
                               auto={!!match(month, it.key)}
+                              toPot={potBound(month, it.key)}
                               hint={paidHint(month, it.key)}
                               onToggle={(anchor) => onToggle(month, it, anchor)}
                             />
@@ -713,9 +786,18 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
       {pop?.kind === "paid" && (
         <AmountPrompt
           anchor={pop.anchor}
-          title={`${pop.label} — paid`}
-          footnote={`Allocated ${gbp0(pop.allocated)}`}
+          title={`${pop.label} — ${pop.hasPot && pop.toPot ? "set aside" : "paid"}`}
+          footnote={
+            pop.hasPot && pop.toPot
+              ? `Allocated ${gbp0(pop.allocated)} · goes into the ${pop.label} pot`
+              : `Allocated ${gbp0(pop.allocated)}`
+          }
           initial={pop.allocated}
+          destination={
+            pop.hasPot
+              ? { toPot: pop.toPot, onChange: (toPot) => setPop({ ...pop, toPot }) }
+              : undefined
+          }
           onConfirm={confirmPop}
           onCancel={() => setPop(null)}
         />

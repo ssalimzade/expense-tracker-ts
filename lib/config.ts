@@ -141,13 +141,19 @@ export const RENT_DEFAULT_ITEMS = [
   { key: "council_tax", label: "Council Tax", saved: false },
   { key: "hot_water", label: "Hot Water", saved: true },
 ];
-export const loadRentData = (sql: Sql) =>
-  kvGet<Dict>(sql, "rent_data", { items: RENT_DEFAULT_ITEMS, months: {} });
+/**
+ * A fresh copy of the seed, items included. Handing the constant itself out
+ * would let a caller that edits an item — or pushes a new one — rewrite the
+ * defaults for every later call, and a Worker isolate outlives the request.
+ */
+const defaultRentData = (): Dict => ({
+  items: RENT_DEFAULT_ITEMS.map((i) => ({ ...i })),
+  months: {},
+});
+
+export const loadRentData = (sql: Sql) => kvGet<Dict>(sql, "rent_data", defaultRentData());
 export async function upsertRentMonth(sql: Sql, month: string, entry: Dict) {
-  const data = await kvGet<Dict>(sql, "rent_data", {
-    items: RENT_DEFAULT_ITEMS,
-    months: {},
-  });
+  const data = await kvGet<Dict>(sql, "rent_data", defaultRentData());
   if (!data.months) data.months = {};
   // Merge rather than replace: a month may hold keys the caller didn't send
   // (an item hidden from its view), and those must survive the write.
@@ -156,12 +162,55 @@ export async function upsertRentMonth(sql: Sql, month: string, entry: Dict) {
   return data;
 }
 
+/**
+ * A key derived from a label — months, pots and matches are all keyed by it, so
+ * it has to be stable and safe to put in a JSON object.
+ */
+const rentItemKey = (label: string) =>
+  label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+
+/**
+ * Insert or update one rent line item. Used to give a bill a savings pot, to
+ * take one away again, and to add an item that is nothing but a pot.
+ *
+ * Never rewrites `months`: a pot added to a bill with history takes
+ * `pot_default: false`, so every month already recorded keeps reading as a
+ * payment and only the months explicitly marked from here on accrue.
+ */
+export async function upsertRentItem(
+  sql: Sql,
+  item: { key?: string; label: string; saved: boolean; pot_default?: boolean },
+): Promise<Dict> {
+  const data = await kvGet<Dict>(sql, "rent_data", defaultRentData());
+  const items: Dict[] = (data.items ??= defaultRentData().items);
+
+  const existing = item.key ? items.find((i) => i.key === item.key) : undefined;
+  if (existing) {
+    existing.label = item.label || existing.label;
+    existing.saved = item.saved;
+    if (item.pot_default == null) delete existing.pot_default;
+    else existing.pot_default = item.pot_default;
+  } else {
+    // A new key must collide with nothing — not even an item added and removed
+    // earlier, whose months may still be sitting in `data.months`.
+    const base = rentItemKey(item.key || item.label) || "item";
+    let key = base;
+    for (let n = 2; items.some((i) => i.key === key); n++) key = `${base}_${n}`;
+    items.push({
+      key,
+      label: item.label,
+      saved: item.saved,
+      ...(item.pot_default != null && { pot_default: item.pot_default }),
+    });
+  }
+
+  await kvSet(sql, "rent_data", data);
+  return data;
+}
+
 /** Replace one pot's settlement history (savings pots for quarterly bills). */
 export async function upsertRentPot(sql: Sql, key: string, settlements: Dict[]) {
-  const data = await kvGet<Dict>(sql, "rent_data", {
-    items: RENT_DEFAULT_ITEMS,
-    months: {},
-  });
+  const data = await kvGet<Dict>(sql, "rent_data", defaultRentData());
   if (!data.pots) data.pots = {};
   data.pots[key] = { settlements };
   await kvSet(sql, "rent_data", data);

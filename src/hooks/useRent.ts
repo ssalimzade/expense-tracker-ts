@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchRent, saveRentMonth, saveRentPot } from "../api/rent";
+import { fetchRent, saveRentItem, saveRentMonth, saveRentPot } from "../api/rent";
 import type { RentData, RentMonthEntry, RentPotSettlement, RentReconciled } from "../types/rent";
 
 /**
@@ -40,6 +40,15 @@ export function useSaveRentMonth() {
     mutationFn: ({ month, entry }: { month: string; entry: RentMonthEntry }) =>
       saveRentMonth(month, entry),
     meta: { success: "Rent saved", error: "Couldn't save rent" },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["rent"] }),
+  });
+}
+
+export function useSaveRentItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: saveRentItem,
+    meta: { success: "Pot saved", error: "Couldn't save pot" },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["rent"] }),
   });
 }

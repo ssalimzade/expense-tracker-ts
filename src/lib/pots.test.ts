@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RentData, RentLineItem, RentPotSettlement } from "../types/rent";
-import { isRetired, potInflow, potsTotal, potViews } from "./pots";
+import { goesToPot, isRetired, potInflow, potsTotal, potViews } from "./pots";
 
 const POT = "hot_water";
 
@@ -222,5 +222,66 @@ describe("isRetired", () => {
   it("is false for a pot that has never been settled", () => {
     const data = build({ "2026-01": paid(50), "2026-02": unpaid(0) });
     expect(isRetired(data, POT, "2026-02", "2026-02")).toBe(false);
+  });
+});
+
+/**
+ * A bill that saves ahead some months and pays out in others. The pot is on the
+ * bill itself, so what separates the two is the month's own `to_pot`.
+ */
+describe("goesToPot", () => {
+  const BILL = "water";
+  /** Water with a pot added later: months are payments unless they say otherwise. */
+  const hybrid = (cell: RentLineItem): RentData => ({
+    items: [{ key: BILL, label: "Water", saved: true, pot_default: false }],
+    months: { "2026-01": { [BILL]: cell } },
+  });
+
+  it("follows the item default when the month does not say", () => {
+    expect(goesToPot(hybrid(paid(50)), BILL, "2026-01")).toBe(false);
+  });
+
+  it("lets a month opt into the pot", () => {
+    expect(goesToPot(hybrid({ amount: 50, paid: true, to_pot: true }), BILL, "2026-01")).toBe(true);
+  });
+
+  it("lets a month opt out of a pot that accrues by default", () => {
+    const data = build({ "2026-01": { amount: 50, paid: true, to_pot: false } });
+    expect(goesToPot(data, POT, "2026-01")).toBe(false);
+  });
+
+  it("treats null as unstated rather than as false", () => {
+    const data = build({ "2026-01": { amount: 50, paid: true, to_pot: null } });
+    expect(goesToPot(data, POT, "2026-01")).toBe(true);
+  });
+
+  it("defaults to `saved` for items predating pot_default", () => {
+    expect(goesToPot(build({ "2026-01": paid(50) }), POT, "2026-01")).toBe(true);
+    expect(goesToPot(build({ "2026-01": paid(50) }), "flat", "2026-01")).toBe(false);
+  });
+
+  it("keeps a bill's history out of a pot added to it later", () => {
+    // The whole point of pot_default: enabling a pot on Water must not
+    // retroactively turn every water bill ever paid into a set-aside.
+    const data = hybrid(paid(50));
+    expect(potInflow(data, BILL, "2026-01")).toBe(0);
+    expect(potViews(data, "2026-01")[0].balance).toBe(0);
+  });
+
+  it("accrues only the months marked for the pot", () => {
+    const data: RentData = {
+      items: [{ key: BILL, label: "Water", saved: true, pot_default: false }],
+      months: {
+        "2026-01": { [BILL]: paid(40) }, // bill paid out
+        "2026-02": { [BILL]: { amount: 40, paid: true, to_pot: true } }, // saved ahead
+        "2026-03": { [BILL]: { amount: 40, paid: true, to_pot: true } },
+      },
+    };
+    expect(potViews(data, "2026-03")[0].balance).toBe(80);
+  });
+
+  it("does not accrue a month marked for the pot but not yet paid", () => {
+    const data = hybrid({ amount: 50, paid: false, to_pot: true });
+    expect(potInflow(data, BILL, "2026-01")).toBe(0);
   });
 });
