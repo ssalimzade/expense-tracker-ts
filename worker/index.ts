@@ -77,7 +77,11 @@ app.get("/requisition-status", async (c) => c.json(await requisitionStatus(sqlOf
 
 // ── Transactions ────────────────────────────────────────────────────────────
 app.get("/transactions", async (c) => {
-  const month = c.req.query("month") || undefined;
+  // Required, and shape-checked: the query is bounded by this string, so a
+  // missing or malformed one has no sensible reading. It used to fall back to
+  // reading every table in full, which is far more work than any caller wants.
+  const month = c.req.query("month") ?? "";
+  if (!MONTH_RE.test(month)) return c.json({ detail: "month=YYYY-MM is required" }, 400);
   return c.json(await serializeTransactions(sqlOf(c), month));
 });
 
@@ -366,6 +370,7 @@ app.post("/archive/:month", async (c) => {
 
 app.post("/archive/:month/recompute", async (c) => {
   const month = c.req.param("month");
+  if (!MONTH_RE.test(month)) return c.json({ detail: "month must be YYYY-MM" }, 400);
   const txns = await serializeTransactions(sqlOf(c), month);
   const raw: Record<string, number> = {};
   for (const t of txns) {

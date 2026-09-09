@@ -47,26 +47,25 @@ const ALL_TABLES = [
   "hsbc_transactions",
 ];
 
-async function fetchTxRows(sql: Sql, month?: string): Promise<Row[]> {
+/**
+ * One month's rows. Always bounded: the list is rendered a month at a time, and
+ * the unbounded variant this used to offer read all five tables and hashed
+ * every row in them — 3k rows and climbing, for a page that shows 40. Nothing
+ * called it, and leaving it reachable was the same trap `reconcileRent` fell
+ * into before its window was narrowed.
+ */
+async function fetchTxRows(sql: Sql, month: string): Promise<Row[]> {
+  const [y, m] = month.split("-").map(Number);
+  const start = `${month}-01`;
+  const end = m < 12 ? `${y}-${String(m + 1).padStart(2, "0")}-01` : `${y + 1}-01-01`;
+
   const out: Row[] = [];
-  if (month) {
-    const [y, m] = month.split("-").map(Number);
-    const start = `${month}-01`;
-    const end =
-      m < 12
-        ? `${y}-${String(m + 1).padStart(2, "0")}-01`
-        : `${y + 1}-01-01`;
-    for (const t of MONTH_TABLES) {
-      const rows = await sql.query(
-        `SELECT ${TX_COLS} FROM ${t} WHERE created >= $1 AND created < $2`,
-        [start, end],
-      );
-      out.push(...rows);
-    }
-  } else {
-    for (const t of ALL_TABLES) {
-      out.push(...(await sql.query(`SELECT ${TX_COLS} FROM ${t}`, [])));
-    }
+  for (const t of MONTH_TABLES) {
+    const rows = await sql.query(
+      `SELECT ${TX_COLS} FROM ${t} WHERE created >= $1 AND created < $2`,
+      [start, end],
+    );
+    out.push(...rows);
   }
   return out;
 }
@@ -109,14 +108,14 @@ async function flagIdsFor(rows: Row[]): Promise<Map<Row, string>> {
   return ids;
 }
 
-export async function serializeTransactions(sql: Sql, month?: string): Promise<Row[]> {
+export async function serializeTransactions(sql: Sql, month: string): Promise<Row[]> {
   // Dropped before the ids are built rather than inside the loop: these rows
   // are never rendered, so hashing them is pure cost.
   const rows = (await fetchTxRows(sql, month)).filter(
     (t) => (t.description ?? "").trim() !== "TFL TRAVEL CHARGE",
   );
   const rules = (await loadRules(sql)) as Rules;
-  const monthFlags = month ? await getFlagsForMonth(sql, month) : {};
+  const monthFlags = await getFlagsForMonth(sql, month);
   const flagIds = await flagIdsFor(rows);
 
   const result: Row[] = [];

@@ -11,9 +11,12 @@ const tx = (over: Partial<TxFixture> & { created: string; description: string })
 
 const at = (day: string) => `${day}T10:00:00`;
 
+/** The month nearly every fixture sits in — the list is always read one month at a time. */
+const MONTH = "2026-03";
+
 const run = (
   transactions: TxFixture[],
-  month?: string,
+  month: string = MONTH,
   config: Record<string, unknown> = {},
 ) => serializeTransactions(fakeSql({ transactions, config }), month);
 
@@ -58,14 +61,6 @@ describe("which rows come back", () => {
       "2026-03",
     );
     expect(out.map((r) => r.description).sort()).toEqual(["A", "B", "C", "D"]);
-  });
-
-  it("includes flex when no month is asked for", async () => {
-    const out = await run([
-      tx({ table: "monzo_transactions", created: at("2026-03-02"), description: "A" }),
-      tx({ table: "flex_transactions", created: at("2026-03-06"), description: "E" }),
-    ]);
-    expect(out.map((r) => r.description).sort()).toEqual(["A", "E"]);
   });
 
   it("bounds a month at its own first and last day", async () => {
@@ -231,12 +226,6 @@ describe("per-row overrides", () => {
     expect(out.subcategory).toBe("Groceries");
   });
 
-  it("reads no flags at all when no month is asked for", async () => {
-    const row = tx({ created: at("2026-03-02"), description: "TESCO" });
-    const config = { one_time_flags: await flagsFor("2026-03", [[row, { subcategory: "Dating" }]]) };
-    const [out] = await run([row], undefined, config);
-    expect(out.subcategory).toBe("Groceries");
-  });
 });
 
 describe("the row it hands back", () => {
