@@ -95,3 +95,15 @@ desktop (`md:`+) layout exactly as-is.
 - **No input-focus zoom:** the viewport meta carries `maximum-scale=1,
   user-scalable=no` so tapping an inline input doesn't zoom the page on iOS.
   (Viewport meta is ignored on desktop, so this is mobile-only.)
+
+## Travel tab (deliberate exception)
+
+The Travel tab intentionally does **not** follow the stat-card / table layout
+above, so it doesn't feel like every other tab:
+
+- The trip is a gradient **boarding-pass ticket** (`TripTicket`): details on the
+  left, spend + budget ring on a perforated stub (stub drops below on phones).
+- Expenses are a **day-by-day itinerary timeline** (`Itinerary`) grouped into
+  Before you go / Day N / After, not a table — same on desktop and mobile.
+- Category split is one **segmented bar** with a legend (`CategoryStrip`).
+- Surfaces use `rounded-2xl`/`rounded-3xl` with `ring-1` instead of `Card`.

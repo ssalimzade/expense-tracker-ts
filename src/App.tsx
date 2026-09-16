@@ -12,6 +12,7 @@ import RentTab from "./components/rent/RentTab";
 import RemunerationTab from "./components/remuneration/RemunerationTab";
 import HistoryTab from "./components/history/HistoryTab";
 import NotesTab from "./components/notes/NotesTab";
+import TravelTab from "./components/travel/TravelTab";
 import type { RentMatch } from "./types/rent";
 import { Toaster } from "./lib/toast";
 import { useAutoArchive } from "./hooks/useAutoArchive";
@@ -21,7 +22,7 @@ const MONTH_TABS: TabKey[] = ["dashboard", "transactions"];
 
 const VALID_TABS: TabKey[] = [
   "dashboard", "transactions", "planner", "repayments", "savings",
-  "projections", "rent", "remuneration", "history", "notes",
+  "projections", "rent", "remuneration", "history", "notes", "travel",
 ];
 const TAB_STORAGE_KEY = "active-tab";
 
@@ -109,6 +110,7 @@ export default function App() {
         {tab === "remuneration" && <RemunerationTab />}
         {tab === "history"     && <HistoryTab />}
         {tab === "notes"       && <NotesTab />}
+        {tab === "travel"      && <TravelTab />}
       </main>
       <Toaster />
     </div>

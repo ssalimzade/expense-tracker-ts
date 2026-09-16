@@ -12,11 +12,12 @@ export type TabKey =
   | "rent"
   | "remuneration"
   | "history"
-  | "notes";
+  | "notes"
+  | "travel";
 
 // Tabs are split into groups, rendered left→right with a divider
 // between each group on the desktop bar.
-type TabGroup = "spending" | "monthly" | "planning" | "records" | "notes";
+type TabGroup = "spending" | "monthly" | "planning" | "records" | "notes" | "travel";
 
 const TABS: { key: TabKey; label: string; group: TabGroup }[] = [
   { key: "dashboard",    label: "Budget",       group: "spending" },
@@ -29,6 +30,7 @@ const TABS: { key: TabKey; label: string; group: TabGroup }[] = [
   { key: "remuneration", label: "Salary",       group: "records"  },
   { key: "history",      label: "History",      group: "records"  },
   { key: "notes",        label: "Notes",        group: "notes"    },
+  { key: "travel",       label: "Travel",       group: "travel"   },
 ];
 
 // Mobile-only icons (bottom bar)
@@ -83,6 +85,11 @@ const ICONS: Record<TabKey, ReactNode> = {
   notes: (
     <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
       <path fillRule="evenodd" d="M3 4a2 2 0 0 1 2-2h7.586a1 1 0 0 1 .707.293l3.414 3.414a1 1 0 0 1 .293.707V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4Zm4 3.75A.75.75 0 0 1 7.75 7h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 7 7.75Zm0 3.5a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Zm0 3.5a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+    </svg>
+  ),
+  travel: (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+      <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
     </svg>
   ),
 };
