@@ -244,14 +244,12 @@ export default function FortuneWorksheet() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Worksheet
-        </h2>
-        {save.isPending && <span className="text-xs text-gray-400">Saving…</span>}
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl ring-1 ring-gray-200 dark:ring-gray-800">
+        {save.isPending && (
+          <span className="pointer-events-none absolute bottom-1.5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-gray-900/80 px-2 py-0.5 text-[11px] text-white">
+            Saving…
+          </span>
+        )}
         <div
           ref={containerRef}
           className={`ws-workbook h-full w-full ${dark ? "ws-dark" : "bg-white"} ${

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNotes, useSaveNote, useDeleteNote } from "../../hooks/useNotes";
 import { toast } from "../../lib/toast";
 import { QueryState } from "../common";
@@ -7,21 +7,45 @@ import NoteCard from "./NoteCard";
 import NoteEditor from "./NoteEditor";
 import Worksheet from "./Worksheet";
 
+const VIEW_STORAGE_KEY = "notes-view";
+type View = "notes" | "worksheet";
+
+const newNoteId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+
+function readView(): View {
+  try {
+    return localStorage.getItem(VIEW_STORAGE_KEY) === "worksheet" ? "worksheet" : "notes";
+  } catch {
+    return "notes";
+  }
+}
+
 export default function NotesTab() {
   const notesQuery = useNotes();
   const saveNote = useSaveNote();
   const deleteNote = useDeleteNote();
 
+  const [view, setView] = useState<View>(readView);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [editing, setEditing] = useState<Partial<Note> | null>(null);
 
+  const changeView = (v: View) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, v);
+    } catch {
+      // Only a convenience.
+    }
+  };
+
   const notes = notesQuery.data ?? [];
 
-  const knownTypes = useMemo(
-    () => [...new Set(notes.map((n) => n.type).filter(Boolean))].sort(),
-    [notes],
-  );
+  const kinds = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const n of notes) if (n.type) counts.set(n.type, (counts.get(n.type) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [notes]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -31,137 +55,202 @@ export default function NotesTab() {
         if (q && !`${n.title} ${n.body} ${n.type}`.toLowerCase().includes(q)) return false;
         return true;
       })
-      .sort((a, b) => {
-        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-        return (b.updated_at ?? "").localeCompare(a.updated_at ?? "");
-      });
+      .sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? ""));
   }, [notes, search, typeFilter]);
 
+  const pinned = filtered.filter((n) => n.pinned);
+  const others = filtered.filter((n) => !n.pinned);
+  const pinnedCount = notes.filter((n) => n.pinned).length;
+
   function handleDelete(note: Note) {
-    if (window.confirm(`Delete this note${note.title ? ` "${note.title}"` : ""}?`)) {
-      deleteNote.mutate(note.id, {
-        onSuccess: () => toast.undo("Note deleted", () => saveNote.mutate(note)),
-      });
-    }
+    if (!window.confirm(`Delete this note${note.title ? ` "${note.title}"` : ""}?`)) return;
+    setEditing(null);
+    deleteNote.mutate(note.id, {
+      onSuccess: () => toast.undo("Note deleted", () => saveNote.mutate(note)),
+    });
   }
 
-  function handleSave(note: Partial<Note>) {
-    saveNote.mutate(note, { onSuccess: () => setEditing(null) });
-  }
+  // New notes get their id up front, so saving the same draft twice (a double
+  // tap, a retry after a dropped connection) updates it rather than duplicating.
+  const draftId = useRef(newNoteId());
+  const openNew = () => {
+    draftId.current = newNoteId();
+    setEditing({ type: typeFilter || undefined });
+  };
+  const handleSave = async (note: Partial<Note>) => {
+    await saveNote.mutateAsync(note.id ? note : { ...note, id: draftId.current });
+  };
+
+  const card = (note: Note) => (
+    <NoteCard
+      key={note.id}
+      note={note}
+      onEdit={setEditing}
+      onTogglePin={(n) => saveNote.mutate({ id: n.id, pinned: !n.pinned })}
+      onDelete={handleDelete}
+    />
+  );
+  const grid = (list: Note[]) => (
+    <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 2xl:columns-4 [&>*]:mb-4">{list.map(card)}</div>
+  );
 
   return (
-    <div className="flex h-[calc(100vh-6.5rem)] flex-col gap-3">
-      {/* ── Notes pane (top) — scrolls independently ─────────── */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
-            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
-          </svg>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notes…"
-            className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm dark:border-gray-700 dark:bg-gray-800"
-          />
+    <div className="mx-auto max-w-7xl">
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+            {view === "notes" ? "Notes" : "Worksheet"}
+          </h1>
+          <p className="mt-0.5 text-sm text-gray-400">
+            {view === "notes"
+              ? `${notes.length} note${notes.length === 1 ? "" : "s"}${pinnedCount ? ` · ${pinnedCount} pinned` : ""}`
+              : "Saves as you type"}
+          </p>
         </div>
-        <button
-          onClick={() => setEditing({})}
-          className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" />
-          </svg>
-          New note
-        </button>
+        <div className="flex gap-1 rounded-2xl bg-gray-100 p-1 dark:bg-gray-800/70 max-sm:w-full">
+          {(["notes", "worksheet"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => changeView(v)}
+              className={`flex items-center justify-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-semibold capitalize transition max-sm:flex-1 ${
+                view === v
+                  ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+              }`}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 opacity-70">
+                {v === "notes" ? (
+                  <path d="M4 3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8.586A2 2 0 0 0 14 16.414L17.414 13A2 2 0 0 0 18 11.586V5a2 2 0 0 0-2-2H4Zm2 4.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 7.25Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" />
+                ) : (
+                  <path fillRule="evenodd" d="M2 4.75A2.75 2.75 0 0 1 4.75 2h10.5A2.75 2.75 0 0 1 18 4.75v10.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25V4.75ZM3.5 8v3h4.25V8H3.5Zm5.75 0v3h7.25V8H9.25ZM16.5 6.5V4.75c0-.69-.56-1.25-1.25-1.25H9.25v3h7.25Zm-8.75-3H4.75c-.69 0-1.25.56-1.25 1.25V6.5h4.25v-3Zm-4.25 9v2.75c0 .69.56 1.25 1.25 1.25h3V12.5H3.5Zm5.75 4h6c.69 0 1.25-.56 1.25-1.25V12.5H9.25v4Z" clipRule="evenodd" />
+                )}
+              </svg>
+              {v}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Type filter pills */}
-      {knownTypes.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <FilterPill active={typeFilter === ""} onClick={() => setTypeFilter("")}>
-            All
-          </FilterPill>
-          {knownTypes.map((t) => (
-            <FilterPill key={t} active={typeFilter === t} onClick={() => setTypeFilter(t)}>
-              {t}
-            </FilterPill>
-          ))}
+      {view === "worksheet" ? (
+        <div className="mt-4 h-[calc(100dvh-16.5rem)] min-h-[24rem] md:h-[calc(100dvh-12rem)]">
+          <Worksheet />
+        </div>
+      ) : (
+        <div className="mt-5 space-y-4">
+          {/* Toolbar */}
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
+                <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
+              </svg>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search notes…"
+                className="w-full rounded-2xl bg-white py-2.5 pl-10 pr-3 text-sm ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-900 dark:ring-gray-800"
+              />
+            </div>
+            <button
+              onClick={openNew}
+              className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+            >
+              <span className="text-lg leading-none">+</span> New note
+            </button>
+          </div>
+
+          {kinds.length > 0 && (
+            <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0 [&::-webkit-scrollbar]:hidden">
+              <FilterPill active={typeFilter === ""} onClick={() => setTypeFilter("")} count={notes.length}>
+                All
+              </FilterPill>
+              {kinds.map(([t, n]) => (
+                <FilterPill key={t} active={typeFilter === t} onClick={() => setTypeFilter(typeFilter === t ? "" : t)} count={n}>
+                  {t}
+                </FilterPill>
+              ))}
+            </div>
+          )}
+
+          <QueryState isLoading={notesQuery.isLoading} error={notesQuery.error}>
+            {filtered.length === 0 ? (
+              <div className="rounded-3xl border-2 border-dashed border-gray-200 px-6 py-16 text-center dark:border-gray-800">
+                <p className="text-3xl">🗒️</p>
+                <p className="mt-3 font-semibold">{notes.length === 0 ? "No notes yet" : "Nothing matches"}</p>
+                <p className="mx-auto mt-1 max-w-xs text-sm text-gray-400">
+                  {notes.length === 0
+                    ? "Jot down balances, reminders, or anything you want to keep handy."
+                    : "Try a different search or kind."}
+                </p>
+                {notes.length === 0 && (
+                  <button
+                    onClick={openNew}
+                    className="mt-4 rounded-2xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-gray-900"
+                  >
+                    Write your first note
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                {pinned.length > 0 && (
+                  <section>
+                    {others.length > 0 && <SectionLabel>Pinned</SectionLabel>}
+                    {grid(pinned)}
+                  </section>
+                )}
+                {others.length > 0 && (
+                  <section>
+                    {pinned.length > 0 && <SectionLabel>Everything else</SectionLabel>}
+                    {grid(others)}
+                  </section>
+                )}
+              </>
+            )}
+          </QueryState>
         </div>
       )}
 
-      <QueryState isLoading={notesQuery.isLoading} error={notesQuery.error}>
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 py-20 text-center dark:border-gray-800">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-10 w-10 text-gray-300 dark:text-gray-600">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-            <p className="mt-3 text-sm text-gray-500">
-              {notes.length === 0 ? "No notes yet." : "No notes match your filters."}
-            </p>
-            {notes.length === 0 && (
-              <button
-                onClick={() => setEditing({})}
-                className="mt-3 rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
-              >
-                Create your first note
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="gap-4 [column-fill:_balance] columns-1 sm:columns-2 lg:columns-3 xl:columns-4 [&>*]:mb-4">
-            {filtered.map((note) => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                onEdit={setEditing}
-                onTogglePin={(n) => saveNote.mutate({ id: n.id, pinned: !n.pinned })}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        )}
-      </QueryState>
-      </div>
-
-      {/* ── Worksheet pane (bottom) — its own scroll window ──── */}
-      {/* On phones the worksheet takes ~2/3 of the height so the grid is
-          actually usable; desktop keeps the even split. */}
-      <div className="min-h-0 flex-1 border-t border-gray-200 pt-3 dark:border-gray-800 max-md:flex-[2]">
-        <Worksheet />
-      </div>
-
-      <NoteEditor
-        note={editing}
-        knownTypes={knownTypes}
-        saving={saveNote.isPending}
-        onSave={handleSave}
-        onClose={() => setEditing(null)}
-      />
+      {editing && (
+        <NoteEditor
+          key={editing.id ?? "new"}
+          note={editing}
+          knownTypes={kinds.map(([t]) => t)}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-gray-400">{children}</p>;
 }
 
 function FilterPill({
   active,
   onClick,
+  count,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  count: number;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+      className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
         active
-          ? "bg-indigo-600 text-white shadow-sm"
-          : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+          : "bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-gray-300 dark:bg-gray-900 dark:text-gray-300 dark:ring-gray-800 dark:hover:ring-gray-700"
       }`}
     >
       {children}
+      <span className={`tabular-nums ${active ? "opacity-60" : "text-gray-400"}`}>{count}</span>
     </button>
   );
 }
