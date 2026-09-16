@@ -26,7 +26,7 @@ function monthCellClass(month: string) {
   const isFuture = month > currentMonth;
   const isCurrent = month === currentMonth;
   return [
-    "px-3 py-2 text-center",
+    "px-1 py-2 text-center",
     isFuture ? "opacity-50" : "",
     isCurrent ? CURRENT_TINT : "",
   ].join(" ");
@@ -40,7 +40,7 @@ function Group({ label, span, children }: { label: string; span: number; childre
   return (
     <>
       <tr className="border-t border-gray-100 dark:border-gray-800">
-        <td className={`${STICKY} px-6 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400`}>{label}</td>
+        <td className={`${STICKY} px-5 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400`}>{label}</td>
         <td colSpan={span} />
       </tr>
       {children}
@@ -108,11 +108,11 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
-              <th className={`${STICKY} px-6 py-3`} />
+              <th className={`${STICKY} px-5 py-3`} />
               {rows.map((row) => (
                 <th
                   key={row.month}
-                  className={`px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white ${
+                  className={`whitespace-nowrap px-1 py-3 text-center text-[11px] font-semibold uppercase tracking-wide text-gray-600 dark:text-white ${
                     row.month === currentMonth ? CURRENT_TINT : ""
                   }`}
                 >
@@ -129,12 +129,12 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
               <Group key={g.label} label={g.label} span={rows.length}>
                 {g.lines.map((line) => (
                   <tr key={line.label} className="group hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                    <td className={`${STICKY} whitespace-nowrap px-6 py-2 text-sm font-medium text-gray-700 group-hover:bg-gray-50 dark:text-gray-300 dark:group-hover:bg-gray-800`}>
+                    <td className={`${STICKY} whitespace-nowrap px-5 py-2 text-sm font-medium text-gray-700 group-hover:bg-gray-50 dark:text-gray-300 dark:group-hover:bg-gray-800`}>
                       {line.label}
                     </td>
                     {rows.map((row) => (
                       <td key={row.month} className={monthCellClass(row.month)}>
-                        <MoneyInput value={line.value(row)} onCommit={(n) => line.commit(row.month, n)} allowNegative />
+                        <MoneyInput value={line.value(row)} onCommit={(n) => line.commit(row.month, n)} allowNegative className="!w-[4.5rem] !px-1" />
                       </td>
                     ))}
                   </tr>
@@ -143,7 +143,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
             ))}
 
             <tr className="border-t-2 border-gray-200 dark:border-gray-700">
-              <td className={`${STICKY} whitespace-nowrap px-6 py-3 text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white`}>
+              <td className={`${STICKY} whitespace-nowrap px-5 py-3 text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white`}>
                 Buffer
               </td>
               {rows.map((row) => (
@@ -159,7 +159,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
             </tr>
 
             <tr className="border-t border-gray-100 dark:border-gray-800">
-              <td className={`${STICKY} whitespace-nowrap px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-400`}>
+              <td className={`${STICKY} whitespace-nowrap px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-400`}>
                 Notes
               </td>
               {rows.map((row) => (
@@ -171,7 +171,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
                       placeholder="Notes…"
                       onBlur={(e) => e.target.value !== row.notes && onNotes(row.month, e.target.value)}
                       onKeyDown={commitOnEnter(row.notes)}
-                      className="w-full min-w-[60px] max-w-[100px] truncate rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm placeholder-gray-300 focus:border-gray-200 focus:outline-none dark:placeholder-gray-600 dark:focus:border-gray-700"
+                      className="w-[4.5rem] truncate rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm placeholder-gray-300 focus:border-gray-200 focus:outline-none dark:placeholder-gray-600 dark:focus:border-gray-700"
                     />
                   </Tooltip>
                 </td>

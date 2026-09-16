@@ -172,25 +172,30 @@ export default function ProjectionsTab() {
               label="Put aside this year"
               value={gbp0(totalAllocated)}
               decoration={
-                <TrendArt />
+                <TrendArt className="lg:left-[36%] lg:right-auto" />
               }
               under={
                 <HeroChip>
                   {Math.round(avgRate * 100)}% of salary into home, savings & investments
                 </HeroChip>
               }
+              aside={<LeftoverChart rows={rows} variant="hero" />}
+              asideFrom="lg"
               fields={[
-                { label: "Avg salary", value: gbp0(avgSalary), sub: "a month, before bonus" },
-                { label: "Avg costs", value: gbp0(avgCosts), sub: `${Math.round((avgCosts / (avgSalary || 1)) * 100)}% of salary` },
+                { label: "Average salary", value: gbp0(avgSalary), sub: "a month, before bonus" },
+                { label: "Average costs", value: gbp0(avgCosts), sub: `${Math.round((avgCosts / (avgSalary || 1)) * 100)}% of salary` },
                 { label: "Buffer so far", value: gbp0(leftover), sub: "left after everything", warn: leftover < 0 },
               ]}
             />
 
             <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
 
-            <div className={`grid gap-4 lg:grid-cols-2 ${section.show("charts")}`}>
+            <div className={`grid gap-4 ${section.show("charts")}`}>
               <AllocationChart rows={rows} />
-              <LeftoverChart rows={rows} />
+              {/* Wide screens show this one inside the header. */}
+              <div className="lg:hidden">
+                <LeftoverChart rows={rows} />
+              </div>
             </div>
 
             <div className={section.show("plan")}>
