@@ -2,67 +2,118 @@ import { useRemuneration } from "../../hooks/useRemuneration";
 import { QueryState } from "../common";
 import { gbp0 } from "../../lib/format";
 import { resolvePay, currentRow } from "../../lib/remuneration";
+import type { RemunerationRow } from "../../types/remuneration";
 import RemunerationTable from "./RemunerationTable";
 import { PayGrowthChart } from "./RemunerationCharts";
 import TakeHomeCalculator from "./TakeHomeCalculator";
 
 export default function RemunerationTab() {
   const query = useRemuneration();
+  const rows = query.data ?? [];
+  const current = currentRow(rows);
 
   return (
     <QueryState isLoading={query.isLoading} error={query.error}>
-      {(() => {
-        const rows = query.data ?? [];
-        const current = currentRow(rows);
-        const first = rows[0];
-        const currentPay = current ? resolvePay(current) : null;
-        const firstPay = first ? resolvePay(first) : null;
+      <div className="mx-auto max-w-7xl space-y-5">
+        {current && <PayslipHero rows={rows} current={current} />}
 
-        const totalGrowthPct =
-          firstPay && currentPay && firstPay.net_pm
-            ? (currentPay.net_pm - firstPay.net_pm) / firstPay.net_pm
-            : 0;
-
-        const stats = current
-          ? [
-              { label: "Current Net p.m", short: "Net p.m", value: gbp0(currentPay!.net_pm), sub: current.period, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
-              { label: "Gross + Bonus", short: "Gross+Bonus", value: gbp0(current.gross + current.bonus), sub: `${gbp0(current.gross)} base`, color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 border-sky-100 dark:bg-sky-950/30 dark:border-sky-900" },
-              { label: "Net p.a", short: "Net p.a", value: gbp0(currentPay!.net_pa), sub: "after tax, NI & pension", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900" },
-              { label: "Growth since start", short: "Growth", value: `+${(totalGrowthPct * 100).toFixed(0)}%`, sub: firstPay ? `from ${gbp0(firstPay.net_pm)}/mo` : "", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900" },
-            ]
-          : [];
-
-        return (
-          <div className="space-y-4">
-            {stats.length > 0 && (
-              <div className="grid gap-2 grid-cols-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
-                {stats.map((s) => (
-                  <div key={s.label} className={`rounded-2xl border px-1.5 py-2 text-center sm:px-5 sm:py-4 ${s.bg}`}>
-                    <p className="text-[9px] font-medium uppercase leading-tight tracking-wide text-gray-500 sm:text-xs sm:tracking-wider">
-                      <span className="sm:hidden">{s.short}</span>
-                      <span className="hidden sm:inline">{s.label}</span>
-                    </p>
-                    <p className={`mt-1 text-sm font-bold sm:mt-1.5 sm:text-2xl ${s.color}`}>{s.value}</p>
-                    <p className="mt-0.5 hidden truncate text-xs text-gray-400 sm:block">{s.sub}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <PayGrowthChart rows={rows} />
-              </div>
-              <TakeHomeCalculator
-                defaultAnnual={current?.gross ?? 71500}
-                currentNetMonthly={currentPay?.net_pm}
-              />
-            </div>
-
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="min-w-0 space-y-5">
+            {rows.length > 1 && <PayGrowthChart rows={rows} />}
             <RemunerationTable rows={rows} />
           </div>
-        );
-      })()}
+          <aside className="space-y-4 lg:sticky lg:top-5 lg:self-start">
+            <TakeHomeCalculator
+              defaultAnnual={current?.gross ?? 71500}
+              currentNetMonthly={current ? resolvePay(current).net_pm : undefined}
+            />
+          </aside>
+        </div>
+      </div>
     </QueryState>
+  );
+}
+
+/** Net pay per period, as a small line — the shape of the career at a glance. */
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+  const w = 160;
+  const h = 48;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * w, h - 4 - ((v - min) / span) * (h - 8)]);
+  const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-12 w-40" aria-hidden>
+      <polygon points={`0,${h} ${line} ${w},${h}`} className="fill-white/10" />
+      <polyline points={line} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={lx} cy={ly} r="3.5" className="fill-white" />
+    </svg>
+  );
+}
+
+function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: RemunerationRow }) {
+  const pay = resolvePay(current);
+  const first = rows[0];
+  const firstPay = first ? resolvePay(first) : null;
+  const growth = firstPay && firstPay.net_pm ? (pay.net_pm - firstPay.net_pm) / firstPay.net_pm : 0;
+  const prev = rows[rows.length - 2];
+  const lastRise = prev ? pay.net_pm - resolvePay(prev).net_pm : 0;
+  const since = first?.period.split(" - ")[0];
+
+  return (
+    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 text-white shadow-lg shadow-teal-500/20 dark:from-emerald-700 dark:via-teal-800 dark:to-cyan-900 dark:shadow-none">
+      {/* Guilloché-style rings, like the security print on a payslip */}
+      <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" className="pointer-events-none absolute inset-0 h-full w-full text-white/10" aria-hidden>
+        {[40, 70, 100, 130, 160].map((r) => (
+          <circle key={r} cx="360" cy="40" r={r} fill="none" stroke="currentColor" strokeWidth="1" />
+        ))}
+      </svg>
+
+      <div className="relative grid gap-6 p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <div className="min-w-0">
+          <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
+            {current.period}
+          </span>
+          <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Take-home each month</p>
+          <p className="mt-1 text-4xl font-extrabold tabular-nums tracking-tight sm:text-5xl">{gbp0(pay.net_pm)}</p>
+          {prev && Math.round(lastRise) !== 0 && (
+            <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">
+              {lastRise > 0 ? "▲" : "▼"} {gbp0(Math.abs(lastRise))}/mo since the last change
+            </p>
+          )}
+
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <HeroField label="Gross + bonus" value={gbp0(current.gross + current.bonus)} sub={`${gbp0(current.gross)} base`} />
+            <HeroField label="Net a year" value={gbp0(pay.net_pa)} sub="after tax, NI & pension" />
+            <HeroField label="Pension" value={gbp0(Math.abs(pay.pension))} sub={`${Math.round((current.pension_pct ?? 0) * 100)}% of gross`} />
+          </div>
+        </div>
+
+        <div className="flex items-end justify-between gap-4 border-t border-dashed border-white/25 pt-5 md:flex-col md:items-end md:border-l md:border-t-0 md:pl-7 md:pt-0">
+          <div className="md:text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Growth{since ? ` since ${since}` : ""}</p>
+            <p className="mt-1 text-3xl font-extrabold tabular-nums">
+              {growth >= 0 ? "+" : "−"}
+              {Math.abs(growth * 100).toFixed(0)}%
+            </p>
+            {firstPay && <p className="text-xs text-white/70">from {gbp0(firstPay.net_pm)}/mo</p>}
+          </div>
+          <Sparkline values={rows.map((r) => resolvePay(r).net_pm)} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HeroField({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">{label}</p>
+      <p className="mt-0.5 text-base font-bold tabular-nums">{value}</p>
+      <p className="truncate text-[11px] text-white/60">{sub}</p>
+    </div>
   );
 }

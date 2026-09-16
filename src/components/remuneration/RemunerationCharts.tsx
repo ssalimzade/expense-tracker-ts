@@ -6,7 +6,6 @@ import type { RemunerationRow } from "../../types/remuneration";
 import { resolvePay } from "../../lib/remuneration";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { Card } from "../common";
 
 // "Sep 2022 - Jan 2023" → "Sep '22"
 const shortLabel = (period: string) => {
@@ -25,19 +24,15 @@ export function PayGrowthChart({ rows }: { rows: RemunerationRow[] }) {
   }));
 
   return (
-    <Card className="flex h-full flex-col">
-      <div className="mb-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Pay Progression
-        </h2>
-      </div>
-      <div className="min-h-[16rem] flex-1">
+    <div className="rounded-3xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">
+      <p className="mb-4 text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Pay over time</p>
+      <div className="h-56 sm:h-64">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
             <defs>
               <linearGradient id="netPmGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
@@ -49,11 +44,11 @@ export function PayGrowthChart({ rows }: { rows: RemunerationRow[] }) {
               contentStyle={tooltipStyle()} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} cursor={cursorStyle()}
             />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-            <Bar yAxisId="left" dataKey="Gross p.a" fill="#c7d2fe" radius={[4, 4, 0, 0]} barSize={22} />
-            <Area yAxisId="right" type="monotone" dataKey="Net p.m" stroke="#6366f1" strokeWidth={2.5} fill="url(#netPmGradient)" dot={{ r: 3, fill: "#6366f1" }} activeDot={{ r: 5 }} />
+            <Bar yAxisId="left" dataKey="Gross p.a" fill="#99f6e4" fillOpacity={0.55} radius={[6, 6, 0, 0]} barSize={isMobile ? 14 : 26} />
+            <Area yAxisId="right" type="monotone" dataKey="Net p.m" stroke="#10b981" strokeWidth={2.5} fill="url(#netPmGradient)" dot={{ r: 3, fill: "#10b981" }} activeDot={{ r: 5 }} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-    </Card>
+    </div>
   );
 }
