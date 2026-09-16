@@ -3,17 +3,17 @@ import type { Repayment } from "../types/repayment";
 // Fixed colour per category, shared by the repayments chart and the schedule so
 // an expense's name/amount always matches its category's bar colour.
 const CATEGORY_COLORS: Record<string, string> = {
-  Groceries: "#a9bf86", // sage
-  Lunch: "#c8b58f", // sand
-  "Social Life": "#a59bc4", // lavender
-  Shopping: "#6f9a6a", // moss
-  Sports: "#7f9cc0", // slate blue
-  Transport: "#8b86b8", // dusk
-  Mobile: "#6fa6a0", // teal
-  Barber: "#b5a66f", // khaki
-  Other: "#8a94a6", // grey-blue
-  Travel: "#5f8f99", // sea
-  Savings: "#9fbfd6", // pale sky
+  Groceries: "#a9c47f", // spring green
+  Lunch: "#d9c7a3", // sand
+  "Social Life": "#d1b36b", // gold
+  Shopping: "#5f9467", // deep green
+  Sports: "#7fb0e0", // light blue
+  Transport: "#5a6fa8", // slate indigo
+  Mobile: "#5fa8a8", // teal
+  Barber: "#9c8266", // brown
+  Other: "#9ca3af", // grey
+  Travel: "#9d88cf", // purple
+  Savings: "#a7c7d9", // pale sky
 };
 // Fallback palette for any custom category not in the fixed map above — muted
 // to match, with no reds, oranges or pinks.

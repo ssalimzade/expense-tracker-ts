@@ -14,8 +14,8 @@ import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
   { value: "schedule", label: "Schedule" },
-  { value: "due", label: "Due" },
-  { value: "monzo", label: "Monzo" },
+  { value: "due", label: "Due dates" },
+  { value: "monzo", label: "Pushed to Monzo" },
 ] as const;
 
 export default function RepaymentsTab() {
@@ -23,7 +23,7 @@ export default function RepaymentsTab() {
   const del = useDeleteRepayment();
   const restore = useRestoreRepayment();
   const months = visibleRepaymentMonths();
-  const section = usePhoneSection("repayments-section", SECTIONS);
+  const section = usePhoneSection("repayments-section", SECTIONS, true);
 
   // Undo list: keeps recently-deleted repayments so the user can restore them
   const [deleted, setDeleted] = useState<{ id: string; description: string }[]>([]);
@@ -56,7 +56,7 @@ export default function RepaymentsTab() {
         const totals = months.map((m) => ({ month: m, total: monthTotal(m) }));
         const grand = totals.reduce((t, x) => t + x.total, 0);
         const peak = Math.max(1, ...totals.map((x) => x.total));
-        const shortMonth = (m: string) => formatMonthLabel(m).slice(0, 3);
+        const monthName = (m: string) => formatMonthLabel(m).split(" ")[0];
 
         return (
           <div className="mx-auto max-w-7xl space-y-5">
@@ -64,7 +64,7 @@ export default function RepaymentsTab() {
               gradient="from-[#8c7c68] via-[#6b5d4d] to-[#3f362e]"
               badge={`${formatMonthLabel(months[0])} – ${formatMonthLabel(months[months.length - 1])}`}
               label="Flex still to repay"
-              decoration={<CardArt className="md:right-64" />}
+              decoration={<CardArt className="md:right-80" />}
               value={gbp0(grand)}
               under={
                 <HeroChip>
@@ -74,17 +74,17 @@ export default function RepaymentsTab() {
               aside={
                 <div className="flex h-28 items-end gap-3">
                   {totals.map((x) => (
-                    <div key={x.month} className="flex w-12 flex-col items-center gap-1">
+                    <div key={x.month} className="flex w-16 flex-col items-center gap-1">
                       <span className="text-[11px] font-bold tabular-nums">{gbp0(x.total)}</span>
-                      <div className="w-full rounded-t-lg bg-white/80" style={{ height: `${Math.max(4, (x.total / peak) * 64)}px` }} />
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">{shortMonth(x.month)}</span>
+                      <div className="w-12 rounded-t-lg bg-white/80" style={{ height: `${Math.max(4, (x.total / peak) * 64)}px` }} />
+                      <span className="text-[11px] font-semibold text-white/75">{monthName(x.month)}</span>
                     </div>
                   ))}
                 </div>
               }
             />
 
-            <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
+            <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} allWidths />
 
             <div className={`grid gap-5 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] xl:items-start ${section.show("due")}`}>
               <DailyRepaymentChart repayments={active} visibleMonths={months} />
