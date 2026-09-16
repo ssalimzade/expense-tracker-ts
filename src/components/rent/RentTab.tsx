@@ -13,6 +13,13 @@ import RentPots from "./RentPots";
 import { potViews, potsTotal } from "../../lib/pots";
 import { CostBreakdownChart, PaidProgressChart } from "./RentCharts";
 import { HouseArt } from "../HeroArt";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+
+const SECTIONS = [
+  { value: "months", label: "Months" },
+  { value: "pots", label: "Pots" },
+  { value: "charts", label: "Charts" },
+] as const;
 
 const currentMonth = (() => {
   const d = new Date();
@@ -28,6 +35,7 @@ export default function RentTab({ onOpenTransactions }: Props) {
   const remQuery = useRemuneration();
   const currentYear = String(new Date().getFullYear());
   const [year, setYear] = useState(currentYear);
+  const section = usePhoneSection("rent-section", SECTIONS);
 
   return (
     <QueryState isLoading={query.isLoading} error={query.error}>
@@ -102,20 +110,26 @@ export default function RentTab({ onOpenTransactions }: Props) {
               ]}
             />
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
+
+            <div className={`grid gap-4 lg:grid-cols-2 ${section.show("charts")}`}>
               <CostBreakdownChart data={data} months={months} />
               <PaidProgressChart data={data} months={months} />
             </div>
 
-            <RentPots data={data} upTo={currentMonth} />
+            <div className={section.show("pots")}>
+              <RentPots data={data} upTo={currentMonth} />
+            </div>
 
-            {months.length > 0 ? (
-              <RentTable data={data} months={months} onOpenMatch={onOpenTransactions} />
-            ) : (
-              <div className="rounded-3xl border-2 border-dashed border-gray-200 p-10 text-center text-sm text-gray-400 dark:border-gray-800">
-                No rent data for {year}.
-              </div>
-            )}
+            <div className={section.show("months")}>
+              {months.length > 0 ? (
+                <RentTable data={data} months={months} onOpenMatch={onOpenTransactions} />
+              ) : (
+                <div className="rounded-3xl border-2 border-dashed border-gray-200 p-10 text-center text-sm text-gray-400 dark:border-gray-800">
+                  No rent data for {year}.
+                </div>
+              )}
+            </div>
           </div>
         );
       })()}

@@ -150,3 +150,25 @@ The table rules still apply inside the tables.
 - **Layout:** main column plus a sticky `lg:` sidebar of `22rem`. On phones the
   sidebar comes after the main content, unless it holds the page's main
   actions.
+
+## Phone sections (every tab with more than one block)
+
+Below `lg`, a tab shows its hero and then one section at a time, picked with
+`PhoneSectionTabs` (same look as Travel's Journal / Plan / Summary). Use
+`usePhoneSection("<tab>-section", SECTIONS)` and put `section.show("<value>")`
+on each block. It only adds `max-lg:hidden`, so wide screens are unchanged and
+hidden components stay mounted (their effects and saves keep working). Phone
+month lists (Projections, Rent) open at the current month with a "Show N
+earlier months" button.
+
+## Chart style
+
+- Colours come from `CHART` in `lib/chart.ts`: muted moss, slate, dusk, lavender,
+  sand, stone and teal. No red, orange or pink, except `CHART.bad` for bad news.
+  "Not yet / still to come" uses `CHART.mist` or a lower `fillOpacity`.
+- Use `axisTick` and `gridStroke`. Put a `ChartLegend` (grey labels, coloured
+  dots) under the card title instead of Recharts' `<Legend>`.
+- One scale per chart. When one value would flatten the rest (rent next to
+  bills, a bonus month), leave it out or cap the axis and name it in the header.
+- Don't chart what a table next to it already shows. Prefer a view the table
+  can't give (over/under, left after costs, due dates).

@@ -24,11 +24,38 @@ export function spacedTicks(count: number, target = 4): (props: TickProps) => Re
   };
 }
 
+/**
+ * Muted, natural chart colours that sit well on the dark theme. Warm reds,
+ * oranges and pinks are deliberately absent; red is kept for "bad" only.
+ */
+export const CHART = {
+  moss: "#8fae73",
+  sage: "#a9bf86",
+  slate: "#7f9cc0",
+  dusk: "#6f9fb8",
+  lavender: "#a59bc4",
+  sand: "#c8b58f",
+  stone: "#9c8f7a",
+  teal: "#6fa6a0",
+  indigo: "#6f7fd6",
+  grey: "#9ca3af",
+  /** Placeholder fill for "not yet"/"still to come" — faint in both themes. */
+  mist: "rgba(148,163,184,0.28)",
+  bad: "#e0786f",
+} as const;
+
+/** Axis label style shared by every chart. */
+export const axisTick = { fontSize: 11, fill: "#9ca3af" };
+
+/** Horizontal grid lines — visible but quiet on light and dark. */
+export const gridStroke = "rgba(148,163,184,0.14)";
+
 /** Returns Recharts <Tooltip> contentStyle matching the current colour scheme. */
 export function tooltipStyle(): React.CSSProperties {
   const dark = document.documentElement.classList.contains("dark");
   return {
-    borderRadius: "10px",
+    borderRadius: "12px",
+    padding: "8px 12px",
     border: `1px solid ${dark ? "#374151" : "#e5e7eb"}`,
     backgroundColor: dark ? "#111827" : "#ffffff",
     color: dark ? "#f9fafb" : "#111827",

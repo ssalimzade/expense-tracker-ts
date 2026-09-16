@@ -1,9 +1,10 @@
 import {
   ComposedChart, Line, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, ReferenceLine,
+  ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import type { SavingsRow } from "../../types/savings";
-import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
+import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle, CHART, axisTick, gridStroke } from "../../lib/chart";
+import ChartLegend from "../ChartLegend";
 import { useIsMobile } from "../../hooks/useIsMobile";
 
 const mo = (iso: string) => new Date(iso).toLocaleString("en-GB", { month: "short" });
@@ -54,12 +55,12 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
                 <stop offset="95%" stopColor="#8fae73" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-            <XAxis dataKey="month" tick={{ fontSize: isMobile ? 9 : 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval={isMobile ? 0 : undefined} />
+            <CartesianGrid vertical={false} stroke={gridStroke} />
+            <XAxis dataKey="month" tick={{ ...axisTick, fontSize: isMobile ? 10 : 11 }} axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} />
             <YAxis
-              tick={{ fontSize: 11, fill: "#9ca3af" }}
+              tick={axisTick}
               width={44}
-              tickFormatter={(v) => `£${(v / 1000).toFixed(0)}k`}
+              tickFormatter={(v) => (v === 0 ? "£0" : `£${(v / 1000).toFixed(0)}k`)}
               domain={[0, niceMax]}
               ticks={yTicks}
               allowDecimals={false}
@@ -100,6 +101,18 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
   );
 }
 
+const BREAKDOWN_SERIES = [
+  { key: "Home", color: CHART.dusk },
+  { key: "Savings", color: CHART.moss },
+  { key: "Adjustments", color: CHART.sand },
+  { key: "Investments", color: CHART.lavender },
+] as const;
+
+const niceUp = (v: number) => {
+  const step = v > 2500 ? 1000 : v > 500 ? 250 : 50;
+  return Math.ceil(v / step) * step;
+};
+
 export function MonthlyBreakdownChart({ rows, showInvestments }: { rows: SavingsRow[]; showInvestments: boolean }) {
   const isMobile = useIsMobile();
   const data = rows.map((r) => ({
@@ -109,19 +122,47 @@ export function MonthlyBreakdownChart({ rows, showInvestments }: { rows: Savings
     Adjustments: r.adjustments,
     ...(showInvestments ? { Investments: r.investments ?? 0 } : {}),
   }));
+  const series = BREAKDOWN_SERIES.filter((s) => showInvestments || s.key !== "Investments");
+
+  // One huge month (a bonus, a transfer) flattens every other bar. When a month
+  // is well over twice the typical one, cap the scale and name it instead.
+  const positive = (d: (typeof data)[number]) =>
+    series.reduce((s, x) => s + Math.max(0, (d as Record<string, number | string>)[x.key] as number), 0);
+  const totals = data.map(positive);
+  const sorted = [...totals].filter((t) => t > 0).sort((a, b) => a - b);
+  const typical = sorted.length ? sorted[Math.floor((sorted.length - 1) * 0.75)] : 0;
+  const capped = typical > 0 && Math.max(0, ...totals) > typical * 2.5;
+  const lowest = Math.min(0, ...data.map((d) => series.reduce((s, x) => s + Math.min(0, (d as Record<string, number | string>)[x.key] as number), 0)));
+  // Even ticks on the capped scale, reaching down far enough for negative months.
+  const step = capped ? niceUp((typical * 1.4) / 3) : 0;
+  const cap = capped ? step * 3 : undefined;
+  const floor = capped && lowest < 0 ? -Math.ceil(-lowest / 50) * 50 : 0;
+  const ticks = capped ? [0, step, step * 2, step * 3] : undefined;
+  const offScale = cap ? data.map((d, i) => ({ month: d.month, total: totals[i] })).filter((d) => d.total > cap) : [];
 
   return (
     <div className="rounded-3xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">
-      <p className="mb-4 text-xs font-bold uppercase tracking-[0.14em] text-gray-400">What went in each month</p>
-      <div className="h-56">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">What went in each month</p>
+        {offScale.length > 0 && (
+          <span className="text-[11px] tabular-nums text-gray-400">
+            Off the top: {offScale.map((d) => `${d.month} £${d.total.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`).join(", ")}
+          </span>
+        )}
+      </div>
+      <ChartLegend className="mb-3" items={series.map((s) => ({ label: s.key, color: s.color }))} />
+      <div className="h-52 sm:h-56">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-            <XAxis dataKey="month" tick={{ fontSize: isMobile ? 9 : 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval={isMobile ? 0 : undefined} />
+          <BarChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }} barCategoryGap={isMobile ? "18%" : "24%"}>
+            <CartesianGrid vertical={false} stroke={gridStroke} />
+            <XAxis dataKey="month" tick={{ ...axisTick, fontSize: isMobile ? 10 : 11 }} axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} />
             <YAxis
-              tick={{ fontSize: 11, fill: "#9ca3af" }}
-              width={isMobile ? 44 : 60}
-              tickFormatter={(v) => (isMobile ? `£${(v / 1000).toFixed(1)}k` : `£${v.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`)}
+              tick={axisTick}
+              width={44}
+              domain={cap ? [floor, cap] : undefined}
+              ticks={ticks}
+              allowDataOverflow={capped}
+              tickFormatter={(v) => (Math.abs(v) >= 1000 ? `£${(v / 1000).toFixed(1)}k` : `${v < 0 ? "−" : ""}£${Math.abs(v)}`)}
               axisLine={false}
               tickLine={false}
             />
@@ -132,14 +173,10 @@ export function MonthlyBreakdownChart({ rows, showInvestments }: { rows: Savings
               labelStyle={tooltipLabelStyle}
               cursor={cursorStyle()}
             />
-            <ReferenceLine y={0} stroke="#e5e7eb" />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-            <Bar dataKey="Home" stackId="a" fill="#0ea5e9" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="Savings" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="Adjustments" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
-            {showInvestments && (
-              <Bar dataKey="Investments" stackId="a" fill="#a855f7" radius={[4, 4, 0, 0]} />
-            )}
+            <ReferenceLine y={0} stroke="rgba(148,163,184,0.45)" />
+            {series.map((s, i) => (
+              <Bar key={s.key} dataKey={s.key} stackId="a" fill={s.color} radius={i === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       </div>

@@ -7,23 +7,39 @@ import RemunerationTable from "./RemunerationTable";
 import { PayGrowthChart } from "./RemunerationCharts";
 import TakeHomeCalculator from "./TakeHomeCalculator";
 import { BanknotesArt } from "../HeroArt";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+
+const SECTIONS = [
+  { value: "career", label: "Career" },
+  { value: "chart", label: "Chart" },
+  { value: "whatif", label: "What if" },
+] as const;
 
 export default function RemunerationTab() {
   const query = useRemuneration();
   const rows = query.data ?? [];
   const current = currentRow(rows);
+  const section = usePhoneSection("salary-section", SECTIONS);
 
   return (
     <QueryState isLoading={query.isLoading} error={query.error}>
       <div className="mx-auto max-w-7xl space-y-5">
         {current && <PayslipHero rows={rows} current={current} />}
 
+        <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
+
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <div className="min-w-0 space-y-5">
-            {rows.length > 1 && <PayGrowthChart rows={rows} />}
-            <RemunerationTable rows={rows} />
+          <div className={`min-w-0 lg:space-y-5 ${section.value === "whatif" ? "max-lg:hidden" : ""}`}>
+            {rows.length > 1 && (
+              <div className={section.show("chart")}>
+                <PayGrowthChart rows={rows} />
+              </div>
+            )}
+            <div className={section.show("career")}>
+              <RemunerationTable rows={rows} />
+            </div>
           </div>
-          <aside className="space-y-4 lg:sticky lg:top-5 lg:self-start">
+          <aside className={`space-y-4 lg:sticky lg:top-5 lg:self-start ${section.show("whatif")}`}>
             <TakeHomeCalculator
               defaultAnnual={current?.gross ?? 71500}
               currentNetMonthly={current ? resolvePay(current).net_pm : undefined}

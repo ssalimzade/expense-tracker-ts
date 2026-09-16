@@ -90,7 +90,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
                   <div className="flex items-center gap-1">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                       <div
-                        className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                        className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-[#c8b58f]" : "bg-indigo-500"}`}
                         style={{ width: `${Math.min(pct, 100)}%` }}
                       />
                     </div>
@@ -125,7 +125,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
               <div className="mt-2.5 flex items-center gap-3">
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                   <div
-                    className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                    className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-[#c8b58f]" : "bg-indigo-500"}`}
                     style={{ width: `${Math.min(pct, 100)}%` }}
                   />
                 </div>

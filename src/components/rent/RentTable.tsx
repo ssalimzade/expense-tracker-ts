@@ -46,7 +46,7 @@ function PaidToggle({
 }: {
   paid: boolean;
   auto: boolean;
-  /** This month's money went to the item's pot — amber, matching the column. */
+  /** This month's money went to the item's pot — sand, matching the column. */
   toPot?: boolean;
   /** Appended to the title — surfaces what the icon is hiding. */
   hint?: string;
@@ -78,7 +78,7 @@ function PaidToggle({
       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
         paid
           ? toPot
-            ? "border-amber-500 bg-amber-500 text-white"
+            ? "border-[#b39767] bg-[#b39767] text-white"
             : "border-emerald-500 bg-emerald-500 text-white"
           : "border-gray-300 text-transparent hover:border-emerald-400 dark:border-gray-600"
       }`}
@@ -266,7 +266,7 @@ function AmountPrompt({
         <div className="mb-2 flex gap-1 rounded-xl bg-gray-100/70 p-1 dark:bg-gray-900/50">
           {[
             { toPot: false, label: "Paid out", on: "bg-emerald-500 text-white" },
-            { toPot: true, label: "To pot", on: "bg-amber-500 text-white" },
+            { toPot: true, label: "To pot", on: "bg-[#b39767] text-white" },
           ].map((opt) => (
             <button
               key={opt.label}
@@ -409,7 +409,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
 
   // Which items have a pot, and — since a bill can now save ahead some months
   // and pay out in others — which months are bound for one. Amber follows the
-  // destination, not the payment: a future month already earmarked reads amber
+  // destination, not the payment: a future month already earmarked reads sand
   // before it is ticked, exactly as a pure pot column always did.
   const hasPot = new Set(items.filter((it) => it.saved).map((it) => it.key));
   const potBound = (month: string, key: string) =>
@@ -474,6 +474,12 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   const isLocked = (month: string, key: string) => !!match(month, key) && !canSplit(key);
 
   const [pop, setPop] = useState<Pop | null>(null);
+
+  // Phones open at this month; the months already behind you are one tap away.
+  const [showEarlier, setShowEarlier] = useState(false);
+  const hasCurrent = months.includes(currentMonth);
+  const phoneMonths = showEarlier || !hasCurrent ? months : months.filter((m) => m >= currentMonth);
+  const hiddenEarlier = months.length - phoneMonths.length;
 
   // Ticking asks what actually left the account; unticking drops that figure so
   // it can't linger as a stale diff. A matched row opens the link menu instead.
@@ -627,7 +633,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                 ? update(month, it.key, { unlinked: false })
                 : openSplit(month, it, e.currentTarget.getBoundingClientRect())
             }
-            className={`min-w-0 flex-1 truncate text-left ${potBound(month, it.key) ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}
+            className={`min-w-0 flex-1 truncate text-left ${potBound(month, it.key) ? "text-[#96794a] dark:text-[#d2bc92]" : "text-gray-400"}`}
           >
             {it.label}
             {drop ? (
@@ -637,7 +643,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
             ) : null}
           </button>
         ) : (
-          <span className={`min-w-0 flex-1 truncate ${potBound(month, it.key) ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>
+          <span className={`min-w-0 flex-1 truncate ${potBound(month, it.key) ? "text-[#96794a] dark:text-[#d2bc92]" : "text-gray-400"}`}>
             {it.label}
           </span>
         )}
@@ -645,7 +651,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
           value={share(month, it.key)}
           onCommit={(n) => commitAmount(month, it.key, n)}
           readOnly={isLocked(month, it.key)}
-          color={potBound(month, it.key) ? "#d97706" : undefined}
+          color={potBound(month, it.key) ? "#b39767" : undefined}
           className="!w-14 !px-1 !text-right"
         />
       </div>
@@ -660,7 +666,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
         </h2>
         <div className="hidden items-center gap-3 text-xs text-gray-400 sm:flex">
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-amber-400" /> set aside to savings
+            <span className="h-2 w-2 rounded-full bg-[#c8b58f]" /> set aside to savings
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500" /> paid
@@ -677,7 +683,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Month</th>
               {visibleItems.map((it: RentItemDef) => (
                 <th key={it.key} className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
-                  <span className={it.saved ? "text-amber-600 dark:text-amber-400" : "text-gray-600 dark:text-white"}>
+                  <span className={it.saved ? "text-[#96794a] dark:text-[#d2bc92]" : "text-gray-600 dark:text-white"}>
                     {it.label}
                   </span>
                 </th>
@@ -696,7 +702,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                 <tr
                   key={month}
                   className={`group hover:bg-gray-50 dark:hover:bg-gray-800/40 ${isFuture ? "opacity-50" : ""} ${
-                    isCurrent ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""
+                    isCurrent ? "bg-teal-50/60 dark:bg-teal-500/[0.06]" : ""
                   }`}
                 >
                   <td className="px-6 py-2.5 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -721,7 +727,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                               value={share(month, it.key)}
                               onCommit={(n) => commitAmount(month, it.key, n)}
                               readOnly={isLocked(month, it.key)}
-                              color={potBound(month, it.key) ? "#d97706" : undefined}
+                              color={potBound(month, it.key) ? "#b39767" : undefined}
                             />
                             <PaidToggle
                               paid={c.paid}
@@ -750,8 +756,20 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
       </div>
 
       {/* Mobile cards */}
+      {hiddenEarlier > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowEarlier(true)}
+          className="flex w-full items-center justify-center gap-1.5 border-b border-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/40 md:hidden"
+        >
+          <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+            <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
+          </svg>
+          Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
+        </button>
+      )}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
-        {months.map((month) => {
+        {phoneMonths.map((month) => {
           const isFuture = month > currentMonth;
           const isCurrent = month === currentMonth;
           const total = monthTotal(month);
@@ -760,7 +778,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
           return (
             <li
               key={month}
-              className={`px-4 py-3 ${isFuture ? "opacity-50" : ""} ${isCurrent ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""}`}
+              className={`px-4 py-3 ${isFuture ? "opacity-50" : ""} ${isCurrent ? "bg-teal-50/60 dark:bg-teal-500/[0.06]" : ""}`}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{mo(month)}</span>

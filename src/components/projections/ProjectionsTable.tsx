@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ProjectionView, ProjectionInput, AllocationField } from "../../types/projections";
 import { gbp0 } from "../../lib/format";
 import { commitOnEnter } from "../../lib/keys";
@@ -12,20 +13,6 @@ const currentMonth = (() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 })();
 
-// Category rows are all neutral grey — only the Buffer row is coloured, to keep
-// the table from feeling too busy.
-const PROJ_COLS: { field: "salary" | "bonus" | "monthly_costs"; label: string }[] = [
-  { field: "salary", label: "Salary" },
-  { field: "bonus", label: "Bonus" },
-  { field: "monthly_costs", label: "Monthly" },
-];
-
-const ALLOC_COLS: { field: AllocationField; label: string }[] = [
-  { field: "home_contributions", label: "Home" },
-  { field: "savings", label: "Savings" },
-  { field: "investments", label: "Invest" },
-];
-
 interface Props {
   rows: ProjectionView[];
   onProjectionField: (month: string, field: ProjectionInput, value: number) => void;
@@ -33,17 +20,83 @@ interface Props {
   onAllocation: (month: string, field: AllocationField, value: number) => void;
 }
 
+const CURRENT_TINT = "bg-violet-50/70 dark:bg-violet-500/[0.07]";
+
 function monthCellClass(month: string) {
   const isFuture = month > currentMonth;
   const isCurrent = month === currentMonth;
   return [
-    "px-3 py-2.5 text-center",
+    "px-3 py-2 text-center",
     isFuture ? "opacity-50" : "",
-    isCurrent ? "bg-indigo-50/40 dark:bg-indigo-950/20" : "",
+    isCurrent ? CURRENT_TINT : "",
   ].join(" ");
 }
 
+// The label column stays put while the months scroll sideways.
+const STICKY = "sticky left-0 z-10 bg-white dark:bg-gray-900";
+
+/** A small heading row that opens each block of the plan. */
+function Group({ label, span, children }: { label: string; span: number; children: React.ReactNode }) {
+  return (
+    <>
+      <tr className="border-t border-gray-100 dark:border-gray-800">
+        <td className={`${STICKY} px-6 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400`}>{label}</td>
+        <td colSpan={span} />
+      </tr>
+      {children}
+    </>
+  );
+}
+
+interface Line {
+  label: string;
+  value: (row: ProjectionView) => number;
+  commit: (month: string, n: number) => void;
+}
+
 export default function ProjectionsTable({ rows, onProjectionField, onNotes, onAllocation }: Props) {
+  // Phones open at this month; the months already behind you are one tap away.
+  const [showEarlier, setShowEarlier] = useState(false);
+  const hasCurrent = rows.some((r) => r.month === currentMonth);
+  const phoneRows = showEarlier || !hasCurrent ? rows : rows.filter((r) => r.month >= currentMonth);
+  const hiddenEarlier = rows.length - phoneRows.length;
+
+  const field = (label: string, key: ProjectionInput, pick: (r: ProjectionView) => number): Line => ({
+    label,
+    value: pick,
+    commit: (m, n) => onProjectionField(m, key, n),
+  });
+  const alloc = (label: string, key: AllocationField): Line => ({
+    label,
+    value: (r) => r[key],
+    commit: (m, n) => onAllocation(m, key, n),
+  });
+  const groups: { label: string; lines: Line[] }[] = [
+    {
+      label: "Income",
+      lines: [
+        field("Salary", "salary", (r) => r.salary),
+        field("Bonus", "bonus", (r) => r.bonus),
+        field("Other P/L", "other_pl", (r) => r.other_pl),
+      ],
+    },
+    {
+      label: "Costs",
+      lines: [
+        field("Monthly", "monthly_costs", (r) => r.monthly_costs),
+        field("Rent", "housing_costs", (r) => r.rent),
+      ],
+    },
+    {
+      label: "Put aside",
+      lines: [
+        alloc("Home", "home_contributions"),
+        alloc("Savings", "savings"),
+        alloc("Investments", "investments"),
+      ],
+    },
+  ];
+
   return (
     <Card className="p-0 overflow-hidden max-md:!p-0">
       <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
@@ -55,92 +108,48 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white" />
+              <th className={`${STICKY} px-6 py-3`} />
               {rows.map((row) => (
                 <th
                   key={row.month}
                   className={`px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white ${
-                    row.month === currentMonth ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""
+                    row.month === currentMonth ? CURRENT_TINT : ""
                   }`}
                 >
                   {mo(row.month)}
+                  {row.month === currentMonth && (
+                    <span className="mt-0.5 block text-[9px] font-bold tracking-[0.14em] text-violet-500 dark:text-violet-300">Now</span>
+                  )}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-            {PROJ_COLS.map((c) => (
-              <tr key={c.field} className="group hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                <td className="px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">
-                  {c.label}
-                </td>
-                {rows.map((row) => (
-                  <td key={row.month} className={monthCellClass(row.month)}>
-                    <MoneyInput
-                      value={row[c.field]}
-                      onCommit={(n) => onProjectionField(row.month, c.field, n)}
-                      allowNegative
-                    />
-                  </td>
+          <tbody>
+            {groups.map((g) => (
+              <Group key={g.label} label={g.label} span={rows.length}>
+                {g.lines.map((line) => (
+                  <tr key={line.label} className="group hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                    <td className={`${STICKY} whitespace-nowrap px-6 py-2 text-sm font-medium text-gray-700 group-hover:bg-gray-50 dark:text-gray-300 dark:group-hover:bg-gray-800`}>
+                      {line.label}
+                    </td>
+                    {rows.map((row) => (
+                      <td key={row.month} className={monthCellClass(row.month)}>
+                        <MoneyInput value={line.value(row)} onCommit={(n) => line.commit(row.month, n)} allowNegative />
+                      </td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
+              </Group>
             ))}
 
-            <tr className="group hover:bg-gray-50 dark:hover:bg-gray-800/40">
-              <td className="px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">
-                Rent
-              </td>
-              {rows.map((row) => (
-                <td key={row.month} className={monthCellClass(row.month)}>
-                  <MoneyInput
-                    value={row.rent}
-                    onCommit={(n) => onProjectionField(row.month, "housing_costs", n)}
-                    allowNegative
-                  />
-                </td>
-              ))}
-            </tr>
-
-            {ALLOC_COLS.map((c) => (
-              <tr key={c.field} className="group hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                <td className="px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">
-                  {c.label}
-                </td>
-                {rows.map((row) => (
-                  <td key={row.month} className={monthCellClass(row.month)}>
-                    <MoneyInput
-                      value={row[c.field]}
-                      onCommit={(n) => onAllocation(row.month, c.field, n)}
-                      allowNegative
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-
-            <tr className="group hover:bg-gray-50 dark:hover:bg-gray-800/40">
-              <td className="px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">
-                Other P/L
-              </td>
-              {rows.map((row) => (
-                <td key={row.month} className={monthCellClass(row.month)}>
-                  <MoneyInput
-                    value={row.other_pl}
-                    onCommit={(n) => onProjectionField(row.month, "other_pl", n)}
-                    allowNegative
-                  />
-                </td>
-              ))}
-            </tr>
-
-            <tr className="group hover:bg-gray-50 dark:hover:bg-gray-800/40">
-              <td className="px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap border-t-2 border-gray-300 dark:border-gray-600">
+            <tr className="border-t-2 border-gray-200 dark:border-gray-700">
+              <td className={`${STICKY} whitespace-nowrap px-6 py-3 text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white`}>
                 Buffer
               </td>
               {rows.map((row) => (
                 <td
                   key={row.month}
-                  className={`${monthCellClass(row.month)} border-t-2 border-gray-300 dark:border-gray-600 font-bold tabular-nums whitespace-nowrap ${
+                  className={`${monthCellClass(row.month)} !py-3 font-bold tabular-nums whitespace-nowrap ${
                     row.buffer < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
                   }`}
                 >
@@ -149,12 +158,12 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
               ))}
             </tr>
 
-            <tr className="group hover:bg-gray-50 dark:hover:bg-gray-800/40">
-              <td className="px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap border-t-2 border-gray-300 dark:border-gray-600">
+            <tr className="border-t border-gray-100 dark:border-gray-800">
+              <td className={`${STICKY} whitespace-nowrap px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-400`}>
                 Notes
               </td>
               {rows.map((row) => (
-                <td key={row.month} className={`${monthCellClass(row.month)} border-t-2 border-gray-300 dark:border-gray-600`}>
+                <td key={row.month} className={monthCellClass(row.month)}>
                   <Tooltip label={row.notes} className="block">
                     <input
                       defaultValue={row.notes}
@@ -173,8 +182,20 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
       </div>
 
       {/* Mobile cards — one per month */}
+      {hiddenEarlier > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowEarlier(true)}
+          className="flex w-full items-center justify-center gap-1.5 border-b border-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/40 md:hidden"
+        >
+          <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+            <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
+          </svg>
+          Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
+        </button>
+      )}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
-        {rows.map((row) => {
+        {phoneRows.map((row) => {
           const field = (label: string, value: number, onCommit: (n: number) => void, color?: string) => (
             <div className="flex items-center justify-between gap-2">
               <span className="text-gray-400">{label}</span>
@@ -184,7 +205,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
           return (
             <li
               key={row.month}
-              className={`px-4 py-2.5 ${row.month > currentMonth ? "opacity-60" : ""} ${row.month === currentMonth ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""}`}
+              className={`px-4 py-2.5 ${row.month > currentMonth ? "opacity-60" : ""} ${row.month === currentMonth ? "bg-violet-50/70 dark:bg-violet-500/[0.07]" : ""}`}
             >
               <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">{mo(row.month)}</div>
               <div className="mt-2 grid grid-cols-2 gap-x-5 gap-y-1 text-xs">

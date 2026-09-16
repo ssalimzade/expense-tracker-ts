@@ -14,7 +14,13 @@ import type { SavingsRow } from "../../types/savings";
 import { gbp0 } from "../../lib/format";
 import { currentNetMonthly } from "../../lib/remuneration";
 import ProjectionsTable from "./ProjectionsTable";
-import { AllocationChart, SalaryVsCostChart } from "./ProjectionsCharts";
+import { AllocationChart, LeftoverChart } from "./ProjectionsCharts";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+
+const SECTIONS = [
+  { value: "plan", label: "Monthly plan" },
+  { value: "charts", label: "Charts" },
+] as const;
 import { TrendArt } from "../HeroArt";
 
 const currentMonth = (() => {
@@ -40,6 +46,7 @@ export default function ProjectionsTab() {
 
   const currentYear = String(new Date().getFullYear());
   const [year, setYear] = useState(currentYear);
+  const section = usePhoneSection("projections-section", SECTIONS);
 
   const loading =
     projQuery.isLoading || savingsQuery.isLoading || remQuery.isLoading || rentQuery.isLoading || plannerQuery.isLoading;
@@ -179,17 +186,21 @@ export default function ProjectionsTab() {
               ]}
             />
 
-            <div className="grid gap-4 lg:grid-cols-2">
+            <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
+
+            <div className={`grid gap-4 lg:grid-cols-2 ${section.show("charts")}`}>
               <AllocationChart rows={rows} />
-              <SalaryVsCostChart rows={rows} />
+              <LeftoverChart rows={rows} />
             </div>
 
+            <div className={section.show("plan")}>
             <ProjectionsTable
               rows={rows}
               onProjectionField={(m, f, v) => saveProjectionField(m, f, v)}
               onNotes={(m, v) => saveProjectionField(m, "notes", v)}
               onAllocation={onAllocation}
             />
+            </div>
           </div>
         );
       })()}

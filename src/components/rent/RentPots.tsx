@@ -66,7 +66,7 @@ export default function RentPots({ data, upTo }: Props) {
         </div>
         <button
           onClick={() => setCreating(true)}
-          className="shrink-0 rounded-lg bg-amber-500 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-600"
+          className="shrink-0 rounded-lg bg-[#b39767] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#9c8257]"
         >
           + New pot
         </button>
@@ -85,7 +85,7 @@ export default function RentPots({ data, upTo }: Props) {
             <li key={pot.key} className="px-4 py-3 sm:px-6">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className={`truncate text-sm font-semibold ${pot.closed ? "text-gray-400" : "text-amber-600 dark:text-amber-400"}`}>
+                  <p className={`truncate text-sm font-semibold ${pot.closed ? "text-gray-400" : "text-[#96794a] dark:text-[#d2bc92]"}`}>
                     {pot.label}
                     {pot.closed && <span className="ml-2 text-[10px] uppercase tracking-wider text-gray-400">closed</span>}
                   </p>
@@ -97,7 +97,7 @@ export default function RentPots({ data, upTo }: Props) {
                       : "Never settled"}
                   </p>
                 </div>
-                <p className={`shrink-0 text-lg font-bold tabular-nums ${pot.balance > 0 ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>
+                <p className={`shrink-0 text-lg font-bold tabular-nums ${pot.balance > 0 ? "text-[#96794a] dark:text-[#d2bc92]" : "text-gray-400"}`}>
                   {gbp0(pot.balance)}
                 </p>
                 {pot.closed && pot.lastSettled === upTo ? (
@@ -110,7 +110,7 @@ export default function RentPots({ data, upTo }: Props) {
                 ) : (
                   <button
                     onClick={() => setSettling(pot)}
-                    className="shrink-0 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300"
+                    className="shrink-0 rounded-lg bg-[#c8b58f]/20 px-2.5 py-1 text-xs font-medium text-[#7d6540] hover:bg-[#c8b58f]/30 dark:bg-[#c8b58f]/10 dark:text-[#d2bc92]"
                   >
                     Settle
                   </button>
@@ -248,7 +248,7 @@ function NewPotDialog({
                 if (e.key === "Enter") create();
                 if (e.key === "Escape") onCancel();
               }}
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm font-medium focus:border-amber-400 focus:outline-none dark:border-gray-600"
+              className="mt-1 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm font-medium focus:border-[#c8b58f] focus:outline-none dark:border-gray-600"
             />
             <p className="mt-2 text-xs text-gray-400">
               Adds a column to the table with a pot of its own. Every month you tick it, that
@@ -267,7 +267,7 @@ function NewPotDialog({
           <button
             onClick={create}
             disabled={!valid}
-            className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40"
+            className="flex-1 rounded-lg bg-[#b39767] px-3 py-2 text-sm font-semibold text-white hover:bg-[#9c8257] disabled:opacity-40"
           >
             Create pot
           </button>
@@ -317,7 +317,7 @@ function SettleDialog({
             if (e.key === "Enter") onSettle(pot, bill);
             if (e.key === "Escape") onCancel();
           }}
-          className="mt-1 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-center text-lg font-semibold tabular-nums focus:border-amber-400 focus:outline-none dark:border-gray-600"
+          className="mt-1 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-center text-lg font-semibold tabular-nums focus:border-[#c8b58f] focus:outline-none dark:border-gray-600"
         />
 
         <p className={`mt-2 text-center text-xs font-medium ${diff > 0 ? "text-emerald-600 dark:text-emerald-400" : diff < 0 ? "text-red-500 dark:text-red-400" : "text-gray-400"}`}>
@@ -337,7 +337,7 @@ function SettleDialog({
           </button>
           <button
             onClick={() => onSettle(pot, bill)}
-            className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600"
+            className="flex-1 rounded-lg bg-[#b39767] px-3 py-2 text-sm font-semibold text-white hover:bg-[#9c8257]"
           >
             Settle
           </button>

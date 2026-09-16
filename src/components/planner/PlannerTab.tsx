@@ -9,6 +9,12 @@ import PlannerCalendar from "./PlannerCalendar";
 import RepaymentHints from "./RepaymentHints";
 import PlannerBudgetTable from "./PlannerBudgetTable";
 import { CalendarArt } from "../HeroArt";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+
+const SECTIONS = [
+  { value: "plan", label: "Plan" },
+  { value: "calendar", label: "Days off & Flex" },
+] as const;
 
 // Current month + the next 11 months — the planning horizon.
 function plannableMonths(count = 12): string[] {
@@ -42,6 +48,7 @@ export default function PlannerTab() {
   const monthOptions = useMemo(() => plannableMonths(), []);
   // Default to next month — the typical thing you plan.
   const [planMonth, setPlanMonth] = useState<string>(monthOptions[1] ?? monthOptions[0]);
+  const section = usePhoneSection("planner-section", SECTIONS);
 
   const plannerQuery = usePlanner(planMonth);
   const savePlanner = useSavePlanner(planMonth);
@@ -185,7 +192,10 @@ export default function PlannerTab() {
             </div>
           </section>
 
+          <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
+
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+            <div className={`min-w-0 ${section.show("plan")}`}>
             <PlannerBudgetTable
               draft={draft}
               lastMonth={lastMonth}
@@ -194,7 +204,8 @@ export default function PlannerTab() {
               onChange={setCategory}
               onCommit={commitCategory}
             />
-            <aside className="space-y-4 lg:sticky lg:top-5 lg:self-start">
+            </div>
+            <aside className={`space-y-4 lg:sticky lg:top-5 lg:self-start ${section.show("calendar")}`}>
               <PlannerCalendar
                 month={planMonth}
                 daysOff={daysOff}

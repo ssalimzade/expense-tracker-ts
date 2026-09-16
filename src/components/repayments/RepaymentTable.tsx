@@ -213,7 +213,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
                   isTicked
                     ? "bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-950/60"
                     : r.refunded
-                    ? "bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60"
+                    ? "bg-[#8c7c68]/10 hover:bg-[#8c7c68]/15 dark:bg-[#8c7c68]/15 dark:hover:bg-[#8c7c68]/20"
                     : "hover:bg-gray-50 dark:hover:bg-gray-800/40"
                 }`}
               >
@@ -317,7 +317,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
                     checked={r.refunded}
                     onChange={(e) => save.mutate({ flex_id: r.flex_id, refunded: e.target.checked })}
                     title="Mark as refunded"
-                    className="h-4 w-4 rounded border-gray-300 accent-rose-600"
+                    className="h-4 w-4 rounded border-gray-300 accent-[#8c7c68]"
                   />
                 </td>
                 <td className="px-3 2xl:px-6 py-3">
@@ -344,17 +344,65 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
 
       {/* Mobile cards */}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
-        {filtered.map((r) => (
-          <li key={r.id} className={`space-y-2 px-4 py-3 ${r.refunded ? "bg-rose-50/60 dark:bg-rose-950/30" : ""}`}>
-            <div className="flex items-start justify-between gap-2">
+        {filtered.map((r) => {
+          const total = Math.abs(r.amount);
+          const left = leftToPay(r);
+          const paidPct = total > 0 ? Math.min(100, Math.max(0, ((total - left) / total) * 100)) : 0;
+          return (
+          <li key={r.id} className={`space-y-3 px-4 py-3.5 ${r.refunded ? "bg-[#8c7c68]/10 dark:bg-[#8c7c68]/15" : ""}`}>
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-semibold" style={{ color: catColor(r.category) }}>{r.description}</p>
-                <p className="text-xs text-gray-400">{shortDate(r.created)}</p>
+                <p className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: catColor(r.category) }} />
+                  <span className="truncate">{r.description}</span>
+                </p>
+                <p className="mt-0.5 pl-4 text-xs text-gray-400">
+                  {shortDate(r.created)} · {gbp(total)}
+                  {r.refunded && " · refunded"}
+                </p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="font-semibold" style={{ color: catColor(r.category) }}>{gbp(Math.abs(r.amount))}</p>
-                <p className="text-xs font-semibold text-gray-900 dark:text-white">{gbp(leftToPay(r))} left</p>
+                <p className="font-bold tabular-nums text-gray-900 dark:text-white">{gbp(left)}</p>
+                <p className="text-[11px] text-gray-400">left to pay</p>
               </div>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+              <div className="h-full rounded-full bg-[#8c7c68] dark:bg-[#b3a089]" style={{ width: `${paidPct}%` }} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {([1, 2, 3] as const).map((n) => {
+                const date = dateOf(r, n);
+                const amount = amountOf(r, n);
+                const isPast = !!date && date.slice(0, 10) < today;
+                return (
+                  <div key={n} className={`rounded-xl bg-gray-50 p-1.5 dark:bg-gray-800/50 ${isPast ? "opacity-60" : ""}`}>
+                    <p className="mb-1 flex items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                      {isPast ? (
+                        <svg viewBox="0 0 12 12" fill="none" className="h-2.5 w-2.5">
+                          <path d="M2.5 6.2 4.7 8.5 9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : null}
+                      {isPast ? "Paid" : `Part ${n}`}
+                    </p>
+                    <DatePicker
+                      selected={date ? parseLocal(date.slice(0, 10)) : null}
+                      onChange={(d: Date | null) => saveDate(r, n, d ? toISO(d) : "")}
+                      dateFormat="d MMM"
+                      placeholderText="—"
+                      popperProps={{ strategy: "fixed" }}
+                      wrapperClassName="w-full"
+                      className="w-full rounded-lg border-0 bg-transparent px-1 py-0.5 text-center text-xs font-medium text-gray-700 dark:text-gray-200"
+                    />
+                    <CurrencyInput
+                      value={amount ?? null}
+                      allowEmpty
+                      forceNegative
+                      onCommit={(v) => saveAmount(r, n, v === null ? "" : String(v))}
+                      className="w-full rounded-lg border-0 bg-transparent px-1 py-0.5 text-center text-xs tabular-nums text-gray-500 dark:text-gray-400"
+                    />
+                  </div>
+                );
+              })}
             </div>
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
@@ -371,9 +419,10 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
                 )}
               </div>
               <label className="flex shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                <input type="checkbox" checked={r.refunded} onChange={(e) => save.mutate({ flex_id: r.flex_id, refunded: e.target.checked })} className="h-4 w-4 rounded border-gray-300 accent-rose-600" />
+                <input type="checkbox" checked={r.refunded} onChange={(e) => save.mutate({ flex_id: r.flex_id, refunded: e.target.checked })} className="h-4 w-4 rounded border-gray-300 accent-[#8c7c68]" />
                 Refund
               </label>
+              <button onClick={() => onDelete(r)} className="shrink-0 px-1 text-xs font-medium text-red-400 hover:text-red-600">Delete</button>
             </div>
             <input
               defaultValue={r.notes}
@@ -382,36 +431,9 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
               onKeyDown={commitOnEnter(r.notes)}
               className="w-full rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-sm placeholder-gray-300 focus:border-gray-300 focus:outline-none dark:border-gray-700 dark:placeholder-gray-600"
             />
-            <div className="grid grid-cols-3 gap-2">
-              {([1, 2, 3] as const).map((n) => {
-                const date = dateOf(r, n);
-                const amount = amountOf(r, n);
-                const isPast = date && date.slice(0, 10) < today;
-                return (
-                  <div key={n} className={`space-y-1 ${isPast ? "opacity-50" : ""}`}>
-                    <DatePicker
-                      selected={date ? parseLocal(date.slice(0, 10)) : null}
-                      onChange={(d: Date | null) => saveDate(r, n, d ? toISO(d) : "")}
-                      dateFormat="d MMM"
-                      placeholderText="—"
-                      popperProps={{ strategy: "fixed" }}
-                      wrapperClassName="w-full"
-                      className={`w-full rounded-lg border border-gray-200 bg-transparent px-1 py-1 text-center text-xs dark:border-gray-700 ${isPast ? "line-through" : ""}`}
-                    />
-                    <CurrencyInput
-                      value={amount ?? null}
-                      allowEmpty
-                      forceNegative
-                      onCommit={(v) => saveAmount(r, n, v === null ? "" : String(v))}
-                      className="w-full rounded-lg border border-gray-200 bg-transparent px-1 py-1 text-center text-xs dark:border-gray-700"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={() => onDelete(r)} className="text-xs font-medium text-red-400 hover:text-red-600">Delete</button>
           </li>
-        ))}
+          );
+        })}
         {filtered.length === 0 && (
           <li className="px-4 py-6 text-center text-sm text-gray-400">{emptyMessage}</li>
         )}

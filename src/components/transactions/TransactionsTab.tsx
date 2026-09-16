@@ -175,7 +175,7 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
           {hiddenRows.length > 0 && (
             <button
               onClick={() => setShowRestorePanel((v) => !v)}
-              className="flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+              className="flex items-center gap-1 rounded-lg bg-[#c8b58f]/20 px-2.5 py-1 text-xs font-semibold text-[#7d6540] hover:bg-[#c8b58f]/30 dark:bg-[#c8b58f]/10 dark:text-[#d2bc92] dark:hover:bg-[#c8b58f]/20"
             >
               {hiddenRows.length} hidden — restore?
             </button>

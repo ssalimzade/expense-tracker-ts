@@ -131,7 +131,7 @@ function DiffBreakdown({
               </table>
             )}
             {overridden && (
-              <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] leading-snug text-amber-600 dark:border-gray-700/60 dark:text-amber-400">
+              <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] leading-snug text-[#96794a] dark:border-gray-700/60 dark:text-[#d2bc92]">
                 Manual override in use — clear the field to switch to this total.
               </p>
             )}

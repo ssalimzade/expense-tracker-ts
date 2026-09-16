@@ -1,9 +1,10 @@
 import {
-  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import type { Transaction } from "../../types/transaction";
 import { dailySpendSeries } from "../../lib/spend";
-import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
+import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle, CHART, axisTick, gridStroke } from "../../lib/chart";
+import ChartLegend from "../ChartLegend";
 import { gbp0 as gbp } from "../../lib/format";
 import { Card } from "../common";
 import { useIsMobile } from "../../hooks/useIsMobile";
@@ -68,6 +69,14 @@ export default function CumulativeSpendChart({
           )}
         </div>
       </div>
+      <ChartLegend
+        className="mb-2"
+        items={[
+          { label: "Spent", color: "#4f46e5" },
+          ...(totalBudget > 0 ? [{ label: "Budget pace", color: CHART.grey, dashed: true }] : []),
+          { label: "Projected", color: CHART.sand, dashed: true },
+        ]}
+      />
       <div className="h-44 sm:h-56">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
@@ -77,19 +86,19 @@ export default function CumulativeSpendChart({
                 <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} stroke="rgba(128,128,128,0.12)" />
+            <CartesianGrid vertical={false} stroke={gridStroke} />
             <XAxis
               dataKey="day"
               type="number"
               domain={[1, lastDay]}
               ticks={ticks}
-              tick={{ fontSize: 11, fill: "#9ca3af" }}
+              tick={axisTick}
               tickFormatter={(d: number) => `${d} ${monthShort}`}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: "#9ca3af" }}
+              tick={axisTick}
               width={52}
               tickCount={isMobile ? 3 : 5}
               tickFormatter={(v) => `£${v}`}
@@ -112,21 +121,6 @@ export default function CumulativeSpendChart({
                 return [gbp(v), labels[name as string] ?? name];
               }}
             />
-            {!isMobile && (
-              <Legend
-                iconType="plainline"
-                iconSize={16}
-                wrapperStyle={{ fontSize: "12px" }}
-                formatter={(value) => {
-                  const labels: Record<string, string> = {
-                    cumulative: "Spent",
-                    pace: "Budget pace",
-                    projection: "Projected",
-                  };
-                  return labels[value] ?? value;
-                }}
-              />
-            )}
             {totalBudget > 0 && (
               <Line
                 type="monotone"
@@ -141,7 +135,7 @@ export default function CumulativeSpendChart({
             <Line
               type="monotone"
               dataKey="projection"
-              stroke="#f59e0b"
+              stroke={CHART.sand}
               strokeWidth={1.5}
               strokeDasharray="5 4"
               dot={false}

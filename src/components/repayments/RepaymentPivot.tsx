@@ -1,5 +1,5 @@
 import type { Repayment } from "../../types/repayment";
-import { pivot } from "../../lib/repayments";
+import { pivot, catColor } from "../../lib/repayments";
 import { gbp, formatMonthLabel, formatMonthLabelShort } from "../../lib/format";
 import { Card } from "../common";
 
@@ -47,7 +47,12 @@ export default function RepaymentPivot({ repayments, visibleMonths }: Props) {
               const muted = r.category === "Uncategorized";
               return (
                 <tr key={r.category} className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 ${muted ? "opacity-40" : ""}`}>
-                  <td className="py-2.5 pr-1 text-xs font-medium text-gray-700 dark:text-gray-300 md:pr-4 md:text-sm">{r.category}</td>
+                  <td className="py-2.5 pr-1 text-xs font-medium text-gray-700 dark:text-gray-300 md:pr-4 md:text-sm">
+                    <span className="flex items-center gap-1.5">
+                      <span className="hidden h-2 w-2 shrink-0 rounded-full sm:inline-block" style={{ backgroundColor: catColor(r.category) }} />
+                      <span className="truncate">{r.category}</span>
+                    </span>
+                  </td>
                   {months.map((m) => (
                     <td key={m} className="py-2.5 pr-1 text-center text-xs text-gray-600 dark:text-gray-400 md:pr-4 md:text-sm">
                       {r.values[m] ? gbp(r.values[m]) : <span className="text-gray-300 dark:text-gray-600">—</span>}

@@ -12,6 +12,13 @@ import BudgetSummaryTable from "./BudgetSummaryTable";
 import CumulativeSpendChart from "./CumulativeSpendChart";
 import BalanceSection from "./BalanceSection";
 import { toMonthKey } from "../../lib/format";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+
+const SECTIONS = [
+  { value: "categories", label: "Categories" },
+  { value: "pace", label: "Pace" },
+  { value: "balances", label: "Balances" },
+] as const;
 
 export default function DashboardTab({ month }: { month: string }) {
   const currentMonth = toMonthKey(new Date());
@@ -23,6 +30,8 @@ export default function DashboardTab({ month }: { month: string }) {
   const archiveQuery = useArchive(isPastMonth ? month : null);
   const syntheticQuery = useSyntheticRepayments();
   const saveBudget = useSaveBudget(month);
+
+  const section = usePhoneSection("budget-section", SECTIONS);
 
   const [draft, setDraft] = useState<BudgetMap>({});
   const serverBudgets = budgetQuery.data?.budgets;
@@ -78,21 +87,28 @@ export default function DashboardTab({ month }: { month: string }) {
         return (
           <div className="mx-auto max-w-7xl space-y-5">
             <MetricsBar totalBudget={totalBudget} totalSpent={totalSpentValue} month={month} />
-            <CumulativeSpendChart
-              transactions={transactions}
-              month={month}
-              totalBudget={totalBudget}
-              repaymentsBaseline={repaymentsBaseline}
-            />
-            <BalanceSection month={month} />
-            <BudgetSummaryTable
-              draft={draft}
-              spentByCategory={spent}
-              onChange={setCategory}
-              onCommit={commit}
-              saving={saveBudget.isPending}
-              month={month}
-            />
+            <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
+            <div className={section.show("pace")}>
+              <CumulativeSpendChart
+                transactions={transactions}
+                month={month}
+                totalBudget={totalBudget}
+                repaymentsBaseline={repaymentsBaseline}
+              />
+            </div>
+            <div className={section.show("balances")}>
+              <BalanceSection month={month} />
+            </div>
+            <div className={section.show("categories")}>
+              <BudgetSummaryTable
+                draft={draft}
+                spentByCategory={spent}
+                onChange={setCategory}
+                onCommit={commit}
+                saving={saveBudget.isPending}
+                month={month}
+              />
+            </div>
           </div>
         );
       })()}

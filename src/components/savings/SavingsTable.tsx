@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { CHART } from "../../lib/chart";
 import type { SavingsRow } from "../../types/savings";
 import { useSaveSavingsRow } from "../../hooks/useSavings";
 import { gbp0 } from "../../lib/format";
@@ -51,12 +52,12 @@ const LABELS: Record<string, string> = {
   investments: "Investments",
 };
 
-// Match the Monthly Breakdown chart's colour scheme (modern, distinct hues).
+// Match the Monthly Breakdown chart's colours.
 const COLORS: Record<string, string> = {
-  home_contributions: "#0ea5e9", // sky
-  savings: "#10b981",            // emerald
-  adjustments: "#f59e0b",        // amber
-  investments: "#a855f7",        // purple
+  home_contributions: CHART.dusk,
+  savings: CHART.moss,
+  adjustments: CHART.sand,
+  investments: CHART.lavender,
 };
 
 

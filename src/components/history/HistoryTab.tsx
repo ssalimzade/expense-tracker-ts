@@ -3,12 +3,19 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useArchiveMonths, useArchive, useAllArchives } from "../../hooks/useArchive";
 import { recomputeArchive } from "../../api/archive";
 import {
-  BarChart, Bar, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import { Card, QueryState } from "../common";
 import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
-import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
+import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle, CHART, axisTick, gridStroke } from "../../lib/chart";
+import ChartLegend from "../ChartLegend";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+
+const SECTIONS = [
+  { value: "categories", label: "Categories" },
+  { value: "charts", label: "Charts" },
+] as const;
 import { useIsMobile } from "../../hooks/useIsMobile";
 import Hero, { HeroProgress } from "../Hero";
 import { RewindClockArt } from "../HeroArt";
@@ -29,6 +36,7 @@ export default function HistoryTab() {
   const allArchives = useAllArchives(allMonths);
   const qc = useQueryClient();
   const isMobile = useIsMobile();
+  const section = usePhoneSection("history-section", SECTIONS);
 
   const refreshSnapshot = useMutation({
     mutationFn: (m: string) => recomputeArchive(m),
@@ -128,60 +136,65 @@ export default function HistoryTab() {
         />
       )}
 
+      {month && <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />}
+
       {/* Historical spending chart (all months) */}
       {allArchives.data.length > 1 && (
-        <Card>
-          <div className="mb-4 flex items-center justify-between">
+        <Card className={section.show("charts")}>
+          <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
               Spending Over Time
             </h2>
             {avgSpend > 0 && (
-              <span className="text-xs text-gray-400">avg {gbp(avgSpend)}/mo</span>
+              <span className="text-xs tabular-nums text-gray-400">avg {gbp(avgSpend)}/mo</span>
             )}
           </div>
-          <div className="h-56">
+          <ChartLegend
+            className="mb-3"
+            items={[
+              { label: "Spent", color: CHART.indigo },
+              { label: "Budget", color: CHART.grey, dashed: true },
+            ]}
+          />
+          <div className="h-52 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={allArchives.data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+              <ComposedChart data={allArchives.data} margin={{ top: 8, right: 20, bottom: 4, left: 0 }}>
                 <defs>
                   <linearGradient id="historySpendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                    <stop offset="5%" stopColor={CHART.indigo} stopOpacity={0.28} />
+                    <stop offset="95%" stopColor={CHART.indigo} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} tickFormatter={monthTick} interval={isMobile ? 2 : undefined} axisLine={false} tickLine={false} />
+                <CartesianGrid vertical={false} stroke={gridStroke} />
+                <XAxis dataKey="month" tick={axisTick} tickFormatter={monthTick} interval={isMobile ? 2 : "preserveStartEnd"} axisLine={false} tickLine={false} />
                 <YAxis
-                  tick={{ fontSize: 10, fill: "#9ca3af" }}
-                  width={52}
-                  tickFormatter={(v) => `£${v}`}
+                  tick={axisTick}
+                  width={48}
+                  tickCount={isMobile ? 4 : 5}
+                  tickFormatter={(v) => (v === 0 ? "£0" : `£${(v / 1000).toFixed(1)}k`)}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
                   formatter={(v: number, name: string) => [gbp(v), name === "spent" ? "Spent" : "Budget"]}
                   labelFormatter={(m) => formatMonthLabel(m as string)}
-                  itemSorter={(item) => -(item.value as number)}
+                  itemSorter={(item) => (item.dataKey === "spent" ? 0 : 1)}
                   contentStyle={tooltipStyle()}
                   itemStyle={tooltipItemStyle}
                   labelStyle={tooltipLabelStyle}
                   cursor={cursorStyle()}
                 />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: "12px" }}
-                  formatter={(value) => value === "spent" ? "Spent" : "Budget"}
-                />
                 {avgSpend > 0 && (
                   <ReferenceLine
                     y={avgSpend}
-                    stroke="#9ca3af"
-                    strokeDasharray="4 2"
+                    stroke={CHART.grey}
+                    strokeOpacity={0.5}
+                    strokeDasharray="2 4"
                     label={{ value: "avg", position: "insideTopRight", fontSize: 10, fill: "#9ca3af" }}
                   />
                 )}
-                <Area type="monotone" dataKey="budget" stroke="#4f46e5" strokeWidth={2.5} fill="url(#historySpendGradient)" dot={{ r: 3, fill: "#4f46e5" }} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="spent" stroke="#c7d2fe" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+                <Line type="monotone" dataKey="budget" stroke={CHART.grey} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={{ r: 3 }} />
+                <Area type="monotone" dataKey="spent" stroke={CHART.indigo} strokeWidth={2.5} fill="url(#historySpendGradient)" dot={{ r: 2.5, fill: CHART.indigo, strokeWidth: 0 }} activeDot={{ r: 5 }} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -193,33 +206,10 @@ export default function HistoryTab() {
           <p className="text-sm text-gray-400">Select a month above.</p>
         ) : (
           <>
-            {/* Per-category bar chart for selected month */}
-            <Card>
-              <div className="mb-4">
-                <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-                  Budget vs Spent — {formatMonthLabel(month)}
-                </h2>
-              </div>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={rows.filter((r) => r["Spent (£)"] > 0 || r["Budget (£)"] > 0)}
-                    margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
-                  >
-                    <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-                    <XAxis dataKey="Category" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} width={44} tickFormatter={(v) => `£${v}`} axisLine={false} tickLine={false} />
-                    <Tooltip formatter={(v: number) => gbp(v)} contentStyle={tooltipStyle()} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} cursor={cursorStyle()} />
-                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-                    <Bar dataKey="Budget (£)" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Spent (£)" fill="#c7d2fe" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
+            <OverUnder month={month} rows={rows} className={section.show("charts")} />
 
             {/* Category table — same style as dashboard budget table */}
-            <Card className="p-0 overflow-hidden max-md:!p-0">
+            <Card className={`p-0 overflow-hidden max-md:!p-0 ${section.show("categories")}`}>
               <div className="flex items-center border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
                 <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Category Breakdown</h2>
               </div>
@@ -259,7 +249,7 @@ export default function HistoryTab() {
                           <div className="flex items-center gap-1">
                             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                               <div
-                                className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                                className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-[#c8b58f]" : "bg-indigo-500"}`}
                                 style={{ width: `${Math.min(pct, 100)}%` }}
                               />
                             </div>
@@ -298,7 +288,7 @@ export default function HistoryTab() {
                       <div className="mt-2.5 flex items-center gap-3">
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                           <div
-                            className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                            className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-[#c8b58f]" : "bg-indigo-500"}`}
                             style={{ width: `${Math.min(pct, 100)}%` }}
                           />
                         </div>
@@ -326,5 +316,70 @@ export default function HistoryTab() {
         )}
       </QueryState>
     </div>
+  );
+}
+
+/**
+ * How far each category landed from its budget, biggest misses first — the one
+ * thing the table below doesn't show at a glance.
+ */
+function OverUnder({
+  month,
+  rows,
+  className = "",
+}: {
+  month: string;
+  rows: { Category: string; "Budget (£)": number; "Spent (£)": number }[];
+  className?: string;
+}) {
+  const items = rows
+    .filter((r) => r["Budget (£)"] > 0 || r["Spent (£)"] > 0)
+    .map((r) => ({ category: r.Category, diff: r["Budget (£)"] - r["Spent (£)"] }))
+    .sort((a, b) => a.diff - b.diff);
+  const scale = Math.max(1, ...items.map((i) => Math.abs(i.diff)));
+
+  return (
+    <Card className={className}>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+          Over / under budget — {formatMonthLabel(month)}
+        </h2>
+        <ChartLegend
+          items={[
+            { label: "Under", color: CHART.moss },
+            { label: "Over", color: CHART.bad },
+          ]}
+        />
+      </div>
+      {items.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-400">Nothing budgeted or spent this month.</p>
+      ) : (
+        <ul className="space-y-2.5">
+          {items.map((it) => {
+            const over = it.diff < 0;
+            const width = `${(Math.abs(it.diff) / scale) * 50}%`;
+            return (
+              <li key={it.category} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.75rem] items-center gap-3 text-sm sm:grid-cols-[9rem_minmax(0,1fr)_7rem]">
+                <span className="truncate text-gray-700 dark:text-gray-300">{it.category}</span>
+                <div className="relative h-2.5 rounded-full bg-gray-100 dark:bg-gray-800">
+                  <span className="absolute inset-y-[-3px] left-1/2 w-px bg-gray-300 dark:bg-gray-600" />
+                  <span
+                    className="absolute inset-y-0 rounded-full"
+                    style={{
+                      width,
+                      backgroundColor: over ? CHART.bad : CHART.moss,
+                      ...(over ? { left: "50%" } : { right: "50%" }),
+                    }}
+                  />
+                </div>
+                <span className={`text-right text-xs font-semibold tabular-nums ${Math.round(it.diff) === 0 ? "text-gray-400" : over ? "text-red-500 dark:text-red-400" : "text-[#5d7a45] dark:text-[#a9c48f]"}`}>
+                  {Math.round(it.diff) === 0 ? "on budget" : `${gbp(Math.abs(it.diff))} ${over ? "over" : "under"}`}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
   );
 }

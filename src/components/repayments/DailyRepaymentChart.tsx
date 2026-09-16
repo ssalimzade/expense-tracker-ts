@@ -1,12 +1,8 @@
 import { useState } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
-} from "recharts";
 import type { Repayment } from "../../types/repayment";
 import { dailyUpcoming, dailyUpcomingCats, repaymentsOnDate, catColor } from "../../lib/repayments";
-import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
 import { gbp } from "../../lib/format";
-import { useIsMobile } from "../../hooks/useIsMobile";
+import ChartLegend from "../ChartLegend";
 import { Card } from "../common";
 
 const fmtDate = (iso: string) => {
@@ -14,53 +10,12 @@ const fmtDate = (iso: string) => {
   return new Date(y, m - 1, d).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 };
 
-interface TooltipPayloadItem {
-  name: string;
-  value: number;
-  color: string;
-}
-
-function CategoryTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: TooltipPayloadItem[];
-  label?: string;
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-  const items = payload.filter((p) => p.value > 0);
-  if (items.length === 0) return null;
-  const total = items.reduce((s, p) => s + p.value, 0);
-
-  return (
-    <div style={tooltipStyle()} className="px-2.5 py-2">
-      <p style={tooltipLabelStyle} className="mb-1">{label ? fmtDate(label) : ""}</p>
-      {items.map((p) => (
-        <div key={p.name} className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5" style={tooltipItemStyle}>
-            <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
-            {p.name}
-          </span>
-          <span style={tooltipItemStyle} className="tabular-nums">{gbp(p.value)}</span>
-        </div>
-      ))}
-      <div className="mt-1 flex items-center justify-between gap-4 border-t border-gray-200 pt-1 dark:border-gray-700">
-        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Total</span>
-        <span className="font-bold tabular-nums">{gbp(total)}</span>
-      </div>
-    </div>
-  );
-}
-
 interface Props {
   repayments: Repayment[];
   visibleMonths: string[];
 }
 
 export default function DailyRepaymentChart({ repayments, visibleMonths }: Props) {
-  const isMobile = useIsMobile();
   const raw = dailyUpcoming(repayments, visibleMonths);
   const cats = dailyUpcomingCats(repayments, visibleMonths);
   const today = new Date().toISOString().slice(0, 10);
@@ -87,73 +42,71 @@ export default function DailyRepaymentChart({ repayments, visibleMonths }: Props
     );
   }
 
-  const data = raw.map((d) => ({ date: d.date, ...d.byCategory }));
   const grandTotal = raw.reduce((s, d) => s + d.total, 0);
+  const peak = Math.max(1, ...raw.map((d) => d.total));
+  const countOn = (date: string) => repaymentsOnDate(repayments, date).length;
 
   return (
     <Card>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
             Upcoming Repayments
           </h2>
-          <p className="mt-0.5 text-xs text-gray-400">Click a day to see what's due</p>
+          <p className="mt-0.5 text-xs text-gray-400">Tap a date to see what's due</p>
         </div>
-        <span className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <span className="text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
           {gbp(grandTotal)}
         </span>
       </div>
-      <div className="h-52">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
-            onClick={(state) => {
-              const label = state?.activeLabel;
-              if (label) setSelected(String(label));
-            }}
-            className="cursor-pointer"
-          >
-            <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 10, fill: "#9ca3af" }}
-              tickFormatter={(d: string) => {
-                const [y, m, day] = d.split("-").map(Number);
-                return new Date(y, m - 1, day).toLocaleString("en-GB", { day: "numeric", month: "short" });
-              }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 10, fill: "#9ca3af" }}
-              width={44}
-              tickFormatter={(v) => `£${v}`}
-              axisLine={false}
-              tickLine={false}
-              domain={[0, "auto"]}
-            />
-            <Tooltip content={<CategoryTooltip />} cursor={cursorStyle()} />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-            {cats.map((cat, i) => (
-              <Bar
-                key={cat}
-                dataKey={cat}
-                stackId="a"
-                fill={catColor(cat)}
-                maxBarSize={isMobile ? 48 : undefined}
-                radius={i === cats.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-              />
-            ))}
-            <ReferenceLine
-              x={today}
-              stroke="#9ca3af"
-              strokeDasharray="4 2"
-              label={{ value: "today", position: "top", fontSize: 9, fill: "#9ca3af" }}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartLegend className="mb-4" items={cats.map((c) => ({ label: c, color: catColor(c) }))} />
+
+      <ul className="space-y-1">
+        {raw.map((d) => {
+          const past = d.date < today;
+          const [y, m, day] = d.date.split("-").map(Number);
+          const label = new Date(y, m - 1, day).toLocaleString("en-GB", { day: "numeric", month: "short" });
+          const n = countOn(d.date);
+          return (
+            <li key={d.date}>
+              <button
+                type="button"
+                onClick={() => setSelected(d.date)}
+                className={`grid w-full grid-cols-[3.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl px-2 py-2.5 text-left transition hover:bg-gray-50 active:bg-gray-100 dark:hover:bg-gray-800/50 dark:active:bg-gray-800 sm:grid-cols-[5rem_minmax(0,1fr)_auto] ${
+                  past ? "opacity-50" : ""
+                }`}
+              >
+                <span>
+                  <span className="block text-sm font-bold text-gray-900 dark:text-white">{label}</span>
+                  <span className="block text-[11px] text-gray-400">
+                    {d.date === today ? "today" : `${n} item${n === 1 ? "" : "s"}`}
+                  </span>
+                </span>
+                <span className="flex h-3 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                  <span className="flex h-full" style={{ width: `${(d.total / peak) * 100}%` }}>
+                    {cats
+                      .filter((c) => (d.byCategory[c] ?? 0) > 0)
+                      .map((c) => (
+                        <span
+                          key={c}
+                          title={`${c} ${gbp(d.byCategory[c])}`}
+                          className="h-full"
+                          style={{ width: `${(d.byCategory[c] / d.total) * 100}%`, backgroundColor: catColor(c) }}
+                        />
+                      ))}
+                  </span>
+                </span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-gray-900 dark:text-white">
+                  {gbp(d.total)}
+                  <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600">
+                    <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
 
       {selected && (
         <div
@@ -221,7 +174,7 @@ export default function DailyRepaymentChart({ repayments, visibleMonths }: Props
 
             <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Total</span>
-              <span className="text-base font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{gbp(dueTotal)}</span>
+              <span className="text-base font-bold tabular-nums text-gray-900 dark:text-white">{gbp(dueTotal)}</span>
             </div>
           </div>
         </div>

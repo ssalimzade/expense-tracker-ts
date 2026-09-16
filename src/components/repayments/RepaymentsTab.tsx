@@ -10,12 +10,20 @@ import { gbp0, formatMonthLabel } from "../../lib/format";
 import Hero, { HeroChip } from "../Hero";
 import { CardArt } from "../HeroArt";
 import type { Repayment } from "../../types/repayment";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+
+const SECTIONS = [
+  { value: "schedule", label: "Schedule" },
+  { value: "due", label: "Due" },
+  { value: "monzo", label: "Monzo" },
+] as const;
 
 export default function RepaymentsTab() {
   const repaymentsQuery = useRepayments();
   const del = useDeleteRepayment();
   const restore = useRestoreRepayment();
   const months = visibleRepaymentMonths();
+  const section = usePhoneSection("repayments-section", SECTIONS);
 
   // Undo list: keeps recently-deleted repayments so the user can restore them
   const [deleted, setDeleted] = useState<{ id: string; description: string }[]>([]);
@@ -76,10 +84,18 @@ export default function RepaymentsTab() {
               }
             />
 
-            <DailyRepaymentChart repayments={active} visibleMonths={months} />
-            <RepaymentPivot repayments={active} visibleMonths={months} />
-            <RepaymentTable repayments={active} onDelete={handleDelete} />
-            <SyntheticRepaymentsPanel visibleMonths={months} />
+            <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
+
+            <div className={`grid gap-5 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] xl:items-start ${section.show("due")}`}>
+              <DailyRepaymentChart repayments={active} visibleMonths={months} />
+              <RepaymentPivot repayments={active} visibleMonths={months} />
+            </div>
+            <div className={section.show("schedule")}>
+              <RepaymentTable repayments={active} onDelete={handleDelete} />
+            </div>
+            <div className={section.show("monzo")}>
+              <SyntheticRepaymentsPanel visibleMonths={months} />
+            </div>
 
             {/* Undo list */}
             {deleted.length > 0 && (

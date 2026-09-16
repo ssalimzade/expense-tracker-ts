@@ -5,12 +5,12 @@ import { RENT_UTILITY_CATEGORY } from "../types/categories";
 export const PREPAID: TravelCategory[] = ["Flights", "Accommodation"];
 
 export const CATEGORY_COLORS: Record<TravelCategory, string> = {
-  Flights: "#6366f1",
-  Accommodation: "#8b5cf6",
-  "Food & Drink": "#f59e0b",
-  Transport: "#0ea5e9",
-  Activities: "#10b981",
-  Shopping: "#ec4899",
+  Flights: "#7f9cc0",
+  Accommodation: "#a59bc4",
+  "Food & Drink": "#c8b58f",
+  Transport: "#6fa6a0",
+  Activities: "#8fae73",
+  Shopping: "#9c8f7a",
   Other: "#9ca3af",
 };
 

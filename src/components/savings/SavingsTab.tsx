@@ -6,6 +6,12 @@ import { SavingsGrowthChart, MonthlyBreakdownChart } from "./SavingsCharts";
 import { gbp0 } from "../../lib/format";
 import type { SavingsRow } from "../../types/savings";
 import { CoinsArt } from "../HeroArt";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+
+const SECTIONS = [
+  { value: "months", label: "Months" },
+  { value: "charts", label: "Charts" },
+] as const;
 
 const currentKey = (() => {
   const d = new Date();
@@ -18,6 +24,7 @@ export default function SavingsTab() {
   const savingsQuery = useSavings();
   const currentYear = String(new Date().getFullYear());
   const [year, setYear] = useState(currentYear);
+  const section = usePhoneSection("savings-section", SECTIONS);
 
   const allRows = savingsQuery.data ?? [];
   const years = [...new Set(allRows.map((r) => r.start_date.slice(0, 4)))].sort();
@@ -43,24 +50,28 @@ export default function SavingsTab() {
               </button>
             ))}
           </div>
-          <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+          <span className="flex items-center gap-1.5 rounded-full bg-[#c8b58f]/20 px-3 py-1 text-xs font-medium text-[#7d6540] dark:bg-[#c8b58f]/10 dark:text-[#d2bc92]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#c8b58f]" />
             Wyndham deposit £1,900 — kept separate from this balance
           </span>
         </div>
 
         {rows.length > 0 && <VaultHero rows={rows} year={year} showInvestments={showInvestments} />}
 
-        <div className="grid gap-5 lg:grid-cols-2">
+        <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
+
+        <div className={`grid gap-5 lg:grid-cols-2 ${section.show("charts")}`}>
           <SavingsGrowthChart rows={rows} />
           <MonthlyBreakdownChart rows={rows} showInvestments={showInvestments} />
         </div>
 
-        <SavingsTable
-          rows={rows}
-          showInvestments={showInvestments}
-          seedDate={allRows.reduce((min, r) => (!min || r.start_date < min ? r.start_date : min), "")}
-        />
+        <div className={section.show("months")}>
+          <SavingsTable
+            rows={rows}
+            showInvestments={showInvestments}
+            seedDate={allRows.reduce((min, r) => (!min || r.start_date < min ? r.start_date : min), "")}
+          />
+        </div>
       </div>
     </QueryState>
   );

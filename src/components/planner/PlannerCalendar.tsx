@@ -112,7 +112,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }
 
           let tile = "bg-gray-50 text-gray-700 hover:bg-[#8ea3c7]/15 hover:text-[#40527a] dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-[#8ea3c7]/15 dark:hover:text-[#c9d4e8]";
           if (isDayOff) tile = "bg-gradient-to-br from-[#7c91b6] to-[#51658a] text-white shadow-sm";
-          else if (isBankHol) tile = "bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300";
+          else if (isBankHol) tile = "bg-[#c8b58f]/25 text-[#6e5836] dark:bg-[#c8b58f]/15 dark:text-[#d9c59e]";
           else if (isWeekend) tile = "text-gray-300 dark:text-gray-600";
 
           return (
@@ -128,7 +128,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }
               }`}
             >
               {day}
-              {isBankHol && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-amber-500" />}
+              {isBankHol && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-[#b39767]" />}
             </button>
           );
         })}
@@ -138,7 +138,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }
         <ul className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-xs dark:border-gray-800">
           {holidays.map(([date, title]) => (
             <li key={date} className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#b39767]" />
               <span className="w-12 tabular-nums text-gray-400">
                 {new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
               </span>

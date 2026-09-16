@@ -3,20 +3,21 @@ import type { Repayment } from "../types/repayment";
 // Fixed colour per category, shared by the repayments chart and the schedule so
 // an expense's name/amount always matches its category's bar colour.
 const CATEGORY_COLORS: Record<string, string> = {
-  Groceries: "#84cc16", // lime
-  Lunch: "#f59e0b", // amber
-  "Social Life": "#ec4899", // pink
-  Shopping: "#10b981", // green
-  Sports: "#f43f5e", // rose
-  Transport: "#8b5cf6", // violet
-  Mobile: "#06b6d4", // cyan
-  Barber: "#eab308", // yellow
-  Other: "#6366f1", // indigo
-  Travel: "#14b8a6", // teal
-  Savings: "#0ea5e9", // sky
+  Groceries: "#a9bf86", // sage
+  Lunch: "#c8b58f", // sand
+  "Social Life": "#a59bc4", // lavender
+  Shopping: "#6f9a6a", // moss
+  Sports: "#7f9cc0", // slate blue
+  Transport: "#8b86b8", // dusk
+  Mobile: "#6fa6a0", // teal
+  Barber: "#b5a66f", // khaki
+  Other: "#8a94a6", // grey-blue
+  Travel: "#5f8f99", // sea
+  Savings: "#9fbfd6", // pale sky
 };
-// Fallback palette for any custom category not in the fixed map above.
-const CAT_PALETTE = ["#818cf8", "#38bdf8", "#34d399", "#fbbf24", "#c084fc", "#fb7185", "#2dd4bf", "#fb923c", "#f472b6", "#a3e635"];
+// Fallback palette for any custom category not in the fixed map above — muted
+// to match, with no reds, oranges or pinks.
+const CAT_PALETTE = ["#8ea3c7", "#a9bf86", "#b3a089", "#9c8fb8", "#7fb0a8", "#c2b07f", "#8fa0b0", "#a8b88f", "#9fb0a0", "#7f9cc0"];
 export function catColor(cat: string): string {
   if (!cat) return "#9ca3af";
   if (CATEGORY_COLORS[cat]) return CATEGORY_COLORS[cat];
