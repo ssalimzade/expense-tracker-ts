@@ -41,18 +41,18 @@ export default function TripPlan({
           { label: "Spent", value: spent, tone: "" },
           { label: "Expected total", value: roundedExpected, tone: "text-gray-500 dark:text-gray-400" },
         ].map((s) => (
-          <div key={s.label}>
+          <div key={s.label} className="text-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">{s.label}</p>
             <p className={`mt-1 text-xl font-extrabold tabular-nums tracking-tight sm:text-2xl ${s.tone}`}>{gbp0(s.value)}</p>
           </div>
         ))}
-        <p className="col-span-3 text-[11px] text-gray-400">
+        <p className="col-span-3 mt-1 text-center text-[11px] text-gray-400">
           Expected total = your plan, plus spending in categories you haven't planned or have gone over.
         </p>
         {planned > 0 && roundedExpected !== Math.round(trip.budget) && (
           <button
             onClick={() => onUseAsBudget(roundedExpected)}
-            className="col-span-3 justify-self-start rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
+            className="col-span-3 justify-self-center rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300"
           >
             Use {gbp0(roundedExpected)} as the trip budget{trip.budget > 0 ? ` (now ${gbp0(trip.budget)})` : ""}
           </button>

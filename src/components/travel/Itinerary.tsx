@@ -110,7 +110,7 @@ export default function Itinerary({
             {g.marker}
           </span>
 
-          <div className="flex min-h-[2.25rem] items-center gap-3 sm:min-h-[2.75rem]">
+          <div className="flex min-h-[2.25rem] items-center gap-3 pr-2.5 sm:min-h-[2.75rem] sm:pr-3 md:pr-[2.875rem]">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold">{g.title}</p>
               <div className="mt-1 flex items-center gap-2">

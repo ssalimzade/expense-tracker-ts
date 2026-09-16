@@ -135,8 +135,7 @@ export default function LinkTransactionsDialog({
         <>
           <p className="mt-1 text-xs text-gray-400">
             Card and Flex spend from {LINK_DAYS_BEFORE} days before the trip to {LINK_DAYS_AFTER} days
-            after. Suggested: anything that looks like travel, and spend during the trip (rent and bills
-            left out). Tick the ones that belong to this trip.
+            after.
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
