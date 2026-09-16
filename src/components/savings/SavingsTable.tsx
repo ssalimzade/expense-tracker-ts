@@ -3,7 +3,6 @@ import type { SavingsRow } from "../../types/savings";
 import { useSaveSavingsRow } from "../../hooks/useSavings";
 import { gbp0 } from "../../lib/format";
 import { commitOnEnter } from "../../lib/keys";
-import { Card } from "../common";
 
 /** Number input that shows comma-formatted integer on blur, raw on focus. */
 function MoneyInput({
@@ -60,8 +59,6 @@ const COLORS: Record<string, string> = {
   investments: "#a855f7",        // purple
 };
 
-// Ending balance — the running total — gets its own distinct colour.
-const ENDING_COLOR = "#14b8a6"; // teal
 
 const mo = (iso: string) => {
   const d = new Date(iso);
@@ -105,96 +102,138 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
     save.mutate({ ...row, adjustment_notes: notes });
   };
 
+  const monthNow = rows.find((r) => monthKey(r.start_date) === currentKey)?.start_date;
+  // Scale for the little "what went in" bars: the biggest month's total inflow.
+  const inflow = (r: SavingsRow) =>
+    Math.max(0, r.home_contributions) + Math.max(0, r.savings) + Math.max(0, r.adjustments) + (showInvestments ? Math.max(0, r.investments ?? 0) : 0);
+  const maxInflow = Math.max(1, ...rows.map(inflow));
+  const barFields = editableFields.filter((f) => f !== "starting_balance");
+
+  const composition = (row: SavingsRow) => (
+    <div className="flex h-1.5 w-full gap-px overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+      {barFields.map((f) => {
+        const v = Math.max(0, (row[f] as number) ?? 0);
+        return v > 0 ? (
+          <span key={f} className="h-full" style={{ width: `${(v / maxInflow) * 100}%`, backgroundColor: COLORS[f as string] }} />
+        ) : null;
+      })}
+    </div>
+  );
+
+  const change = (row: SavingsRow) => {
+    const d = row.ending_balance - (row.starting_balance ?? 0);
+    return (
+      <span className={`text-xs font-semibold tabular-nums ${d >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}`}>
+        {d >= 0 ? "+" : "−"}
+        {gbp0(Math.abs(d))}
+      </span>
+    );
+  };
+
+  const desktopCols = showInvestments
+    ? "md:grid-cols-[8rem_repeat(5,minmax(0,6rem))_7rem_minmax(8rem,1fr)]"
+    : "md:grid-cols-[8rem_repeat(4,minmax(0,6rem))_7rem_minmax(8rem,1fr)]";
+
   return (
-    <Card className="p-0 overflow-hidden max-md:!p-0">
-      <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Monthly Savings
-        </h2>
-      </div>
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[700px] text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 dark:border-gray-800">
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Month</th>
-              {editableFields.map((f) => (
-                <th
-                  key={f}
-                  className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: COLORS[f as string] ?? undefined }}
-                >
-                  <span className={COLORS[f as string] ? "" : "text-gray-600 dark:text-white"}>
-                    {LABELS[f] ?? f}
-                  </span>
-                </th>
-              ))}
-              <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider" style={{ color: ENDING_COLOR }}>Ending</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Notes</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-            {rows.map((row) => {
-              const isFuture = monthKey(row.start_date) > currentKey;
-              return (
-                <tr
-                  key={row.start_date}
-                  className={`group hover:bg-gray-50 dark:hover:bg-gray-800/40 ${isFuture ? "opacity-40" : ""}`}
-                >
-                  <td className="px-6 py-3 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                    {mo(row.start_date)}
-                  </td>
-                  {editableFields.map((field) => {
-                    // Starting balance is derived (= previous month's ending)
-                    // for every month except the earliest seed row.
-                    const startingDerived =
-                      field === "starting_balance" && row.start_date !== seedDate;
-                    return (
-                      <td key={field} className="px-6 py-3 text-center">
-                        {startingDerived ? (
-                          <span
-                            className="inline-block w-24 px-2 py-1 text-center text-sm text-gray-400 dark:text-gray-500"
-                            title="Derived from the previous month's ending balance"
-                          >
-                            {gbp0((row[field] as number) ?? 0)}
-                          </span>
-                        ) : (
-                          <MoneyInput
-                            value={(row[field] as number) ?? 0}
-                            onCommit={(n) => commitNumber(row, field, n)}
-                            color={COLORS[field as string]}
-                          />
-                        )}
-                      </td>
-                    );
-                  })}
-                  <td className="px-6 py-3 text-center font-bold whitespace-nowrap" style={{ color: ENDING_COLOR }}>
-                    {gbp0(row.ending_balance)}
-                  </td>
-                  <td className="px-6 py-3">
-                    <input
-                      defaultValue={row.adjustment_notes}
-                      placeholder="Notes…"
-                      onBlur={(e) => commitNotes(row, e.target.value)}
-                      onKeyDown={commitOnEnter(row.adjustment_notes)}
-                      className="w-full min-w-[140px] rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm placeholder-gray-300 focus:border-gray-200 focus:outline-none dark:placeholder-gray-600 dark:focus:border-gray-700"
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <section>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-extrabold tracking-tight">Month by month</h2>
+          <p className="text-xs text-gray-400">Starting balance carries over from the month before</p>
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
+          {barFields.map((f) => (
+            <span key={f} className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[f as string] }} />
+              {LABELS[f as string]}
+            </span>
+          ))}
+        </div>
       </div>
 
-      {/* Mobile cards */}
-      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+      {/* Desktop ledger */}
+      <div className="hidden overflow-hidden rounded-3xl bg-white ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800 md:block">
+        <div className={`grid items-center gap-x-2 border-b border-gray-100 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 dark:border-gray-800 ${desktopCols}`}>
+          <span>Month</span>
+          {editableFields.map((f) => (
+            <span key={f} className="text-center">{LABELS[f as string]}</span>
+          ))}
+          <span className="text-right">Ending</span>
+          <span className="pl-3">Notes</span>
+        </div>
+        <ul className="divide-y divide-gray-50 dark:divide-gray-800/60">
+          {rows.map((row) => {
+            const isFuture = monthKey(row.start_date) > currentKey;
+            const isNow = row.start_date === monthNow;
+            return (
+              <li
+                key={row.start_date}
+                className={`relative grid items-center gap-x-2 px-5 py-2.5 transition hover:bg-gray-50/70 dark:hover:bg-gray-800/30 ${desktopCols} ${
+                  isNow ? "bg-orange-50/60 dark:bg-orange-500/[0.06]" : ""
+                }`}
+              >
+                {isNow && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-orange-400" />}
+                <div className={isFuture ? "opacity-50" : ""}>
+                  <p className="flex items-center gap-1.5 text-sm font-bold">
+                    {mo(row.start_date)}
+                    {isFuture && <span className="rounded bg-gray-100 px-1 text-[9px] font-bold uppercase text-gray-500 dark:bg-gray-800">plan</span>}
+                  </p>
+                  <div className="mt-1 w-24">{composition(row)}</div>
+                </div>
+                {editableFields.map((field) => {
+                  // Starting balance is derived (= previous month's ending) for
+                  // every month except the earliest seed row.
+                  const startingDerived = field === "starting_balance" && row.start_date !== seedDate;
+                  return (
+                    <div key={field} className={`text-center ${isFuture ? "opacity-50 focus-within:opacity-100" : ""}`}>
+                      {startingDerived ? (
+                        <span
+                          className="inline-block w-full px-2 py-1 text-center text-sm tabular-nums text-gray-400 dark:text-gray-500"
+                          title="Derived from the previous month's ending balance"
+                        >
+                          {gbp0((row[field] as number) ?? 0)}
+                        </span>
+                      ) : (
+                        <MoneyInput
+                          value={(row[field] as number) ?? 0}
+                          onCommit={(n) => commitNumber(row, field, n)}
+                          color={COLORS[field as string]}
+                          className="!w-full"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+                <div className={`text-right ${isFuture ? "opacity-50" : ""}`}>
+                  <p className="text-sm font-extrabold tabular-nums">{gbp0(row.ending_balance)}</p>
+                  {change(row)}
+                </div>
+                <input
+                  defaultValue={row.adjustment_notes}
+                  placeholder="Add a note…"
+                  onBlur={(e) => commitNotes(row, e.target.value)}
+                  onKeyDown={commitOnEnter(row.adjustment_notes)}
+                  title={row.adjustment_notes || undefined}
+                  className="ml-3 w-[calc(100%-0.75rem)] truncate rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm text-gray-600 placeholder-gray-300 focus:border-gray-200 focus:outline-none dark:text-gray-300 dark:placeholder-gray-600 dark:focus:border-gray-700"
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {/* Phone: one card per month */}
+      <ul className="space-y-2 md:hidden">
         {rows.map((row) => {
           const isFuture = monthKey(row.start_date) > currentKey;
+          const isNow = row.start_date === monthNow;
           const startingDerived = row.start_date !== seedDate;
-          // Editable category field for the mobile card (label + right-aligned input).
           const renderField = (field: keyof SavingsRow) => (
             <div key={field} className="flex items-center justify-between gap-1">
-              <span className="shrink-0 text-gray-400">{LABELS[field as string] ?? field}</span>
+              <span className="flex shrink-0 items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COLORS[field as string] }} />
+                {LABELS[field as string] ?? field}
+              </span>
               <MoneyInput
                 value={(row[field] as number) ?? 0}
                 onCommit={(n) => commitNumber(row, field, n)}
@@ -204,52 +243,55 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
             </div>
           );
           return (
-            <li key={row.start_date} className={`px-4 py-3 ${isFuture ? "opacity-40" : ""}`}>
-              {/* Month on the left, starting balance value on the right (same line). */}
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-gray-700 dark:text-gray-300">{mo(row.start_date)}</span>
-                <div className="flex items-center gap-1.5 text-xs">
-                  {startingDerived ? (
-                    <span
-                      className="inline-block w-20 px-1 py-0.5 text-right tabular-nums text-gray-400"
-                      title="Derived from the previous month's ending balance"
-                    >
-                      {gbp0(row.starting_balance ?? 0)}
-                    </span>
-                  ) : (
-                    <MoneyInput
-                      value={row.starting_balance ?? 0}
-                      onCommit={(n) => commitNumber(row, "starting_balance", n)}
-                      className="!w-20 !px-1 !text-right"
-                    />
-                  )}
+            <li
+              key={row.start_date}
+              className={`rounded-2xl bg-white p-3 ring-1 dark:bg-gray-900 ${
+                isNow ? "ring-orange-300 dark:ring-orange-800" : "ring-gray-100 dark:ring-gray-800"
+              } ${isFuture ? "opacity-60" : ""}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="flex items-center gap-1.5 font-bold">
+                    {mo(row.start_date)}
+                    {isNow && <span className="rounded-full bg-orange-100 px-1.5 text-[9px] font-bold uppercase text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">now</span>}
+                    {isFuture && <span className="rounded bg-gray-100 px-1 text-[9px] font-bold uppercase text-gray-500 dark:bg-gray-800">plan</span>}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                    from
+                    {startingDerived ? (
+                      <span className="tabular-nums" title="Derived from the previous month's ending balance">{gbp0(row.starting_balance ?? 0)}</span>
+                    ) : (
+                      <MoneyInput
+                        value={row.starting_balance ?? 0}
+                        onCommit={(n) => commitNumber(row, "starting_balance", n)}
+                        className="!w-16 !px-1 !text-left"
+                      />
+                    )}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-extrabold tabular-nums">{gbp0(row.ending_balance)}</p>
+                  {change(row)}
                 </div>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                <div className="space-y-1">
-                  {renderField("savings")}
-                  {renderField("home_contributions")}
-                </div>
-                <div className="space-y-1">
-                  {showInvestments && renderField("investments")}
-                  {renderField("adjustments")}
-                </div>
-              </div>
-              <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2 dark:border-gray-800">
-                <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Ending</span>
-                <span className="text-base font-bold" style={{ color: ENDING_COLOR }}>{gbp0(row.ending_balance)}</span>
+              <div className="mt-2">{composition(row)}</div>
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                {renderField("savings")}
+                {renderField("home_contributions")}
+                {renderField("adjustments")}
+                {showInvestments && renderField("investments")}
               </div>
               <input
                 defaultValue={row.adjustment_notes}
-                placeholder="Notes…"
+                placeholder="Add a note…"
                 onBlur={(e) => commitNotes(row, e.target.value)}
                 onKeyDown={commitOnEnter(row.adjustment_notes)}
-                className="mt-2 w-full rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-sm placeholder-gray-300 focus:border-gray-300 focus:outline-none dark:border-gray-700 dark:placeholder-gray-600"
+                className="mt-2 w-full rounded-lg bg-gray-50 px-2 py-1.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 dark:bg-gray-800/60 dark:placeholder-gray-500"
               />
             </li>
           );
         })}
       </ul>
-    </Card>
+    </section>
   );
 }

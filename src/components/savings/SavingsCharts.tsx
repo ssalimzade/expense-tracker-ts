@@ -5,7 +5,6 @@ import {
 import type { SavingsRow } from "../../types/savings";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { Card } from "../common";
 
 const mo = (iso: string) => new Date(iso).toLocaleString("en-GB", { month: "short" });
 const currentKey = (() => {
@@ -37,14 +36,12 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
   for (let v = 0; v <= niceMax; v += step) yTicks.push(v);
 
   return (
-    <Card>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Balance Growth
-        </h2>
+    <div className="rounded-3xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">
+      <div className="mb-4 flex items-baseline justify-between">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Balance through the year</p>
         {rows.length > 0 && (
-          <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-            £{lastBalance.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
+          <span className="text-sm font-bold tabular-nums text-orange-500 dark:text-orange-400">
+            {"→ "}£{lastBalance.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
           </span>
         )}
       </div>
@@ -53,8 +50,8 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
           <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
             <defs>
               <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+                <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
@@ -79,27 +76,27 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
             <Area
               type="monotone"
               dataKey="actual"
-              stroke="#14b8a6"
+              stroke="#f97316"
               strokeWidth={2.5}
               fill="url(#balanceGradient)"
-              dot={{ r: 3, fill: "#14b8a6" }}
+              dot={{ r: 3, fill: "#f97316" }}
               activeDot={{ r: 5 }}
               connectNulls={false}
             />
             <Line
               type="monotone"
               dataKey="future"
-              stroke="#14b8a6"
+              stroke="#f97316"
               strokeWidth={2.5}
               strokeDasharray="5 4"
-              dot={{ r: 3, fill: "#14b8a6" }}
+              dot={{ r: 3, fill: "#f97316" }}
               activeDot={{ r: 5 }}
               connectNulls={false}
             />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -114,12 +111,8 @@ export function MonthlyBreakdownChart({ rows, showInvestments }: { rows: Savings
   }));
 
   return (
-    <Card>
-      <div className="mb-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Monthly Breakdown
-        </h2>
-      </div>
+    <div className="rounded-3xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">
+      <p className="mb-4 text-xs font-bold uppercase tracking-[0.14em] text-gray-400">What went in each month</p>
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
@@ -150,6 +143,6 @@ export function MonthlyBreakdownChart({ rows, showInvestments }: { rows: Savings
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </Card>
+    </div>
   );
 }
