@@ -29,6 +29,17 @@ import {
   loadHidden,
   saveHiddenMonth,
 } from "../lib/config";
+import {
+  loadTravel,
+  upsertTrip,
+  setTripPlanLine,
+  deleteTrip,
+  upsertTripExpense,
+  upsertTripExpenses,
+  deleteTripExpense,
+  TravelConflictError,
+  TravelLinkError,
+} from "../lib/travel";
 import { subcategoryToCategory, categorizeRow, type Rules } from "../lib/categorize";
 import {
   serializeTransactions,
@@ -437,6 +448,60 @@ app.put("/worksheet", async (c) => {
   const b = await c.req.json();
   return c.json(await saveWorksheet(sqlOf(c), { data: b.data ?? [] }));
 });
+
+// ── Travel ──────────────────────────────────────────────────────────────────
+app.get("/travel", async (c) => c.json(await loadTravel(sqlOf(c))));
+// Today's rate for a new trip: local units per £1. Fetched once when the trip is
+// set up; the trip stores the number, so it never moves afterwards.
+app.get("/travel/rate/:currency", async (c) => {
+  const currency = c.req.param("currency").toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) return c.json({ error: "Bad currency code" }, 400);
+  if (currency === "GBP") return c.json({ currency, rate: 1, as_of: null });
+  const res = await fetch("https://open.er-api.com/v6/latest/GBP");
+  const body = (await res.json().catch(() => null)) as
+    | { result?: string; rates?: Record<string, number>; time_last_update_unix?: number }
+    | null;
+  const rate = body?.result === "success" ? body.rates?.[currency] : undefined;
+  if (!res.ok || !rate) return c.json({ error: `No rate for ${currency}` }, 502);
+  const asOf = body?.time_last_update_unix
+    ? new Date(body.time_last_update_unix * 1000).toISOString().slice(0, 10)
+    : null;
+  return c.json({ currency, rate: Math.round(rate * 10_000) / 10_000, as_of: asOf });
+});
+// A lost write race is 409 (retry later); anything else thrown by the store is
+// a bad request, e.g. an expense for a trip that no longer exists.
+const travelWrite = async (c: any, write: () => Promise<unknown>) => {
+  try {
+    return c.json(await write());
+  } catch (e) {
+    const status = e instanceof TravelConflictError || e instanceof TravelLinkError ? 409 : 400;
+    return c.json({ error: e instanceof Error ? e.message : String(e) }, status);
+  }
+};
+app.post("/travel/trips", async (c) => {
+  const body = await c.req.json();
+  return travelWrite(c, () => upsertTrip(sqlOf(c), body));
+});
+app.post("/travel/trips/:trip_id/plan", async (c) => {
+  const body = await c.req.json();
+  return travelWrite(c, () => setTripPlanLine(sqlOf(c), c.req.param("trip_id"), body));
+});
+app.delete("/travel/trips/:trip_id", (c) =>
+  travelWrite(c, () => deleteTrip(sqlOf(c), c.req.param("trip_id"))),
+);
+app.post("/travel/expenses", async (c) => {
+  const body = await c.req.json();
+  return travelWrite(c, () => upsertTripExpense(sqlOf(c), body));
+});
+app.post("/travel/expenses/batch", async (c) => {
+  const body = await c.req.json();
+  if (!Array.isArray(body)) return c.json({ error: "Expected an array of expenses" }, 400);
+  const restore = c.req.query("restore") === "1";
+  return travelWrite(c, () => upsertTripExpenses(sqlOf(c), body, { restore }));
+});
+app.delete("/travel/expenses/:expense_id", (c) =>
+  travelWrite(c, () => deleteTripExpense(sqlOf(c), c.req.param("expense_id"))),
+);
 
 // ── Hidden transactions (per month) ─────────────────────────────────────────
 app.get("/hidden", async (c) => c.json(await loadHidden(sqlOf(c))));

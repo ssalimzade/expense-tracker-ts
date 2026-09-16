@@ -82,6 +82,10 @@ const flexRow = (t: TxFixture): Row => {
 
 export function fakeSql(db: FakeDb = {}): Sql {
   const config = db.config ?? {};
+  // Stand-in for `updated_at`: bumped on every write, so compare-and-swap
+  // callers see a concurrent write the way they would against Postgres.
+  const versions: Record<string, number> = {};
+  const bump = (key: string) => (versions[key] = (versions[key] ?? 0) + 1);
   // A row without an explicit id still needs a distinct one, or the duplicate
   // ordering in `flagIdsFor` would have nothing to sort on.
   const rows: TxFixture[] = (db.transactions ?? []).map((t, i) => ({
@@ -95,6 +99,27 @@ export function fakeSql(db: FakeDb = {}): Sql {
   // kv.ts talks to app_config through tagged templates.
   const tag = async (strings: TemplateStringsArray, ...values: any[]): Promise<Row[]> => {
     const text = strings.join(" ? ");
+    // Versioned read / conditional writes (compare-and-swap on updated_at).
+    if (/updated_at::text AS version FROM app_config/.test(text)) {
+      const key = values[0] as string;
+      return key in config
+        ? [{ value: structuredClone(config[key]), version: String(versions[key] ?? 0) }]
+        : [];
+    }
+    if (/UPDATE app_config SET value/.test(text)) {
+      const [json, key, version] = values as [string, string, string];
+      if (!(key in config) || String(versions[key] ?? 0) !== version) return [];
+      config[key] = JSON.parse(json);
+      bump(key);
+      return [{ key }];
+    }
+    if (/ON CONFLICT \(key\) DO NOTHING/.test(text)) {
+      const [key, json] = values as [string, string];
+      if (key in config) return [];
+      config[key] = JSON.parse(json);
+      bump(key);
+      return [{ key }];
+    }
     if (/FROM app_config WHERE key =/.test(text)) {
       const key = values[0] as string;
       return key in config ? [{ value: config[key] }] : [];
@@ -105,6 +130,7 @@ export function fakeSql(db: FakeDb = {}): Sql {
     // wouldn't give it.
     if (/INSERT INTO app_config/.test(text)) {
       config[values[0] as string] = JSON.parse(values[1] as string);
+      bump(values[0] as string);
       return [];
     }
     throw new Error(`fakeSql: unhandled template query: ${text}`);
