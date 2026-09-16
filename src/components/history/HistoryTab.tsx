@@ -10,6 +10,7 @@ import { Card, QueryState } from "../common";
 import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle, CHART, axisTick, gridStroke } from "../../lib/chart";
 import ChartLegend from "../ChartLegend";
+import CategoryBreakdownTable from "../dashboard/CategoryBreakdownTable";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
@@ -213,64 +214,10 @@ export default function HistoryTab() {
               <div className="flex items-center border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
                 <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Category Breakdown</h2>
               </div>
-              <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[720px] table-fixed text-sm">
-                <colgroup>
-                  <col className="w-56" />
-                  <col className="w-40" />
-                  <col className="w-40" />
-                  <col className="w-40" />
-                  <col className="w-20" />
-                </colgroup>
-                <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-800">
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Category</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Budget</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Spent</th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Remaining</th>
-                    <th className="pl-2 pr-6 py-3 text-center text-xs font-semibold uppercase leading-tight text-gray-600 dark:text-white">% Remaining</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-                  {rows.map((row, i) => {
-                    const rem = row["Remaining (£)"];
-                    const pct = row["Budget (£)"] > 0
-                      ? (row["Spent (£)"] / row["Budget (£)"]) * 100
-                      : row["Spent (£)"] > 0 ? 999 : 0;
-                    return (
-                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                        <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-300">{row.Category}</td>
-                        <td className="px-6 py-3 text-center text-gray-900 dark:text-white">{gbp(row["Budget (£)"])}</td>
-                        <td className="px-6 py-3 text-center text-gray-900 dark:text-white">{gbp(row["Spent (£)"])}</td>
-                        <td className={`px-6 py-3 text-center font-semibold ${rem < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                          {gbp(rem)}
-                        </td>
-                        <td className="pl-2 pr-6 py-3">
-                          <div className="flex items-center gap-1">
-                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
-                              <div
-                                className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-[#c8b58f]" : "bg-indigo-500"}`}
-                                style={{ width: `${Math.min(pct, 100)}%` }}
-                              />
-                            </div>
-                            <span className="w-7 shrink-0 text-center text-[10px] text-gray-400">{pct > 999 ? "—" : `${pct.toFixed(0)}%`}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-200 dark:border-gray-700">
-                    <td className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">Total</td>
-                    <td className="px-6 py-3 text-center font-bold text-gray-900 dark:text-white">{gbp(totalBudget)}</td>
-                    <td className="px-6 py-3 text-center font-bold text-gray-900 dark:text-white">{gbp(totalSpent)}</td>
-                    <td className={`px-6 py-3 text-center font-bold ${totalRemaining < 0 ? "text-red-600" : "text-emerald-600"}`}>{gbp(totalRemaining)}</td>
-                    <td className="px-6 py-3" />
-                  </tr>
-                </tfoot>
-              </table>
-              </div>
+              <CategoryBreakdownTable
+                rows={rows.map((r) => ({ category: r.Category, budget: r["Budget (£)"], spent: r["Spent (£)"] }))}
+                totals={{ budget: totalBudget, spent: totalSpent }}
+              />
 
               {/* Mobile cards */}
               <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
@@ -288,7 +235,7 @@ export default function HistoryTab() {
                       <div className="mt-2.5 flex items-center gap-3">
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                           <div
-                            className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-[#c8b58f]" : "bg-indigo-500"}`}
+                            className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
                             style={{ width: `${Math.min(pct, 100)}%` }}
                           />
                         </div>

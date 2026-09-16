@@ -140,7 +140,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }
             <li key={date} className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-[#b39767]" />
               <span className="w-12 tabular-nums text-gray-400">
-                {new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                {new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}
               </span>
               <span className="text-gray-600 dark:text-gray-300">{title}</span>
             </li>

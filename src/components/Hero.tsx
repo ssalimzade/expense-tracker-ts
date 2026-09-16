@@ -16,17 +16,21 @@ export interface HeroFieldProps {
 export default function Hero({
   gradient,
   badge,
+  badgeNote,
   label,
   value,
   under,
   fields = [],
   aside,
+  asideFrom = "md",
   decoration,
   children,
 }: {
   /** Tailwind gradient stops, e.g. "from-indigo-500 via-violet-600 to-purple-700 dark:from-…". */
   gradient: string;
   badge?: ReactNode;
+  /** Quiet text beside the badge pill, e.g. today's date. */
+  badgeNote?: ReactNode;
   label: string;
   value: ReactNode;
   /** Right under the headline figure: a delta chip, a progress bar… */
@@ -34,6 +38,8 @@ export default function Hero({
   fields?: HeroFieldProps[];
   /** Right-hand column on desktop (below on phones). */
   aside?: ReactNode;
+  /** Breakpoint where the aside moves beside the headline — `lg` hides it below that. */
+  asideFrom?: "md" | "lg";
   /** Faint background SVG. */
   decoration?: ReactNode;
   children?: ReactNode;
@@ -43,12 +49,19 @@ export default function Hero({
       className={`relative overflow-hidden rounded-3xl bg-gradient-to-br text-white shadow-lg shadow-black/5 dark:shadow-none ${gradient}`}
     >
       {decoration}
-      <div className={`relative grid gap-6 p-5 sm:p-7 ${aside ? "md:grid-cols-[minmax(0,1fr)_auto] md:items-end" : ""}`}>
+      <div
+        className={`relative grid gap-6 p-5 sm:p-7 ${
+          !aside ? "" : asideFrom === "lg" ? "lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch" : "md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+        }`}
+      >
         <div className="min-w-0">
           {badge && (
-            <span className="inline-block rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
-              {badge}
-            </span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="inline-block rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
+                {badge}
+              </span>
+              {badgeNote && <span className="text-xs font-medium text-white/75">{badgeNote}</span>}
+            </div>
           )}
           <p className={`${badge ? "mt-4" : ""} text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70`}>{label}</p>
           <p className="mt-1 text-4xl font-extrabold tabular-nums tracking-tight sm:text-5xl">{value}</p>
@@ -63,7 +76,15 @@ export default function Hero({
           {children}
         </div>
         {aside && (
-          <div className="border-t border-dashed border-white/25 pt-5 md:border-l md:border-t-0 md:pl-7 md:pt-0">{aside}</div>
+          <div
+            className={
+              asideFrom === "lg"
+                ? "hidden border-dashed border-white/25 lg:block lg:border-l lg:pl-7"
+                : "border-t border-dashed border-white/25 pt-5 md:border-l md:border-t-0 md:pl-7 md:pt-0"
+            }
+          >
+            {aside}
+          </div>
         )}
       </div>
     </section>

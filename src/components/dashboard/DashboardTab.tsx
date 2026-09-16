@@ -86,9 +86,23 @@ export default function DashboardTab({ month }: { month: string }) {
 
         return (
           <div className="mx-auto max-w-7xl space-y-5">
-            <MetricsBar totalBudget={totalBudget} totalSpent={totalSpentValue} month={month} />
+            <MetricsBar
+              totalBudget={totalBudget}
+              totalSpent={totalSpentValue}
+              month={month}
+              aside={
+                <CumulativeSpendChart
+                  variant="hero"
+                  transactions={transactions}
+                  month={month}
+                  totalBudget={totalBudget}
+                  repaymentsBaseline={repaymentsBaseline}
+                />
+              }
+            />
             <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
-            <div className={section.show("pace")}>
+            {/* Wide screens show the pace chart inside the header instead. */}
+            <div className={`lg:hidden ${section.show("pace")}`}>
               <CumulativeSpendChart
                 transactions={transactions}
                 month={month}

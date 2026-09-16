@@ -31,6 +31,16 @@ const SOURCE_LABELS: Record<string, string> = {
   hsbc: "HSBC",
 };
 
+/** Bank name on a neutral chip with its dot — shared with the hidden-rows panel. */
+export function SourceBadge({ source }: { source: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: SOURCE_COLORS[source?.toLowerCase()] ?? "#9ca3af" }} />
+      {SOURCE_LABELS[source] ?? source}
+    </span>
+  );
+}
+
 interface Props {
   transactions: Transaction[];
   month: string;
@@ -103,12 +113,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
       ? "bg-indigo-50 ring-2 ring-inset ring-indigo-400 dark:bg-indigo-950/40"
       : "";
 
-  const sourceBadge = (source: string) => (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: SOURCE_COLORS[source?.toLowerCase()] ?? "#9ca3af" }} />
-      {SOURCE_LABELS[source] ?? source}
-    </span>
-  );
+  const sourceBadge = (source: string) => <SourceBadge source={source} />;
 
   // Rows arrive newest first; runs of the same day become one group with a total.
   const days: { key: string; label: string; net: number; rows: Transaction[] }[] = [];

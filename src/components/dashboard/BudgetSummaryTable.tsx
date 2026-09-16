@@ -4,6 +4,7 @@ import { downloadCsv } from "../../lib/csv";
 import { MAIN_CATEGORIES } from "../../types/categories";
 import { Card } from "../common";
 import CurrencyInput from "../CurrencyInput";
+import CategoryBreakdownTable from "./CategoryBreakdownTable";
 
 interface Props {
   draft: BudgetMap;
@@ -47,62 +48,17 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
           </button>
         </div>
       </div>
-      <div className="hidden overflow-x-auto md:block">
-      <table className="w-full min-w-[720px] table-fixed text-sm">
-        <colgroup>
-          <col className="w-56" />
-          <col className="w-40" />
-          <col className="w-40" />
-          <col className="w-40" />
-          <col className="w-20" />
-        </colgroup>
-        <thead>
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Category</th>
-            <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Budget</th>
-            <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Spent</th>
-            <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Remaining</th>
-            <th className="pl-2 pr-6 py-3 text-center text-xs font-semibold uppercase leading-tight text-gray-600 dark:text-white">% Remaining</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-          {MAIN_CATEGORIES.map((cat) => {
-            const budget = draft[cat] ?? 0;
-            const spent = spentByCategory[cat] ?? 0;
-            const remaining = budget - spent;
-            const pct = budget > 0 ? (spent / budget) * 100 : spent > 0 ? 999 : 0;
-            return (
-              <tr key={cat} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-300">{cat}</td>
-                <td className="px-6 py-3 text-center">
-                  <CurrencyInput
-                    value={budget}
-                    onLiveChange={(n) => onChange(cat, n)}
-                    onCommit={(n) => onCommit(cat, n ?? 0)}
-                    className="w-24 rounded-lg border border-transparent bg-transparent px-2 py-1 text-center text-white focus:border-gray-200 focus:outline-none dark:focus:border-gray-700"
-                  />
-                </td>
-                <td className="px-6 py-3 text-center text-gray-900 dark:text-white">{gbp(spent)}</td>
-                <td className={`px-6 py-3 text-center font-semibold ${remaining < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                  {gbp(remaining)}
-                </td>
-                <td className="pl-2 pr-6 py-3">
-                  <div className="flex items-center gap-1">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
-                      <div
-                        className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-[#c8b58f]" : "bg-indigo-500"}`}
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                      />
-                    </div>
-                    <span className="w-7 shrink-0 text-center text-[10px] text-gray-400">{pct > 999 ? "—" : `${pct.toFixed(0)}%`}</span>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      </div>
+      <CategoryBreakdownTable
+        rows={MAIN_CATEGORIES.map((cat) => ({ category: cat, budget: draft[cat] ?? 0, spent: spentByCategory[cat] ?? 0 }))}
+        renderBudget={(row) => (
+          <CurrencyInput
+            value={row.budget}
+            onLiveChange={(n) => onChange(row.category, n)}
+            onCommit={(n) => onCommit(row.category, n ?? 0)}
+            className="-mr-2 w-24 rounded-lg border border-transparent bg-transparent px-2 py-1 text-right tabular-nums text-gray-900 hover:border-gray-200 focus:border-gray-300 focus:outline-none dark:text-white dark:hover:border-gray-700 dark:focus:border-gray-600"
+          />
+        )}
+      />
 
       {/* Mobile cards */}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
@@ -125,7 +81,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
               <div className="mt-2.5 flex items-center gap-3">
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                   <div
-                    className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-[#c8b58f]" : "bg-indigo-500"}`}
+                    className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
                     style={{ width: `${Math.min(pct, 100)}%` }}
                   />
                 </div>

@@ -15,14 +15,41 @@ interface Props {
   totalBudget: number;
   /** Repayments committed on the 1st — where the budget pace line starts. */
   repaymentsBaseline?: number;
+  /** "hero" draws in white for the gradient header, without its own card. */
+  variant?: "card" | "hero";
 }
+
+// Series colours per surface: the indigo card, or white on the Budget header.
+const THEMES = {
+  card: {
+    spent: "#4f46e5",
+    fillOpacity: 0.2,
+    pace: CHART.grey,
+    projection: CHART.sand,
+    tick: axisTick,
+    grid: gridStroke,
+    dotStroke: "#fff",
+  },
+  hero: {
+    spent: "#ffffff",
+    fillOpacity: 0.28,
+    pace: "rgba(255,255,255,0.55)",
+    projection: "#ecdcb6",
+    tick: { fontSize: 11, fill: "rgba(255,255,255,0.65)" },
+    grid: "rgba(255,255,255,0.12)",
+    dotStroke: "#3b4fd0",
+  },
+} as const;
 
 export default function CumulativeSpendChart({
   transactions,
   month,
   totalBudget,
   repaymentsBaseline = 0,
+  variant = "card",
 }: Props) {
+  const theme = THEMES[variant];
+  const hero = variant === "hero";
   const data = dailySpendSeries(transactions, month, totalBudget, repaymentsBaseline);
 
   // Latest actual cumulative + how it compares to the budget pace at that point.
@@ -40,8 +67,27 @@ export default function CumulativeSpendChart({
   const monthShort = new Date(`${month}-01`).toLocaleString("en-GB", { month: "short" });
   const monthName = new Date(`${month}-01`).toLocaleString("en-GB", { month: "long", year: "numeric" });
 
-  return (
-    <Card>
+  const legend = [
+    { label: "Spent", color: theme.spent },
+    ...(totalBudget > 0 ? [{ label: "Budget pace", color: theme.pace, dashed: true }] : []),
+    { label: "Projected", color: theme.projection, dashed: true },
+  ];
+
+  const header = hero ? (
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Pace</p>
+        {totalBudget > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold">
+            <span className={`h-1.5 w-1.5 rounded-full ${overPace ? "bg-rose-200" : "bg-emerald-300"}`} />
+            {overPace ? "Ahead of budget pace" : "On track"}
+          </span>
+        )}
+      </div>
+      <ChartLegend items={legend} className="!text-white/70" />
+    </div>
+  ) : (
+    <>
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
@@ -69,36 +115,36 @@ export default function CumulativeSpendChart({
           )}
         </div>
       </div>
-      <ChartLegend
-        className="mb-2"
-        items={[
-          { label: "Spent", color: "#4f46e5" },
-          ...(totalBudget > 0 ? [{ label: "Budget pace", color: CHART.grey, dashed: true }] : []),
-          { label: "Projected", color: CHART.sand, dashed: true },
-        ]}
-      />
-      <div className="h-44 sm:h-56">
+      <ChartLegend className="mb-2" items={legend} />
+    </>
+  );
+
+  const gradientId = `spendGradient-${variant}`;
+  const chart = (
+    <>
+      {header}
+      <div className={hero ? "h-44 w-[26rem] xl:w-[34rem]" : "h-44 sm:h-56"}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
             <defs>
-              <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={theme.spent} stopOpacity={theme.fillOpacity} />
+                <stop offset="95%" stopColor={theme.spent} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} stroke={gridStroke} />
+            <CartesianGrid vertical={false} stroke={theme.grid} />
             <XAxis
               dataKey="day"
               type="number"
               domain={[1, lastDay]}
               ticks={ticks}
-              tick={axisTick}
+              tick={theme.tick}
               tickFormatter={(d: number) => `${d} ${monthShort}`}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={axisTick}
+              tick={theme.tick}
               width={52}
               tickCount={isMobile ? 3 : 5}
               tickFormatter={(v) => `£${v}`}
@@ -109,7 +155,7 @@ export default function CumulativeSpendChart({
               contentStyle={tooltipStyle()}
               itemStyle={tooltipItemStyle}
               labelStyle={tooltipLabelStyle}
-              cursor={cursorStyle()}
+              cursor={hero ? { stroke: "rgba(255,255,255,0.35)" } : cursorStyle()}
               labelFormatter={(d) => `${d} ${monthName}`}
               formatter={(v: number, name) => {
                 if (v == null) return ["—", ""];
@@ -125,7 +171,7 @@ export default function CumulativeSpendChart({
               <Line
                 type="monotone"
                 dataKey="pace"
-                stroke="#9ca3af"
+                stroke={theme.pace}
                 strokeWidth={1.5}
                 strokeDasharray="5 4"
                 dot={false}
@@ -135,7 +181,7 @@ export default function CumulativeSpendChart({
             <Line
               type="monotone"
               dataKey="projection"
-              stroke={CHART.sand}
+              stroke={theme.projection}
               strokeWidth={1.5}
               strokeDasharray="5 4"
               dot={false}
@@ -145,16 +191,18 @@ export default function CumulativeSpendChart({
             <Area
               type="monotone"
               dataKey="cumulative"
-              stroke="#4f46e5"
+              stroke={theme.spent}
               strokeWidth={2.5}
-              fill="url(#spendGradient)"
+              fill={`url(#${gradientId})`}
               dot={false}
-              activeDot={{ r: 4, fill: "#4f46e5", stroke: "#fff", strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: theme.spent, stroke: theme.dotStroke, strokeWidth: 2 }}
               connectNulls={false}
             />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-    </Card>
+    </>
   );
+
+  return hero ? <div className="flex h-full flex-col justify-end">{chart}</div> : <Card>{chart}</Card>;
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { gbp0 as gbp, formatMonthLabel, toMonthKey } from "../../lib/format";
 import Hero, { HeroChip, HeroProgress } from "../Hero";
 import { WalletArt } from "../HeroArt";
@@ -6,9 +7,11 @@ interface Props {
   totalBudget: number;
   totalSpent: number;
   month: string;
+  /** Shown beside the figures on wide screens (the pace chart). */
+  aside?: ReactNode;
 }
 
-export default function MetricsBar({ totalBudget, totalSpent, month }: Props) {
+export default function MetricsBar({ totalBudget, totalSpent, month, aside }: Props) {
   const remaining = totalBudget - totalSpent;
   const pct = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
@@ -18,15 +21,19 @@ export default function MetricsBar({ totalBudget, totalSpent, month }: Props) {
   const daysInMonth = new Date(y, m, 0).getDate();
   const daysLeft = isCurrent ? daysInMonth - new Date().getDate() + 1 : 0;
   const perDay = daysLeft > 0 && remaining > 0 ? remaining / daysLeft : 0;
+  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
   return (
     <Hero
       gradient="from-indigo-500 via-blue-600 to-sky-600 dark:from-indigo-700 dark:via-blue-800 dark:to-sky-900"
       badge={formatMonthLabel(month)}
+      badgeNote={isCurrent ? `Today is ${today}` : undefined}
+      aside={aside}
+      asideFrom="lg"
       label="Spent so far"
       value={gbp(totalSpent)}
       decoration={
-        <WalletArt />
+        <WalletArt className={aside ? "lg:left-[36%] lg:right-auto" : ""} />
       }
       under={
         <div className="max-w-xl space-y-1.5">

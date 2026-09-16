@@ -17,7 +17,7 @@ const SECTIONS = [
 ] as const;
 
 // Current month + the next 11 months — the planning horizon.
-function plannableMonths(count = 12): string[] {
+function plannableMonths(count = 6): string[] {
   const months: string[] = [];
   const now = new Date();
   for (let i = 0; i < count; i++) {
@@ -142,7 +142,7 @@ export default function PlannerTab() {
                   : "bg-white text-gray-700 ring-1 ring-gray-200 hover:ring-gray-300 dark:bg-gray-900 dark:text-gray-300 dark:ring-gray-800"
               }`}
             >
-              <span className="block text-sm font-bold">{d.toLocaleString("en-GB", { month: "short" })}</span>
+              <span className="block text-sm font-bold">{d.toLocaleString("en-GB", { month: "long" })}</span>
               <span className={`block text-[11px] tabular-nums ${active ? "opacity-60" : "text-gray-400"}`}>{y}</span>
             </button>
           );
@@ -176,7 +176,7 @@ export default function PlannerTab() {
                 <div className="grid grid-cols-3 gap-5">
                   <HeroStat label="Working days" value={String(workingDays)} />
                   <HeroStat label="Days off" value={String(daysOff.size)} />
-                  <HeroStat label="Bank hols" value={String(bankHolidays)} />
+                  <HeroStat label="Bank holidays" value={String(bankHolidays)} />
                 </div>
                 <button
                   onClick={moveToBudget}

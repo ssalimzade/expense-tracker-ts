@@ -38,7 +38,7 @@ export default function PlannerBudgetTable({ draft, lastMonth, lastMonthName, av
             <span className="h-2 w-4 rounded-full bg-gradient-to-r from-[#8ea3c7] to-[#5a6f95]" /> Plan
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-3 w-0.5 rounded bg-gray-400" /> 2026 avg
+            <span className="h-3 w-0.5 rounded bg-gray-400" /> 2026 average
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-3 w-0.5 rounded bg-[#c8b58f]" /> {lastMonthName}
@@ -54,10 +54,10 @@ export default function PlannerBudgetTable({ draft, lastMonth, lastMonthName, av
           return (
             <li key={cat} className="flex items-center gap-3 border-b border-gray-50 px-4 py-3 last:border-0 dark:border-gray-800/60 sm:gap-4 sm:px-5">
               <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                   <span className="truncate text-sm font-semibold">{cat}</span>
-                  <span className="shrink-0 text-[11px] tabular-nums text-gray-400">
-                    avg {gbp(avg)} · <span className="text-[#9c8761] dark:text-[#c8b58f]">{lastMonthName.slice(0, 3)} {gbp(last)}</span>
+                  <span className="text-[11px] tabular-nums text-gray-400">
+                    average {gbp(avg)} · <span className="text-[#9c8761] dark:text-[#c8b58f]">{lastMonthName} {gbp(last)}</span>
                   </span>
                 </div>
                 <div className="relative mt-2 h-2 rounded-full bg-gray-100 dark:bg-gray-800">
