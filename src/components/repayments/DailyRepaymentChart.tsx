@@ -94,7 +94,7 @@ export default function DailyRepaymentChart({ repayments, visibleMonths }: Props
     <Card>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
             Upcoming Repayments
           </h2>
           <p className="mt-0.5 text-xs text-gray-400">Click a day to see what's due</p>

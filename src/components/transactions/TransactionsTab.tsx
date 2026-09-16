@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTransactions } from "../../hooks/useTransactions";
 import { MAIN_CATEGORIES, RENT_UTILITY_CATEGORY } from "../../types/categories";
 import type { Source, Transaction } from "../../types/transaction";
-import { gbp, shortDate } from "../../lib/format";
+import { gbp, shortDate, formatMonthLabel } from "../../lib/format";
 import { downloadCsv } from "../../lib/csv";
 import { Card, QueryState } from "../common";
 import TransactionTable from "./TransactionTable";
@@ -126,7 +126,16 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-7xl space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Transactions</h1>
+          <p className="mt-0.5 text-sm text-gray-400">
+            {formatMonthLabel(month)} · {filtered.length} transaction{filtered.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
@@ -137,7 +146,7 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search description…"
-            className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm dark:border-gray-700 dark:bg-gray-800"
+            className="w-full rounded-2xl bg-white py-2.5 pl-9 pr-3 text-sm ring-1 ring-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-900 dark:ring-gray-800"
           />
         </div>
         <div className="flex gap-2">
@@ -145,23 +154,23 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
             value={category}
             onChange={setCategory}
             options={CATEGORY_OPTIONS}
-            className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 sm:flex-none sm:min-w-[160px]"
+            className="flex-1 rounded-2xl border-0 bg-white px-3 py-2.5 text-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800 sm:flex-none sm:min-w-[160px]"
           />
           <Select
             value={source}
             onChange={setSource}
             options={SOURCE_OPTIONS}
             capitalize
-            className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 sm:flex-none sm:min-w-[140px]"
+            className="flex-1 rounded-2xl border-0 bg-white px-3 py-2.5 text-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800 sm:flex-none sm:min-w-[140px]"
           />
         </div>
       </div>
 
       {/* Summary bar */}
-      <div className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2.5 dark:bg-gray-800/60">
+      <div className="flex min-h-[2.75rem] items-center justify-between gap-2 rounded-2xl bg-gray-100/70 px-4 py-2 dark:bg-gray-800/50">
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">
-            {filtered.length} transaction{filtered.length !== 1 ? "s" : ""}
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {isFiltered ? "Filtered" : "Showing all"}
           </span>
           {hiddenRows.length > 0 && (
             <button
@@ -176,14 +185,14 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
           {isFiltered && (
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Filtered total</span>
-              <span className="rounded-lg bg-indigo-600 px-3 py-1 text-sm font-bold text-white shadow-sm">
+              <span className="rounded-xl bg-gray-900 px-3 py-1 text-sm font-bold tabular-nums text-white shadow-sm dark:bg-white dark:text-gray-900">
                 {gbp(filteredSpend)}
               </span>
             </div>
           )}
           <button
             onClick={exportCsv}
-            className="hidden items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 sm:flex dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="hidden items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50 sm:flex dark:bg-gray-900 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-800"
           >
             <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
               <path d="M8 1a.75.75 0 0 1 .75.75v6.69l1.97-1.97a.75.75 0 1 1 1.06 1.06L8.53 10.78a.75.75 0 0 1-1.06 0L4.22 7.53a.75.75 0 0 1 1.06-1.06L7.25 8.44V1.75A.75.75 0 0 1 8 1ZM1.5 13.25a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 0 1.5H2.25a.75.75 0 0 1-.75-.75Z" />

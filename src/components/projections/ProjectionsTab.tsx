@@ -5,6 +5,8 @@ import { useRemuneration } from "../../hooks/useRemuneration";
 import { useRent } from "../../hooks/useRent";
 import { useAllPlanner } from "../../hooks/usePlanner";
 import { QueryState } from "../common";
+import Hero, { HeroChip } from "../Hero";
+import YearSwitch from "../YearSwitch";
 import { MAIN_CATEGORIES } from "../../types/categories";
 import { deriveView } from "../../types/projections";
 import type { ProjectionRow, ProjectionView, ProjectionInput, AllocationField } from "../../types/projections";
@@ -151,44 +153,33 @@ export default function ProjectionsTab() {
         const totalAllocated = sum((r) => r.home_contributions + r.savings + r.investments);
         const avgRate = avgSalary ? totalAllocated / sum((r) => r.salary) : 0;
 
-        const stats = [
-          { label: "Avg Salary", short: "Avg Salary", value: gbp0(avgSalary), sub: `${elapsed.length} mo`, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900" },
-          { label: "Avg Costs", short: "Avg Costs", value: gbp0(avgCosts), sub: `${Math.round((avgCosts / (avgSalary || 1)) * 100)}% of salary`, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-50/60 border-orange-100 dark:bg-orange-950/30 dark:border-orange-900" },
-          { label: "Allocated (Home/Save/Invest)", short: "Allocated", value: gbp0(totalAllocated), sub: `${Math.round(avgRate * 100)}% savings rate`, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900" },
-        ];
-
+        const leftover = sum((r) => r.buffer);
         return (
-          <div className="space-y-4">
-            {/* Year tabs */}
-            <div className="flex gap-1.5 rounded-xl bg-gray-100 p-1 dark:bg-gray-800 w-fit">
-              {years.map((y) => (
-                <button
-                  key={y}
-                  onClick={() => setYear(y)}
-                  className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition-all ${
-                    y === year
-                      ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                  }`}
-                >
-                  {y}
-                </button>
-              ))}
-            </div>
+          <div className="mx-auto max-w-7xl space-y-5">
+            <YearSwitch years={years} year={year} onChange={setYear} />
 
-            {/* Summary cards */}
-            <div className="grid gap-2 grid-cols-3 sm:gap-3">
-              {stats.map((s) => (
-                <div key={s.label} className={`rounded-2xl border px-2 py-2.5 text-center sm:px-5 sm:py-4 ${s.bg}`}>
-                  <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 sm:text-xs">
-                    <span className="sm:hidden">{s.short}</span>
-                    <span className="hidden sm:inline">{s.label}</span>
-                  </p>
-                  <p className={`mt-1 text-base font-bold sm:mt-1.5 sm:text-2xl ${s.color}`}>{s.value}</p>
-                  <p className="mt-0.5 truncate text-[10px] text-gray-400 sm:text-xs">{s.sub}</p>
-                </div>
-              ))}
-            </div>
+            <Hero
+              gradient="from-violet-600 via-purple-600 to-indigo-700 dark:from-violet-800 dark:via-purple-900 dark:to-indigo-950"
+              badge={`${year} · ${elapsed.length} month${elapsed.length === 1 ? "" : "s"} so far`}
+              label="Put aside this year"
+              value={gbp0(totalAllocated)}
+              decoration={
+                <svg viewBox="0 0 240 160" className="pointer-events-none absolute -right-4 bottom-0 h-48 text-white/10" aria-hidden>
+                  <path d="M0 150 L40 120 L80 128 L120 90 L160 96 L200 50 L240 20" fill="none" stroke="currentColor" strokeWidth="3" />
+                  <path d="M0 150 L40 120 L80 128 L120 90 L160 96 L200 50 L240 20 L240 160 L0 160Z" fill="currentColor" opacity="0.4" />
+                </svg>
+              }
+              under={
+                <HeroChip>
+                  {Math.round(avgRate * 100)}% of salary into home, savings & investments
+                </HeroChip>
+              }
+              fields={[
+                { label: "Avg salary", value: gbp0(avgSalary), sub: "a month, before bonus" },
+                { label: "Avg costs", value: gbp0(avgCosts), sub: `${Math.round((avgCosts / (avgSalary || 1)) * 100)}% of salary` },
+                { label: "Buffer so far", value: gbp0(leftover), sub: "left after everything", warn: leftover < 0 },
+              ]}
+            />
 
             <div className="grid gap-4 lg:grid-cols-2">
               <AllocationChart rows={rows} />

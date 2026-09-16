@@ -43,7 +43,7 @@ export default function CumulativeSpendChart({
     <Card>
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
             Cumulative Spent
           </h2>
           {totalBudget > 0 && (

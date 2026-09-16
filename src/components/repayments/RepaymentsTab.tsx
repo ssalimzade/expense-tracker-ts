@@ -5,7 +5,9 @@ import RepaymentTable from "./RepaymentTable";
 import RepaymentPivot from "./RepaymentPivot";
 import DailyRepaymentChart from "./DailyRepaymentChart";
 import SyntheticRepaymentsPanel from "./SyntheticRepaymentsPanel";
-import { filterActiveRepayments, visibleRepaymentMonths } from "../../lib/repayments";
+import { filterActiveRepayments, pivot, visibleRepaymentMonths } from "../../lib/repayments";
+import { gbp0, formatMonthLabel } from "../../lib/format";
+import Hero, { HeroChip } from "../Hero";
 import type { Repayment } from "../../types/repayment";
 
 export default function RepaymentsTab() {
@@ -38,17 +40,39 @@ export default function RepaymentsTab() {
       {(() => {
         const allRepayments = repaymentsQuery.data ?? [];
         const active = filterActiveRepayments(allRepayments, months);
-        const monthLabel = months.join(" · ");
+        // Same totals as the breakdown below: Uncategorized is left out.
+        const { rows: pivotRows } = pivot(active, months);
+        const monthTotal = (m: string) =>
+          pivotRows.reduce((t, r) => (r.category === "Uncategorized" ? t : t + (r.values[m] ?? 0)), 0);
+        const totals = months.map((m) => ({ month: m, total: monthTotal(m) }));
+        const grand = totals.reduce((t, x) => t + x.total, 0);
+        const peak = Math.max(1, ...totals.map((x) => x.total));
+        const shortMonth = (m: string) => formatMonthLabel(m).slice(0, 3);
 
         return (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-gray-400">Showing</span>
-              <span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
-                {monthLabel}
-              </span>
-              <span className="text-xs text-gray-400">· {active.length} active repayments</span>
-            </div>
+          <div className="mx-auto max-w-7xl space-y-5">
+            <Hero
+              gradient="from-pink-500 via-rose-600 to-orange-600 dark:from-pink-700 dark:via-rose-800 dark:to-orange-900"
+              badge={`${formatMonthLabel(months[0])} – ${formatMonthLabel(months[months.length - 1])}`}
+              label="Flex still to repay"
+              value={gbp0(grand)}
+              under={
+                <HeroChip>
+                  {active.length} active repayment{active.length === 1 ? "" : "s"}
+                </HeroChip>
+              }
+              aside={
+                <div className="flex h-28 items-end gap-3">
+                  {totals.map((x) => (
+                    <div key={x.month} className="flex w-12 flex-col items-center gap-1">
+                      <span className="text-[11px] font-bold tabular-nums">{gbp0(x.total)}</span>
+                      <div className="w-full rounded-t-lg bg-white/80" style={{ height: `${Math.max(4, (x.total / peak) * 64)}px` }} />
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">{shortMonth(x.month)}</span>
+                    </div>
+                  ))}
+                </div>
+              }
+            />
 
             <DailyRepaymentChart repayments={active} visibleMonths={months} />
             <RepaymentPivot repayments={active} visibleMonths={months} />

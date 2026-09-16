@@ -27,18 +27,18 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
 
   return (
     <Card className="p-0 overflow-hidden max-md:!p-0">
-      <div className="flex items-center justify-between bg-indigo-600 dark:bg-indigo-900 px-4 py-3 sm:px-6 sm:py-4">
-        <h2 className="text-sm font-bold text-white">Budget Breakdown</h2>
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
+        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Budget Breakdown</h2>
         <div className="flex items-center gap-3">
           {saving && (
-            <span className="flex items-center gap-1 text-xs text-indigo-200">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+            <span className="flex items-center gap-1 text-xs text-gray-400">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
               Saving…
             </span>
           )}
           <button
             onClick={exportCsv}
-            className="hidden items-center gap-1.5 rounded-lg bg-indigo-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-400 sm:flex dark:bg-indigo-800 dark:hover:bg-indigo-700"
+            className="hidden items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50 sm:flex dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-800"
           >
             <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
               <path d="M8 1a.75.75 0 0 1 .75.75v6.69l1.97-1.97a.75.75 0 1 1 1.06 1.06L8.53 10.78a.75.75 0 0 1-1.06 0L4.22 7.53a.75.75 0 0 1 1.06-1.06L7.25 8.44V1.75A.75.75 0 0 1 8 1ZM1.5 13.25a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 0 1.5H2.25a.75.75 0 0 1-.75-.75Z" />
@@ -82,7 +82,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
                     className="w-24 rounded-lg border border-transparent bg-transparent px-2 py-1 text-center text-white focus:border-gray-200 focus:outline-none dark:focus:border-gray-700"
                   />
                 </td>
-                <td className="px-6 py-3 text-center text-white dark:text-white">{gbp(spent)}</td>
+                <td className="px-6 py-3 text-center text-gray-900 dark:text-white">{gbp(spent)}</td>
                 <td className={`px-6 py-3 text-center font-semibold ${remaining < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                   {gbp(remaining)}
                 </td>

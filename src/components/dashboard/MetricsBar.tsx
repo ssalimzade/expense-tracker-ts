@@ -1,62 +1,55 @@
-import { gbp0 as gbp } from "../../lib/format";
+import { gbp0 as gbp, formatMonthLabel, toMonthKey } from "../../lib/format";
+import Hero, { HeroChip, HeroProgress } from "../Hero";
 
 interface Props {
   totalBudget: number;
   totalSpent: number;
+  month: string;
 }
 
-export default function MetricsBar({ totalBudget, totalSpent }: Props) {
+export default function MetricsBar({ totalBudget, totalSpent, month }: Props) {
   const remaining = totalBudget - totalSpent;
-  const pct = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
+  const pct = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
-  const metrics = [
-    {
-      label: "Total Budget",
-      value: totalBudget,
-      color: "text-gray-900 dark:text-white",
-      bg: "bg-gray-50 dark:bg-gray-800/60",
-      border: "border-gray-200 dark:border-gray-700",
-    },
-    {
-      label: "Spent",
-      value: totalSpent,
-      color: "text-indigo-600 dark:text-indigo-400",
-      bg: "bg-indigo-50/60 dark:bg-indigo-950/40",
-      border: "border-indigo-100 dark:border-indigo-900",
-    },
-    {
-      label: "Remaining",
-      value: remaining,
-      color: remaining < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400",
-      bg: remaining < 0 ? "bg-red-50/60 dark:bg-red-950/40" : "bg-emerald-50/60 dark:bg-emerald-950/40",
-      border: remaining < 0 ? "border-red-100 dark:border-red-900" : "border-emerald-100 dark:border-emerald-900",
-    },
-  ];
+  // Days left only means something for the month you're in.
+  const isCurrent = month === toMonthKey(new Date());
+  const [y, m] = month.split("-").map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const daysLeft = isCurrent ? daysInMonth - new Date().getDate() + 1 : 0;
+  const perDay = daysLeft > 0 && remaining > 0 ? remaining / daysLeft : 0;
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        {metrics.map((m) => (
-          <div
-            key={m.label}
-            className={`rounded-2xl border ${m.border} ${m.bg} px-2.5 py-2 text-center sm:px-5 sm:py-4`}
-          >
-            <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
-              {m.label}
-            </p>
-            <p className={`mt-1 text-lg font-bold tracking-tight sm:mt-1.5 sm:text-2xl ${m.color}`}>
-              {gbp(m.value)}
-            </p>
+    <Hero
+      gradient="from-indigo-500 via-blue-600 to-sky-600 dark:from-indigo-700 dark:via-blue-800 dark:to-sky-900"
+      badge={formatMonthLabel(month)}
+      label="Spent so far"
+      value={gbp(totalSpent)}
+      decoration={
+        <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 text-white/10" aria-hidden>
+          {[90, 70, 50].map((r) => (
+            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="currentColor" strokeWidth="10" />
+          ))}
+        </svg>
+      }
+      under={
+        <div className="max-w-xl space-y-1.5">
+          <HeroProgress pct={pct} danger={pct >= 100} />
+          <div className="flex justify-between text-xs text-white/80 tabular-nums">
+            <span>{Math.round(pct)}% of {gbp(totalBudget)}</span>
+            {remaining < 0 && <HeroChip>Over by {gbp(-remaining)}</HeroChip>}
           </div>
-        ))}
-      </div>
-      {/* Spend progress bar */}
-      <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-        <div
-          className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
+        </div>
+      }
+      fields={[
+        { label: "Budget", value: gbp(totalBudget) },
+        { label: remaining < 0 ? "Over budget" : "Remaining", value: gbp(Math.abs(remaining)), warn: remaining < 0 },
+        ...(isCurrent
+          ? [
+              { label: "Days left", value: String(daysLeft), sub: `of ${daysInMonth}` },
+              { label: "Per day", value: perDay > 0 ? gbp(perDay) : "—", sub: "to stay on budget" },
+            ]
+          : []),
+      ]}
+    />
   );
 }

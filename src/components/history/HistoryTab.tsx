@@ -10,6 +10,7 @@ import { Card, QueryState } from "../common";
 import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import Hero, { HeroProgress } from "../Hero";
 
 // "2026-06" → "Jun '26" for chart axes (month name + short year across years).
 const monthTick = (m: string) => {
@@ -53,41 +54,88 @@ export default function HistoryTab() {
     : 0;
 
   return (
-    <div className="space-y-4">
-      {/* Month selector */}
+    <div className="mx-auto max-w-7xl space-y-5">
+      {/* Month strip */}
       <QueryState isLoading={monthsQuery.isLoading} error={monthsQuery.error}>
-        <div className="flex flex-wrap items-center gap-1.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 max-md:[&::-webkit-scrollbar]:hidden">
-          {month && (
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
+          {[...allMonths].reverse().map((m) => {
+            const [y, mm] = m.split("-").map(Number);
+            const active = m === month;
+            return (
+              <button
+                key={m}
+                onClick={() => setMonth(m)}
+                className={`shrink-0 rounded-2xl px-4 py-2 text-left transition ${
+                  active
+                    ? "bg-gray-900 text-white shadow-md dark:bg-white dark:text-gray-900"
+                    : "bg-white text-gray-700 ring-1 ring-gray-200 hover:ring-gray-300 dark:bg-gray-900 dark:text-gray-300 dark:ring-gray-800"
+                }`}
+              >
+                <span className="block text-sm font-bold">
+                  {new Date(y, mm - 1, 1).toLocaleString("en-GB", { month: "short" })}
+                </span>
+                <span className={`block text-[11px] tabular-nums ${active ? "opacity-60" : "text-gray-400"}`}>{y}</span>
+              </button>
+            );
+          })}
+        </div>
+      </QueryState>
+
+      {month && (
+        <Hero
+          gradient="from-slate-600 via-slate-700 to-indigo-900 dark:from-slate-700 dark:via-slate-800 dark:to-indigo-950"
+          badge={
+            <span className="flex items-center gap-2">
+              {formatMonthLabel(month)} · snapshot
+            </span>
+          }
+          label="Spent"
+          value={archiveQuery.isSuccess ? gbp(totalSpent) : "—"}
+          decoration={
+            <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-8 -top-8 h-64 w-64 text-white/10" aria-hidden>
+              {[20, 45, 70, 95].map((r) => (
+                <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 5" />
+              ))}
+            </svg>
+          }
+          under={
+            archiveQuery.isSuccess && (
+            <div className="max-w-xl space-y-1.5">
+              <HeroProgress pct={totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0} danger={totalRemaining < 0} />
+              <p className="text-xs text-white/80 tabular-nums">
+                {totalBudget > 0 ? `${Math.round((totalSpent / totalBudget) * 100)}% of ${gbp(totalBudget)}` : "No budget set"}
+              </p>
+            </div>
+            )
+          }
+          fields={!archiveQuery.isSuccess ? [] : [
+            { label: "Budget", value: gbp(totalBudget) },
+            { label: totalRemaining < 0 ? "Over budget" : "Left over", value: gbp(Math.abs(totalRemaining)), warn: totalRemaining < 0 },
+            ...(avgSpend > 0
+              ? [{ label: "vs average", value: `${totalSpent >= avgSpend ? "+" : "−"}${gbp(Math.abs(totalSpent - avgSpend))}`, sub: `avg ${gbp(avgSpend)}/mo` }]
+              : []),
+          ]}
+          aside={
             <button
               onClick={() => refreshSnapshot.mutate(month)}
               disabled={refreshSnapshot.isPending}
               title="Recompute and overwrite this month's snapshot from live data"
-              className="mr-2 rounded-lg px-3 py-1.5 text-sm font-medium text-indigo-600 ring-1 ring-indigo-200 transition-all hover:bg-indigo-50 disabled:opacity-50 max-md:mr-1 max-md:shrink-0 max-md:whitespace-nowrap dark:text-indigo-400 dark:ring-indigo-800 dark:hover:bg-indigo-950/40"
+              className="flex items-center gap-1.5 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-semibold backdrop-blur transition hover:bg-white/25 disabled:opacity-50 max-md:w-full max-md:justify-center"
             >
+              <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 ${refreshSnapshot.isPending ? "animate-spin" : ""}`}>
+                <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clipRule="evenodd" />
+              </svg>
               {refreshSnapshot.isPending ? "Refreshing…" : "Refresh snapshot"}
             </button>
-          )}
-          {[...allMonths].reverse().map((m) => (
-            <button
-              key={m}
-              onClick={() => setMonth(m)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all max-md:shrink-0 ${
-                m === month
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700"
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </QueryState>
+          }
+        />
+      )}
 
       {/* Historical spending chart (all months) */}
       {allArchives.data.length > 1 && (
         <Card>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
               Spending Over Time
             </h2>
             {avgSpend > 0 && (
@@ -148,24 +196,10 @@ export default function HistoryTab() {
           <p className="text-sm text-gray-400">Select a month above.</p>
         ) : (
           <>
-            {/* Summary cards */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[
-                { label: "Budget", value: totalBudget, color: "text-gray-900 dark:text-white", bg: "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700" },
-                { label: "Spent", value: totalSpent, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50/60 dark:bg-indigo-950/40 border-indigo-100 dark:border-indigo-900" },
-                { label: "Remaining", value: totalRemaining, color: totalRemaining < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400", bg: totalRemaining < 0 ? "bg-red-50/60 border-red-100 dark:bg-red-950/40 dark:border-red-900" : "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-900" },
-              ].map((m) => (
-                <div key={m.label} className={`rounded-2xl border px-2.5 py-2 text-center sm:px-5 sm:py-4 ${m.bg}`}>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500 sm:text-xs">{m.label}</p>
-                  <p className={`mt-1 text-lg font-bold sm:mt-1.5 sm:text-2xl ${m.color}`}>{gbp(m.value)}</p>
-                </div>
-              ))}
-            </div>
-
             {/* Per-category bar chart for selected month */}
             <Card>
               <div className="mb-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
                   Budget vs Spent — {formatMonthLabel(month)}
                 </h2>
               </div>
@@ -189,8 +223,8 @@ export default function HistoryTab() {
 
             {/* Category table — same style as dashboard budget table */}
             <Card className="p-0 overflow-hidden max-md:!p-0">
-              <div className="flex items-center bg-indigo-600 dark:bg-indigo-900 px-4 py-3 sm:px-6 sm:py-4">
-                <h2 className="text-sm font-bold text-white">Category Breakdown</h2>
+              <div className="flex items-center border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
+                <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Category Breakdown</h2>
               </div>
               <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[720px] table-fixed text-sm">
@@ -219,8 +253,8 @@ export default function HistoryTab() {
                     return (
                       <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                         <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-300">{row.Category}</td>
-                        <td className="px-6 py-3 text-center text-white dark:text-white">{gbp(row["Budget (£)"])}</td>
-                        <td className="px-6 py-3 text-center text-white dark:text-white">{gbp(row["Spent (£)"])}</td>
+                        <td className="px-6 py-3 text-center text-gray-900 dark:text-white">{gbp(row["Budget (£)"])}</td>
+                        <td className="px-6 py-3 text-center text-gray-900 dark:text-white">{gbp(row["Spent (£)"])}</td>
                         <td className={`px-6 py-3 text-center font-semibold ${rem < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                           {gbp(rem)}
                         </td>

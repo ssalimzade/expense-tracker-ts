@@ -33,7 +33,7 @@ export function CostBreakdownChart({ data, months }: { data: RentData; months: s
   return (
     <Card>
       <div className="mb-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
           Cost Breakdown
         </h2>
       </div>
@@ -81,7 +81,7 @@ export function PaidProgressChart({ data, months }: { data: RentData; months: st
   return (
     <Card>
       <div className="mb-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
           Paid vs Outstanding
         </h2>
       </div>

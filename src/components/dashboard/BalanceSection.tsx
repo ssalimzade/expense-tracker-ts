@@ -171,19 +171,19 @@ function cardStyle(v: number) {
   if (v > 0)
     return {
       text: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-emerald-50/60 dark:bg-emerald-950/40",
-      border: "border-emerald-100 dark:border-emerald-900",
+      bg: "bg-white dark:bg-gray-900 before:bg-emerald-400",
+      border: "ring-gray-100 dark:ring-gray-800",
     };
   if (v < 0)
     return {
-      text: "text-red-600 dark:text-red-400",
-      bg: "bg-red-50/60 dark:bg-red-950/40",
-      border: "border-red-100 dark:border-red-900",
+      text: "text-rose-600 dark:text-rose-400",
+      bg: "bg-white dark:bg-gray-900 before:bg-rose-400",
+      border: "ring-gray-100 dark:ring-gray-800",
     };
   return {
     text: "text-gray-900 dark:text-white",
-    bg: "bg-gray-50 dark:bg-gray-800/60",
-    border: "border-gray-200 dark:border-gray-700",
+    bg: "bg-white dark:bg-gray-900 before:bg-gray-300 dark:before:bg-gray-600",
+    border: "ring-gray-100 dark:ring-gray-800",
   };
 }
 
@@ -330,9 +330,7 @@ export default function BalanceSection({ month }: { month: string }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-        Balances
-      </p>
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Balances</p>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-8">
         {ITEMS.map(({ key, label }) => {
           const val = effectiveValue(key);
@@ -340,7 +338,7 @@ export default function BalanceSection({ month }: { month: string }) {
           return (
             <div
               key={key}
-              className={`relative rounded-2xl border ${border} ${bg} px-2 py-2 text-center sm:px-4 sm:py-4`}
+              className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4`}
             >
               {key === "diff_in_bills" && (
                 <DiffBreakdown
@@ -377,7 +375,7 @@ export default function BalanceSection({ month }: { month: string }) {
           return (
             <div
               title={tip}
-              className={`relative rounded-2xl border ${border} ${bg} px-2 py-2 text-center sm:px-4 sm:py-4`}
+              className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4`}
             >
               <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                 Left to Pay
@@ -397,7 +395,7 @@ export default function BalanceSection({ month }: { month: string }) {
         })()}
 
         {/* Read-only sum of all balances above */}
-        <div className={`col-span-2 rounded-2xl border ${totalStyle.border} ${totalStyle.bg} px-3 py-2.5 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
+        <div className={`relative col-span-2 rounded-2xl ring-1 ${totalStyle.border} ${totalStyle.bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-3 py-2.5 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
           <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Total Balance
           </p>

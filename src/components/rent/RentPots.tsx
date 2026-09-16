@@ -56,7 +56,7 @@ export default function RentPots({ data, upTo }: Props) {
     <Card className="p-0 overflow-hidden max-md:!p-0">
       <div className="flex items-start gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
             Bills Pots
           </h2>
           <p className="mt-1 text-xs text-gray-400">

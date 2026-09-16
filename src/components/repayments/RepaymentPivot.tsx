@@ -22,7 +22,7 @@ export default function RepaymentPivot({ repayments, visibleMonths }: Props) {
   return (
     <Card className="overflow-hidden max-md:!p-0">
       <div className="mb-4 max-md:mb-2 max-md:px-4 max-md:pt-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
           Breakdown by months
         </h2>
       </div>

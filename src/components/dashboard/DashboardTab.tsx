@@ -76,8 +76,8 @@ export default function DashboardTab({ month }: { month: string }) {
         };
 
         return (
-          <div className="space-y-4">
-            <MetricsBar totalBudget={totalBudget} totalSpent={totalSpentValue} />
+          <div className="mx-auto max-w-7xl space-y-5">
+            <MetricsBar totalBudget={totalBudget} totalSpent={totalSpentValue} month={month} />
             <CumulativeSpendChart
               transactions={transactions}
               month={month}

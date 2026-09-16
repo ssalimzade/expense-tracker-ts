@@ -655,7 +655,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   return (
     <Card className="p-0 overflow-hidden max-md:!p-0">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
           Rent &amp; Utilities (Wyndham)
         </h2>
         <div className="hidden items-center gap-3 text-xs text-gray-400 sm:flex">

@@ -108,19 +108,27 @@ above, so it doesn't feel like every other tab:
 - Category split is one **segmented bar** with a legend (`CategoryStrip`).
 - Surfaces use `rounded-2xl`/`rounded-3xl` with `ring-1` instead of `Card`.
 
-## Hero-style tabs (Travel, Notes, Salary, Savings, Planner)
+## Hero-style tabs (every tab)
 
-These tabs share a newer look, and each one gets its own palette so they don't
-blur into each other. The stat-card and table rules above still apply to the
-other tabs (Budget, Transactions, History, …).
+All tabs now share this look, and each one gets its own palette so they don't
+blur into each other. The hero replaces the old "Summary stat cards" row above.
+The table rules still apply inside the tables.
+
+- **Shared pieces:** `components/Hero.tsx` (`Hero`, `HeroField`, `HeroChip`,
+  `HeroProgress`), `components/YearSwitch.tsx`, and `Card` in `common.tsx`,
+  which already carries the `rounded-3xl ring-1` surface.
+- **Budget ⇄ History mirror:** both breakdown tables keep a plain header row
+  (small uppercase label, `border-b`), with no coloured band.
 
 - **Page width:** content sits in `mx-auto max-w-7xl` (Travel uses `max-w-6xl`).
 - **Hero:** one `rounded-3xl` gradient header with a faint decorative SVG behind
   the text, instead of rows of tinted stat cards. Inside it: a pill label, then
   the key figure (`text-4xl sm:text-5xl font-extrabold`), then small
   uppercase-label fields in `text-white/60`. Palettes: Travel sky→violet,
-  Salary emerald→cyan, Savings amber→rose, Planner rose→purple. Notes has no
-  hero; it uses a large page title instead.
+  Salary emerald→cyan, Savings amber→rose, Planner rose→purple, Budget
+  indigo→sky, History slate→indigo, Projections violet→indigo, Rent sky→teal,
+  Repayments pink→orange. Notes and Transactions have no hero; they are
+  working lists, so they use a large page title instead.
 - **Surfaces:** `rounded-3xl bg-white ring-1 ring-gray-100
   dark:bg-gray-900 dark:ring-gray-800`, used instead of `Card`. Section labels
   are `text-xs font-bold uppercase tracking-[0.14em] text-gray-400`. Section
