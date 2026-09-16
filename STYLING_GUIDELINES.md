@@ -125,9 +125,14 @@ The table rules still apply inside the tables.
   the text, instead of rows of tinted stat cards. Inside it: a pill label, then
   the key figure (`text-4xl sm:text-5xl font-extrabold`), then small
   uppercase-label fields in `text-white/60`. Palettes: Travel sky→violet,
-  Salary emerald→cyan, Savings amber→rose, Planner rose→purple, Budget
+  Salary emerald→cyan, Savings moss green, Planner dusty slate blue, Budget
   indigo→sky, History slate→indigo, Projections violet→indigo, Rent sky→teal,
-  Repayments pink→orange. Notes and Transactions have no hero; they are
+  Repayments warm stone. Avoid red, orange and pink as theme colours; the user
+  prefers natural, muted tones that suit the dark design. Red is only for
+  meaning (negative, over budget, delete).
+- **Corner icon:** every hero carries one large faint line icon from
+  `components/HeroArt.tsx` (wallet, clock, trend, house, card, banknotes, coins,
+  calendar, plane), all drawn with the same stroke so they read as a set. Notes and Transactions have no hero; they are
   working lists, so they use a large page title instead.
 - **Surfaces:** `rounded-3xl bg-white ring-1 ring-gray-100
   dark:bg-gray-900 dark:ring-gray-800`, used instead of `Card`. Section labels

@@ -5,6 +5,7 @@ import SavingsTable from "./SavingsTable";
 import { SavingsGrowthChart, MonthlyBreakdownChart } from "./SavingsCharts";
 import { gbp0 } from "../../lib/format";
 import type { SavingsRow } from "../../types/savings";
+import { CoinsArt } from "../HeroArt";
 
 const currentKey = (() => {
   const d = new Date();
@@ -81,13 +82,8 @@ function VaultHero({ rows, year, showInvestments }: { rows: SavingsRow[]; year: 
   const progress = yearEnd > start ? Math.min(1, Math.max(0, (now - start) / (yearEnd - start))) : 1;
 
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-600 text-white shadow-lg shadow-orange-500/20 dark:from-amber-600 dark:via-orange-700 dark:to-rose-800 dark:shadow-none">
-      {/* Stacked coins */}
-      <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-6 -top-6 h-56 w-56 text-white/10" aria-hidden>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <ellipse key={i} cx="100" cy={150 - i * 22} rx="70" ry="18" fill="none" stroke="currentColor" strokeWidth="2" />
-        ))}
-      </svg>
+    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6f8a58] via-[#526a44] to-[#34472f] text-white shadow-lg shadow-black/10 dark:shadow-none">
+      <CoinsArt />
 
       <div className="relative p-5 sm:p-7">
         <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">

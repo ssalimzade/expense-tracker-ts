@@ -1,5 +1,6 @@
 import { gbp0 as gbp, formatMonthLabel, toMonthKey } from "../../lib/format";
 import Hero, { HeroChip, HeroProgress } from "../Hero";
+import { WalletArt } from "../HeroArt";
 
 interface Props {
   totalBudget: number;
@@ -25,11 +26,7 @@ export default function MetricsBar({ totalBudget, totalSpent, month }: Props) {
       label="Spent so far"
       value={gbp(totalSpent)}
       decoration={
-        <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 text-white/10" aria-hidden>
-          {[90, 70, 50].map((r) => (
-            <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="currentColor" strokeWidth="10" />
-          ))}
-        </svg>
+        <WalletArt />
       }
       under={
         <div className="max-w-xl space-y-1.5">

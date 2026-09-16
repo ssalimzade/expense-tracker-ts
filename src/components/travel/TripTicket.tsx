@@ -1,4 +1,5 @@
 import type { Trip } from "../../types/travel";
+import { PlaneArt } from "../HeroArt";
 import {
   daysElapsed,
   formatTripDates,
@@ -103,6 +104,8 @@ export default function TripTicket({
       <svg viewBox="0 0 400 160" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full text-white/15" aria-hidden>
         <path d="M-10 140 C 120 20, 260 20, 410 90" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 6" />
       </svg>
+
+      <PlaneArt className="-right-4 top-6 h-44 w-44 md:right-72 md:top-2 md:h-52 md:w-52" />
 
       <div className="relative flex flex-col md:flex-row">
         {/* Main part */}

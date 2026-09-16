@@ -45,7 +45,7 @@ export default function RepaymentHints({ month, onApply }: Props) {
                 <button
                   key={r.category}
                   onClick={() => onApply(r.category, r.amount)}
-                  className="group flex w-full items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-left transition-colors hover:bg-fuchsia-50 dark:bg-gray-800/50 dark:hover:bg-fuchsia-500/10"
+                  className="group flex w-full items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-left transition-colors hover:bg-[#8ea3c7]/15 dark:bg-gray-800/50 dark:hover:bg-[#8ea3c7]/10"
                 >
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700 dark:text-gray-200">
                     {r.category}
@@ -53,7 +53,7 @@ export default function RepaymentHints({ month, onApply }: Props) {
                   <span className="shrink-0 text-sm font-bold tabular-nums text-gray-900 dark:text-white">
                     {gbp(r.amount)}
                   </span>
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-fuchsia-600 shadow-sm transition group-hover:bg-fuchsia-600 group-hover:text-white dark:bg-gray-900 dark:text-fuchsia-300">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-[#51658a] shadow-sm transition group-hover:bg-[#51658a] group-hover:text-white dark:bg-gray-900 dark:text-[#a9b9d6]">
                     +
                   </span>
                 </button>

@@ -192,7 +192,7 @@ export default function LinkTransactionsDialog({
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-400">
                         <span>{formatExpenseDate(c.date)}</span>
                         {c.source === "flex" && (
-                          <span className="rounded bg-pink-50 px-1 text-[10px] font-bold text-pink-600 dark:bg-pink-950 dark:text-pink-400">
+                          <span className="rounded bg-[#b3a089]/15 px-1 text-[10px] font-bold text-[#7d6c56] dark:text-[#cdbba3]">
                             Flex
                           </span>
                         )}

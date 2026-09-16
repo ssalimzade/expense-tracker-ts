@@ -169,10 +169,10 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
               <li
                 key={row.start_date}
                 className={`relative grid items-center gap-x-2 px-5 py-2.5 transition hover:bg-gray-50/70 dark:hover:bg-gray-800/30 ${desktopCols} ${
-                  isNow ? "bg-orange-50/60 dark:bg-orange-500/[0.06]" : ""
+                  isNow ? "bg-[#8fae73]/[0.08]" : ""
                 }`}
               >
-                {isNow && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-orange-400" />}
+                {isNow && <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-[#8fae73]" />}
                 <div className={isFuture ? "opacity-50" : ""}>
                   <p className="flex items-center gap-1.5 text-sm font-bold">
                     {mo(row.start_date)}
@@ -246,14 +246,14 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
             <li
               key={row.start_date}
               className={`rounded-2xl bg-white p-3 ring-1 dark:bg-gray-900 ${
-                isNow ? "ring-orange-300 dark:ring-orange-800" : "ring-gray-100 dark:ring-gray-800"
+                isNow ? "ring-[#8fae73]/60" : "ring-gray-100 dark:ring-gray-800"
               } ${isFuture ? "opacity-60" : ""}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="flex items-center gap-1.5 font-bold">
                     {mo(row.start_date)}
-                    {isNow && <span className="rounded-full bg-orange-100 px-1.5 text-[9px] font-bold uppercase text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">now</span>}
+                    {isNow && <span className="rounded-full bg-[#8fae73]/15 px-1.5 text-[9px] font-bold uppercase text-[#5d7a45] dark:text-[#a9c48f]">now</span>}
                     {isFuture && <span className="rounded bg-gray-100 px-1 text-[9px] font-bold uppercase text-gray-500 dark:bg-gray-800">plan</span>}
                   </p>
                   <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
@@ -286,7 +286,7 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
                 placeholder="Add a note…"
                 onBlur={(e) => commitNotes(row, e.target.value)}
                 onKeyDown={commitOnEnter(row.adjustment_notes)}
-                className="mt-2 w-full rounded-lg bg-gray-50 px-2 py-1.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 dark:bg-gray-800/60 dark:placeholder-gray-500"
+                className="mt-2 w-full rounded-lg bg-gray-50 px-2 py-1.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8fae73]/60 dark:bg-gray-800/60 dark:placeholder-gray-500"
               />
             </li>
           );

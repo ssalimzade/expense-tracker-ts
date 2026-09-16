@@ -8,6 +8,7 @@ import { QueryState } from "../common";
 import PlannerCalendar from "./PlannerCalendar";
 import RepaymentHints from "./RepaymentHints";
 import PlannerBudgetTable from "./PlannerBudgetTable";
+import { CalendarArt } from "../HeroArt";
 
 // Current month + the next 11 months — the planning horizon.
 function plannableMonths(count = 12): string[] {
@@ -144,13 +145,8 @@ export default function PlannerTab() {
       <QueryState isLoading={plannerQuery.isLoading} error={plannerQuery.error}>
         <div className="space-y-5">
           {/* Hero */}
-          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-500 via-fuchsia-600 to-purple-700 text-white shadow-lg shadow-fuchsia-500/20 dark:from-rose-700 dark:via-fuchsia-800 dark:to-purple-900 dark:shadow-none">
-            {/* A faint month grid */}
-            <svg viewBox="0 0 280 200" className="pointer-events-none absolute -right-4 top-1/2 h-64 -translate-y-1/2 text-white/10 max-sm:opacity-50" aria-hidden>
-              {Array.from({ length: 35 }, (_, i) => (
-                <rect key={i} x={(i % 7) * 40 + 4} y={Math.floor(i / 7) * 40 + 4} width="32" height="32" rx="8" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              ))}
-            </svg>
+          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6d82a6] via-[#51658a] to-[#333f5c] text-white shadow-lg shadow-black/10 dark:shadow-none">
+            <CalendarArt />
             <div className="relative p-5 sm:p-7">
               <div className="flex items-start justify-between gap-3">
                 <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
@@ -178,7 +174,7 @@ export default function PlannerTab() {
                 <button
                   onClick={moveToBudget}
                   disabled={saveBudget.isPending}
-                  className="flex items-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-fuchsia-700 shadow-lg transition hover:scale-[1.02] disabled:opacity-60 max-sm:w-full max-sm:justify-center"
+                  className="flex items-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-[#40527a] shadow-lg transition hover:scale-[1.02] disabled:opacity-60 max-sm:w-full max-sm:justify-center"
                 >
                   <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                     <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />

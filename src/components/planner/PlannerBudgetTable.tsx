@@ -35,13 +35,13 @@ export default function PlannerBudgetTable({ draft, lastMonth, lastMonthName, av
         </div>
         <div className="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-4 rounded-full bg-gradient-to-r from-rose-500 to-fuchsia-600" /> Plan
+            <span className="h-2 w-4 rounded-full bg-gradient-to-r from-[#8ea3c7] to-[#5a6f95]" /> Plan
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-3 w-0.5 rounded bg-gray-400" /> 2026 avg
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-3 w-0.5 rounded bg-sky-400" /> {lastMonthName}
+            <span className="h-3 w-0.5 rounded bg-[#c8b58f]" /> {lastMonthName}
           </span>
         </div>
       </div>
@@ -57,20 +57,20 @@ export default function PlannerBudgetTable({ draft, lastMonth, lastMonthName, av
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate text-sm font-semibold">{cat}</span>
                   <span className="shrink-0 text-[11px] tabular-nums text-gray-400">
-                    avg {gbp(avg)} · <span className="text-sky-500 dark:text-sky-400">{lastMonthName.slice(0, 3)} {gbp(last)}</span>
+                    avg {gbp(avg)} · <span className="text-[#9c8761] dark:text-[#c8b58f]">{lastMonthName.slice(0, 3)} {gbp(last)}</span>
                   </span>
                 </div>
                 <div className="relative mt-2 h-2 rounded-full bg-gray-100 dark:bg-gray-800">
-                  <div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-fuchsia-600 transition-[width] duration-300" style={{ width: pct(planned) }} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#8ea3c7] to-[#5a6f95] transition-[width] duration-300" style={{ width: pct(planned) }} />
                   {avg > 0 && <span className="absolute -top-1 h-4 w-0.5 -translate-x-1/2 rounded bg-gray-400 dark:bg-gray-500" style={{ left: pct(avg) }} />}
-                  {last > 0 && <span className="absolute -top-1 h-4 w-0.5 -translate-x-1/2 rounded bg-sky-400" style={{ left: pct(last) }} />}
+                  {last > 0 && <span className="absolute -top-1 h-4 w-0.5 -translate-x-1/2 rounded bg-[#c8b58f]" style={{ left: pct(last) }} />}
                 </div>
               </div>
               <CurrencyInput
                 value={planned}
                 onLiveChange={(n) => onChange(cat, n)}
                 onCommit={(n) => onCommit(cat, n ?? 0)}
-                className="w-24 shrink-0 rounded-xl border border-gray-200 bg-transparent px-2 py-1.5 text-center font-bold tabular-nums text-gray-900 focus:border-fuchsia-400 focus:outline-none dark:border-gray-700 dark:text-white dark:focus:border-fuchsia-500 sm:w-28"
+                className="w-24 shrink-0 rounded-xl border border-gray-200 bg-transparent px-2 py-1.5 text-center font-bold tabular-nums text-gray-900 focus:border-[#8ea3c7] focus:outline-none dark:border-gray-700 dark:text-white dark:focus:border-[#8ea3c7] sm:w-28"
               />
             </li>
           );

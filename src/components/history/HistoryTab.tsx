@@ -11,6 +11,7 @@ import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle } from "../../lib/chart";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import Hero, { HeroProgress } from "../Hero";
+import { RewindClockArt } from "../HeroArt";
 
 // "2026-06" → "Jun '26" for chart axes (month name + short year across years).
 const monthTick = (m: string) => {
@@ -92,11 +93,7 @@ export default function HistoryTab() {
           label="Spent"
           value={archiveQuery.isSuccess ? gbp(totalSpent) : "—"}
           decoration={
-            <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-8 -top-8 h-64 w-64 text-white/10" aria-hidden>
-              {[20, 45, 70, 95].map((r) => (
-                <circle key={r} cx="100" cy="100" r={r} fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 5" />
-              ))}
-            </svg>
+            <RewindClockArt />
           }
           under={
             archiveQuery.isSuccess && (

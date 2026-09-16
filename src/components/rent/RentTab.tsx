@@ -12,6 +12,7 @@ import RentTable from "./RentTable";
 import RentPots from "./RentPots";
 import { potViews, potsTotal } from "../../lib/pots";
 import { CostBreakdownChart, PaidProgressChart } from "./RentCharts";
+import { HouseArt } from "../HeroArt";
 
 const currentMonth = (() => {
   const d = new Date();
@@ -82,10 +83,7 @@ export default function RentTab({ onOpenTransactions }: Props) {
               label="Rent & bills so far"
               value={gbp0(costYtd)}
               decoration={
-                <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-6 -top-4 h-60 w-60 text-white/10" aria-hidden>
-                  <path d="M20 95 L100 25 L180 95 V180 H20 Z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
-                  <rect x="80" y="120" width="40" height="60" fill="none" stroke="currentColor" strokeWidth="6" />
-                </svg>
+                <HouseArt />
               }
               under={
                 <HeroChip>

@@ -40,7 +40,7 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
       <div className="mb-4 flex items-baseline justify-between">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Balance through the year</p>
         {rows.length > 0 && (
-          <span className="text-sm font-bold tabular-nums text-orange-500 dark:text-orange-400">
+          <span className="text-sm font-bold tabular-nums text-[#5d7a45] dark:text-[#a9c48f]">
             {"→ "}£{lastBalance.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
           </span>
         )}
@@ -50,8 +50,8 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
           <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
             <defs>
               <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                <stop offset="5%" stopColor="#8fae73" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#8fae73" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="rgba(0,0,0,0.05)" />
@@ -76,20 +76,20 @@ export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
             <Area
               type="monotone"
               dataKey="actual"
-              stroke="#f97316"
+              stroke="#8fae73"
               strokeWidth={2.5}
               fill="url(#balanceGradient)"
-              dot={{ r: 3, fill: "#f97316" }}
+              dot={{ r: 3, fill: "#8fae73" }}
               activeDot={{ r: 5 }}
               connectNulls={false}
             />
             <Line
               type="monotone"
               dataKey="future"
-              stroke="#f97316"
+              stroke="#8fae73"
               strokeWidth={2.5}
               strokeDasharray="5 4"
-              dot={{ r: 3, fill: "#f97316" }}
+              dot={{ r: 3, fill: "#8fae73" }}
               activeDot={{ r: 5 }}
               connectNulls={false}
             />

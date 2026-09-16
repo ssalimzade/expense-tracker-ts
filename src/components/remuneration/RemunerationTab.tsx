@@ -6,6 +6,7 @@ import type { RemunerationRow } from "../../types/remuneration";
 import RemunerationTable from "./RemunerationTable";
 import { PayGrowthChart } from "./RemunerationCharts";
 import TakeHomeCalculator from "./TakeHomeCalculator";
+import { BanknotesArt } from "../HeroArt";
 
 export default function RemunerationTab() {
   const query = useRemuneration();
@@ -65,12 +66,7 @@ function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: Remu
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 text-white shadow-lg shadow-teal-500/20 dark:from-emerald-700 dark:via-teal-800 dark:to-cyan-900 dark:shadow-none">
-      {/* Guilloché-style rings, like the security print on a payslip */}
-      <svg viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" className="pointer-events-none absolute inset-0 h-full w-full text-white/10" aria-hidden>
-        {[40, 70, 100, 130, 160].map((r) => (
-          <circle key={r} cx="360" cy="40" r={r} fill="none" stroke="currentColor" strokeWidth="1" />
-        ))}
-      </svg>
+      <BanknotesArt className="md:right-72" />
 
       <div className="relative grid gap-6 p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
         <div className="min-w-0">

@@ -8,6 +8,7 @@ import SyntheticRepaymentsPanel from "./SyntheticRepaymentsPanel";
 import { filterActiveRepayments, pivot, visibleRepaymentMonths } from "../../lib/repayments";
 import { gbp0, formatMonthLabel } from "../../lib/format";
 import Hero, { HeroChip } from "../Hero";
+import { CardArt } from "../HeroArt";
 import type { Repayment } from "../../types/repayment";
 
 export default function RepaymentsTab() {
@@ -52,9 +53,10 @@ export default function RepaymentsTab() {
         return (
           <div className="mx-auto max-w-7xl space-y-5">
             <Hero
-              gradient="from-pink-500 via-rose-600 to-orange-600 dark:from-pink-700 dark:via-rose-800 dark:to-orange-900"
+              gradient="from-[#8c7c68] via-[#6b5d4d] to-[#3f362e]"
               badge={`${formatMonthLabel(months[0])} – ${formatMonthLabel(months[months.length - 1])}`}
               label="Flex still to repay"
+              decoration={<CardArt className="md:right-64" />}
               value={gbp0(grand)}
               under={
                 <HeroChip>

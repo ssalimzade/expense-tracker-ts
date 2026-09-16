@@ -30,7 +30,7 @@ export default function PaymentStrip({
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">How you paid</p>
       <div className="mt-4 flex h-3 gap-0.5 overflow-hidden rounded-full">
         <span className="h-full rounded-l-full bg-sky-500" style={{ width: `${(card / total) * 100}%` }} />
-        <span className="h-full rounded-r-full bg-pink-500" style={{ width: `${(flex / total) * 100}%` }} />
+        <span className="h-full rounded-r-full bg-[#b3a089]" style={{ width: `${(flex / total) * 100}%` }} />
       </div>
       <ul className="mt-4 space-y-2 text-sm">
         <li className="flex items-center gap-2">
@@ -39,7 +39,7 @@ export default function PaymentStrip({
           <span className="font-semibold tabular-nums">{money(card)}</span>
         </li>
         <li className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-pink-500" />
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#b3a089]" />
           <span className="flex-1 text-gray-600 dark:text-gray-300">Flex — paid over months</span>
           <span className="font-semibold tabular-nums">{money(flex)}</span>
         </li>

@@ -110,8 +110,8 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }
           const isToday = dateStr === todayStr;
           const clickable = !isWeekend && !isBankHol;
 
-          let tile = "bg-gray-50 text-gray-700 hover:bg-fuchsia-50 hover:text-fuchsia-700 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-fuchsia-500/15 dark:hover:text-fuchsia-200";
-          if (isDayOff) tile = "bg-gradient-to-br from-rose-500 to-fuchsia-600 text-white shadow-sm shadow-fuchsia-500/30";
+          let tile = "bg-gray-50 text-gray-700 hover:bg-[#8ea3c7]/15 hover:text-[#40527a] dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-[#8ea3c7]/15 dark:hover:text-[#c9d4e8]";
+          if (isDayOff) tile = "bg-gradient-to-br from-[#7c91b6] to-[#51658a] text-white shadow-sm";
           else if (isBankHol) tile = "bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300";
           else if (isWeekend) tile = "text-gray-300 dark:text-gray-600";
 
@@ -124,7 +124,7 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }
               title={isBankHol ? holTitles[dateStr] : isDayOff ? "Day off — tap to undo" : undefined}
               aria-pressed={clickable ? isDayOff : undefined}
               className={`relative flex aspect-square items-center justify-center rounded-xl text-sm font-semibold tabular-nums transition disabled:cursor-default ${tile} ${
-                isToday ? "ring-2 ring-fuchsia-400 ring-offset-1 ring-offset-white dark:ring-offset-gray-900" : ""
+                isToday ? "ring-2 ring-[#8ea3c7] ring-offset-1 ring-offset-white dark:ring-offset-gray-900" : ""
               }`}
             >
               {day}

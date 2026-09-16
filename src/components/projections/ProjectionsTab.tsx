@@ -15,6 +15,7 @@ import { gbp0 } from "../../lib/format";
 import { currentNetMonthly } from "../../lib/remuneration";
 import ProjectionsTable from "./ProjectionsTable";
 import { AllocationChart, SalaryVsCostChart } from "./ProjectionsCharts";
+import { TrendArt } from "../HeroArt";
 
 const currentMonth = (() => {
   const d = new Date();
@@ -164,10 +165,7 @@ export default function ProjectionsTab() {
               label="Put aside this year"
               value={gbp0(totalAllocated)}
               decoration={
-                <svg viewBox="0 0 240 160" className="pointer-events-none absolute -right-4 bottom-0 h-48 text-white/10" aria-hidden>
-                  <path d="M0 150 L40 120 L80 128 L120 90 L160 96 L200 50 L240 20" fill="none" stroke="currentColor" strokeWidth="3" />
-                  <path d="M0 150 L40 120 L80 128 L120 90 L160 96 L200 50 L240 20 L240 160 L0 160Z" fill="currentColor" opacity="0.4" />
-                </svg>
+                <TrendArt />
               }
               under={
                 <HeroChip>
