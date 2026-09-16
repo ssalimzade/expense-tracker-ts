@@ -107,3 +107,33 @@ above, so it doesn't feel like every other tab:
   Before you go / Day N / After, not a table — same on desktop and mobile.
 - Category split is one **segmented bar** with a legend (`CategoryStrip`).
 - Surfaces use `rounded-2xl`/`rounded-3xl` with `ring-1` instead of `Card`.
+
+## Hero-style tabs (Travel, Notes, Salary, Savings, Planner)
+
+These tabs share a newer look, and each one gets its own palette so they don't
+blur into each other. The stat-card and table rules above still apply to the
+other tabs (Budget, Transactions, History, …).
+
+- **Page width:** content sits in `mx-auto max-w-7xl` (Travel uses `max-w-6xl`).
+- **Hero:** one `rounded-3xl` gradient header with a faint decorative SVG behind
+  the text, instead of rows of tinted stat cards. Inside it: a pill label, then
+  the key figure (`text-4xl sm:text-5xl font-extrabold`), then small
+  uppercase-label fields in `text-white/60`. Palettes: Travel sky→violet,
+  Salary emerald→cyan, Savings amber→rose, Planner rose→purple. Notes has no
+  hero; it uses a large page title instead.
+- **Surfaces:** `rounded-3xl bg-white ring-1 ring-gray-100
+  dark:bg-gray-900 dark:ring-gray-800`, used instead of `Card`. Section labels
+  are `text-xs font-bold uppercase tracking-[0.14em] text-gray-400`. Section
+  titles above a list are `text-lg font-extrabold tracking-tight` with a muted
+  one-line subtitle.
+- **Switches:** segmented controls use `rounded-2xl bg-gray-100 p-1` with a
+  white active pill. Picker strips (trips, months) are horizontally scrolling
+  `rounded-2xl` tiles; the active tile is filled `bg-gray-900` (white in dark
+  mode).
+- **Primary buttons:** `rounded-2xl bg-gray-900 text-white` (inverted in dark
+  mode). An action sitting on a hero is a white button.
+- **Lists over tables:** history reads as a timeline (Travel itinerary, Salary
+  history), months as a ledger (Savings), categories as bar rows (Planner).
+- **Layout:** main column plus a sticky `lg:` sidebar of `22rem`. On phones the
+  sidebar comes after the main content, unless it holds the page's main
+  actions.

@@ -1,134 +1,81 @@
 import type { BudgetMap } from "../../types/budget";
 import { gbp0 as gbp } from "../../lib/format";
 import { MAIN_CATEGORIES } from "../../types/categories";
-import { Card } from "../common";
 import CurrencyInput from "../CurrencyInput";
 
 interface Props {
   draft: BudgetMap;
-  /** Previous-month budget reference column. */
+  /** Previous month's budget, for reference. */
   lastMonth: BudgetMap;
-  lastMonthLabel: string;
-  /** Full previous-month name (e.g. "July") for the mobile reference row. */
+  /** Full previous-month name, e.g. "September". */
   lastMonthName: string;
-  /** 2026 per-category average reference column. */
+  /** 2026 per-category average, for reference. */
   avg2026: BudgetMap;
-  /** Label for the editable column — the month being planned, e.g. "Jul 2026". */
-  planLabel: string;
   onChange: (category: string, value: number) => void;
   onCommit: (category: string, value: number) => void;
-  saving: boolean;
-  onMoveToBudget: () => void;
-  moving: boolean;
 }
 
-export default function PlannerBudgetTable({
-  draft,
-  lastMonth,
-  lastMonthLabel,
-  lastMonthName,
-  avg2026,
-  planLabel,
-  onChange,
-  onCommit,
-  saving,
-  onMoveToBudget,
-  moving,
-}: Props) {
-  const sum = (m: BudgetMap) => MAIN_CATEGORIES.reduce((s, c) => s + (m[c] ?? 0), 0);
-  const total = sum(draft);
+/**
+ * One line per category: the plan as a bar, with ticks where the 2026 average
+ * and last month sit, so a figure that's out of line stands out before it's typed.
+ */
+export default function PlannerBudgetTable({ draft, lastMonth, lastMonthName, avg2026, onChange, onCommit }: Props) {
+  const scale = Math.max(
+    1,
+    ...MAIN_CATEGORIES.flatMap((c) => [draft[c] ?? 0, lastMonth[c] ?? 0, avg2026[c] ?? 0]),
+  );
+  const pct = (v: number) => `${Math.min(100, (v / scale) * 100)}%`;
 
   return (
-    <Card className="p-0 overflow-hidden max-md:!p-0">
-      <div className="flex items-center justify-between bg-teal-600 dark:bg-teal-900 px-4 py-3 sm:px-6 sm:py-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-bold text-white">Planned Budget</h2>
-          {saving && (
-            <span className="flex items-center gap-1 text-xs text-teal-200">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-              Saving…
-            </span>
-          )}
+    <section className="min-w-0">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-extrabold tracking-tight">The plan</h2>
+          <p className="text-xs text-gray-400">Saves as you go</p>
         </div>
-        <button
-          onClick={onMoveToBudget}
-          disabled={moving}
-          className="flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/25 disabled:opacity-60"
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-            <path fillRule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v8.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3.75A.75.75 0 0 1 10 3Z" clipRule="evenodd" />
-          </svg>
-          Move to Budget
-        </button>
-      </div>
-      <div className="hidden overflow-x-auto md:block">
-      <table className="w-full min-w-[520px] text-sm">
-        <thead>
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Category</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">2026 Avg</th>
-            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{lastMonthLabel}</th>
-            <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-300">{planLabel}</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-          {MAIN_CATEGORIES.map((cat) => {
-            const planned = draft[cat] ?? 0;
-            return (
-              <tr key={cat} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-300">{cat}</td>
-                <td className="px-4 py-3 text-center text-gray-400 dark:text-gray-500">{gbp(avg2026[cat] ?? 0)}</td>
-                <td className="px-4 py-3 text-center text-gray-400 dark:text-gray-500">{gbp(lastMonth[cat] ?? 0)}</td>
-                <td className="px-6 py-3 text-center">
-                  <CurrencyInput
-                    value={planned}
-                    onLiveChange={(n) => onChange(cat, n)}
-                    onCommit={(n) => onCommit(cat, n ?? 0)}
-                    className="w-28 rounded-lg border border-gray-200 bg-transparent px-2 py-1.5 text-center font-semibold text-gray-900 focus:border-teal-400 focus:outline-none dark:border-gray-700 dark:text-white dark:focus:border-teal-500"
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="border-t-2 border-gray-200 font-bold dark:border-gray-700">
-            <td className="px-6 py-3 text-left text-gray-700 dark:text-gray-200">Total</td>
-            <td className="px-4 py-3 text-center text-gray-400 dark:text-gray-500">{gbp(sum(avg2026))}</td>
-            <td className="px-4 py-3 text-center text-gray-400 dark:text-gray-500">{gbp(sum(lastMonth))}</td>
-            <td className="px-6 py-3 text-center text-teal-700 dark:text-teal-300">{gbp(total)}</td>
-          </tr>
-        </tfoot>
-      </table>
+        <div className="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-4 rounded-full bg-gradient-to-r from-rose-500 to-fuchsia-600" /> Plan
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-0.5 rounded bg-gray-400" /> 2026 avg
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-3 w-0.5 rounded bg-sky-400" /> {lastMonthName}
+          </span>
+        </div>
       </div>
 
-      {/* Mobile cards */}
-      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+      <ul className="overflow-hidden rounded-3xl bg-white ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">
         {MAIN_CATEGORIES.map((cat) => {
           const planned = draft[cat] ?? 0;
+          const avg = avg2026[cat] ?? 0;
+          const last = lastMonth[cat] ?? 0;
           return (
-            <li key={cat} className="flex items-center justify-between gap-2 px-4 py-2.5">
-              <div className="min-w-0">
-                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{cat}</span>
-                <div className="mt-1.5 flex text-xs text-gray-400 dark:text-gray-500">
-                  <span className="flex w-28 items-center gap-1.5"><span>Average</span><span className="tabular-nums text-gray-500 dark:text-gray-400">{gbp(avg2026[cat] ?? 0)}</span></span>
-                  <span className="flex items-center gap-1.5"><span>{lastMonthName}</span><span className="tabular-nums text-gray-500 dark:text-gray-400">{gbp(lastMonth[cat] ?? 0)}</span></span>
+            <li key={cat} className="flex items-center gap-3 border-b border-gray-50 px-4 py-3 last:border-0 dark:border-gray-800/60 sm:gap-4 sm:px-5">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-sm font-semibold">{cat}</span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-gray-400">
+                    avg {gbp(avg)} · <span className="text-sky-500 dark:text-sky-400">{lastMonthName.slice(0, 3)} {gbp(last)}</span>
+                  </span>
+                </div>
+                <div className="relative mt-2 h-2 rounded-full bg-gray-100 dark:bg-gray-800">
+                  <div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-fuchsia-600 transition-[width] duration-300" style={{ width: pct(planned) }} />
+                  {avg > 0 && <span className="absolute -top-1 h-4 w-0.5 -translate-x-1/2 rounded bg-gray-400 dark:bg-gray-500" style={{ left: pct(avg) }} />}
+                  {last > 0 && <span className="absolute -top-1 h-4 w-0.5 -translate-x-1/2 rounded bg-sky-400" style={{ left: pct(last) }} />}
                 </div>
               </div>
               <CurrencyInput
                 value={planned}
                 onLiveChange={(n) => onChange(cat, n)}
                 onCommit={(n) => onCommit(cat, n ?? 0)}
-                className="w-24 shrink-0 rounded-lg border border-gray-200 bg-transparent px-2 py-1 text-center text-sm font-semibold text-gray-900 focus:border-teal-400 focus:outline-none dark:border-gray-700 dark:text-white dark:focus:border-teal-500"
+                className="w-24 shrink-0 rounded-xl border border-gray-200 bg-transparent px-2 py-1.5 text-center font-bold tabular-nums text-gray-900 focus:border-fuchsia-400 focus:outline-none dark:border-gray-700 dark:text-white dark:focus:border-fuchsia-500 sm:w-28"
               />
             </li>
           );
         })}
-        <li className="flex items-center justify-between border-t-2 border-gray-200 px-4 py-3 text-sm font-bold dark:border-gray-700">
-          <span className="text-gray-700 dark:text-gray-200">Total</span>
-          <span className="w-24 shrink-0 text-center text-teal-700 dark:text-teal-300">{gbp(total)}</span>
-        </li>
       </ul>
-    </Card>
+    </section>
   );
 }

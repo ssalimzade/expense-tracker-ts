@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
-import { Card } from "../common";
-import { formatMonthLabel } from "../../lib/format";
+import { useState, useEffect, useRef } from "react";
 
 interface BankHoliday {
   title: string;
@@ -29,15 +27,17 @@ async function loadBankHolidays(): Promise<BankHoliday[]> {
   }
 }
 
-const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DOW_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 interface Props {
   month: string;
   daysOff: Set<number>;
   onToggleDay: (day: number) => void;
+  /** Working days and weekday bank holidays, once the holidays are known. */
+  onStats?: (s: { workingDays: number; bankHolidays: number }) => void;
 }
 
-export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) {
+export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }: Props) {
   const [holTitles, setHolTitles] = useState<Record<string, string>>({});
   const [holDates, setHolDates] = useState<Set<string>>(new Set());
 
@@ -76,117 +76,77 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay }: Props) 
     if (!isWeekend && !isBankHol && !isDayOff) workingDays++;
   }
 
+  const statsRef = useRef(onStats);
+  statsRef.current = onStats;
+  useEffect(() => {
+    statsRef.current?.({ workingDays, bankHolidays: bankHolCount });
+  }, [workingDays, bankHolCount]);
+
+  const holidays = Object.entries(holTitles).sort(([a], [b]) => a.localeCompare(b));
+
   return (
-    <Card className="max-md:!p-2.5">
-      <div className="space-y-4 max-md:space-y-2.5">
-        {/* Header: month name + stats */}
-        <div className="flex flex-wrap items-center justify-between gap-3 max-md:gap-1.5">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 max-md:text-base">{formatMonthLabel(month)}</h2>
-          <div className="flex gap-2 text-xs">
-            <span className="rounded-md bg-teal-50 px-2.5 py-1 font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300">
-              {daysOff.size} days off
-            </span>
-            <span className="rounded-md bg-amber-50 px-2.5 py-1 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-              {bankHolCount} bank holidays
-            </span>
-            <span className="rounded-md bg-indigo-50 px-2.5 py-1 font-medium text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
-              {workingDays} working days
-            </span>
-          </div>
-        </div>
-
-        {/* Calendar grid */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
-          {/* Weekday header */}
-          <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/60">
-            {DOW_LABELS.map((d, i) => (
-              <div
-                key={d}
-                className={`py-2 text-center text-xs font-semibold uppercase tracking-wider max-md:py-1 max-md:text-[10px] ${
-                  i >= 5 ? "text-gray-300 dark:text-gray-600" : "text-gray-500 dark:text-gray-400"
-                }`}
-              >
-                {d}
-              </div>
-            ))}
-          </div>
-          {/* Day cells */}
-          <div className="grid grid-cols-7">
-            {cells.map((day, idx) => {
-              if (!day)
-                return (
-                  <div
-                    key={`e${idx}`}
-                    className="min-h-[36px] sm:min-h-[78px] border-b border-r border-gray-100 bg-gray-50/40 last:border-r-0 dark:border-gray-800 dark:bg-gray-900/40"
-                  />
-                );
-              const dow = (new Date(year, monthNum - 1, day).getDay() + 6) % 7;
-              const isWeekend = dow >= 5;
-              const dateStr = `${month}-${String(day).padStart(2, "0")}`;
-              const isBankHol = holDates.has(dateStr);
-              const isDayOff = daysOff.has(day);
-              const isToday = dateStr === todayStr;
-              const clickable = !isWeekend && !isBankHol;
-
-              let cellBg = "bg-white dark:bg-gray-900 ";
-              if (isDayOff) cellBg = "bg-teal-500 dark:bg-teal-600 ";
-              else if (isBankHol) cellBg = "bg-amber-50 dark:bg-amber-950/50 ";
-              else if (isWeekend) cellBg = "bg-gray-50 dark:bg-gray-800/40 ";
-
-              return (
-                <div
-                  key={day}
-                  onClick={() => clickable && onToggleDay(day)}
-                  title={isBankHol ? holTitles[dateStr] : undefined}
-                  className={`relative min-h-[36px] sm:min-h-[78px] border-b border-r border-gray-100 p-1 transition-colors last:border-r-0 max-md:p-0.5 sm:p-1.5 dark:border-gray-800 ${cellBg} ${
-                    clickable ? "cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/40" : "cursor-default"
-                  } ${isDayOff && clickable ? "hover:bg-teal-600 dark:hover:bg-teal-700" : ""}`}
-                >
-                  <span
-                    className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-medium max-md:h-5 max-md:w-5 max-md:text-xs ${
-                      isToday ? "bg-indigo-600 text-white" : ""
-                    } ${
-                      isDayOff
-                        ? "text-white"
-                        : isWeekend
-                          ? "text-gray-300 dark:text-gray-600"
-                          : "text-gray-700 dark:text-gray-200"
-                    }`}
-                  >
-                    {day}
-                  </span>
-                  {isBankHol && (
-                    <span className="mt-0.5 block truncate text-[10px] font-medium leading-tight text-amber-700 dark:text-amber-400">
-                      {holTitles[dateStr]}
-                    </span>
-                  )}
-                  {isDayOff && (
-                    <span className="mt-0.5 block text-[10px] font-semibold leading-tight text-teal-50">
-                      Day off
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-          <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-teal-500" />
-            Day off (click a weekday to toggle)
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-amber-100 dark:bg-amber-900" />
-            Bank holiday
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-gray-100 dark:bg-gray-800" />
-            Weekend
-          </span>
-        </div>
+    <div className="rounded-3xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800 sm:p-5">
+      <div className="flex items-baseline justify-between">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Days off</p>
+        <p className="text-[11px] text-gray-400">Tap a weekday</p>
       </div>
-    </Card>
+
+      <div className="mt-3 grid grid-cols-7 gap-1">
+        {DOW_LABELS.map((d, i) => (
+          <div
+            key={i}
+            className={`pb-1 text-center text-[10px] font-bold ${i >= 5 ? "text-gray-300 dark:text-gray-600" : "text-gray-400"}`}
+          >
+            {d}
+          </div>
+        ))}
+        {cells.map((day, idx) => {
+          if (!day) return <div key={`e${idx}`} />;
+          const dow = (new Date(year, monthNum - 1, day).getDay() + 6) % 7;
+          const isWeekend = dow >= 5;
+          const dateStr = `${month}-${String(day).padStart(2, "0")}`;
+          const isBankHol = holDates.has(dateStr);
+          const isDayOff = daysOff.has(day);
+          const isToday = dateStr === todayStr;
+          const clickable = !isWeekend && !isBankHol;
+
+          let tile = "bg-gray-50 text-gray-700 hover:bg-fuchsia-50 hover:text-fuchsia-700 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-fuchsia-500/15 dark:hover:text-fuchsia-200";
+          if (isDayOff) tile = "bg-gradient-to-br from-rose-500 to-fuchsia-600 text-white shadow-sm shadow-fuchsia-500/30";
+          else if (isBankHol) tile = "bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300";
+          else if (isWeekend) tile = "text-gray-300 dark:text-gray-600";
+
+          return (
+            <button
+              key={day}
+              type="button"
+              disabled={!clickable}
+              onClick={() => onToggleDay(day)}
+              title={isBankHol ? holTitles[dateStr] : isDayOff ? "Day off — tap to undo" : undefined}
+              aria-pressed={clickable ? isDayOff : undefined}
+              className={`relative flex aspect-square items-center justify-center rounded-xl text-sm font-semibold tabular-nums transition disabled:cursor-default ${tile} ${
+                isToday ? "ring-2 ring-fuchsia-400 ring-offset-1 ring-offset-white dark:ring-offset-gray-900" : ""
+              }`}
+            >
+              {day}
+              {isBankHol && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-amber-500" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {holidays.length > 0 && (
+        <ul className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-xs dark:border-gray-800">
+          {holidays.map(([date, title]) => (
+            <li key={date} className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              <span className="w-12 tabular-nums text-gray-400">
+                {new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+              </span>
+              <span className="text-gray-600 dark:text-gray-300">{title}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

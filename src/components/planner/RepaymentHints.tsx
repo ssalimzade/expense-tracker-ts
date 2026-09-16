@@ -1,7 +1,7 @@
 import { useRepayments } from "../../hooks/useRepayments";
 import { filterActiveRepayments, pivot } from "../../lib/repayments";
 import { gbp0 as gbp } from "../../lib/format";
-import { Card, QueryState } from "../common";
+import { QueryState } from "../common";
 
 interface Props {
   month: string; // YYYY-MM being planned
@@ -13,12 +13,8 @@ export default function RepaymentHints({ month, onApply }: Props) {
   const repaymentsQuery = useRepayments();
 
   return (
-    <Card className="overflow-hidden max-md:!p-0">
-      <div className="mb-3 max-md:px-4 max-md:pt-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          Repayments due
-        </h2>
-      </div>
+    <div className="rounded-3xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800 sm:p-5">
+      <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Flex repayments due</p>
       <QueryState isLoading={repaymentsQuery.isLoading} error={repaymentsQuery.error}>
         {(() => {
           // Mirror the Repayments tab exactly: filter to the month, pivot by
@@ -41,38 +37,37 @@ export default function RepaymentHints({ month, onApply }: Props) {
           }
 
           return (
-            <div className="space-y-1.5 max-md:px-4 max-md:pb-4">
-              <p className="text-[11px] leading-tight text-gray-400 dark:text-gray-500">
-                From your Flex splits scheduled this month. Click a row to add it to that
-                category's planned budget.
+            <div className="space-y-1.5">
+              <p className="pb-1 text-[11px] leading-snug text-gray-400 dark:text-gray-500">
+                Tap one to add it to that category's plan.
               </p>
               {rows.map((r) => (
                 <button
                   key={r.category}
                   onClick={() => onApply(r.category, r.amount)}
-                  className="group flex w-full items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-left transition-colors hover:border-indigo-200 hover:bg-indigo-50 dark:border-gray-800 dark:bg-gray-800/50 dark:hover:border-indigo-800 dark:hover:bg-indigo-950"
+                  className="group flex w-full items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-left transition-colors hover:bg-fuchsia-50 dark:bg-gray-800/50 dark:hover:bg-fuchsia-500/10"
                 >
-                  <span className="min-w-0 flex-1 truncate text-xs font-medium text-gray-700 dark:text-gray-200">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700 dark:text-gray-200">
                     {r.category}
                   </span>
-                  <span className="w-24 shrink-0 text-center text-xs font-semibold text-gray-900 dark:text-white">
+                  <span className="shrink-0 text-sm font-bold tabular-nums text-gray-900 dark:text-white">
                     {gbp(r.amount)}
                   </span>
-                  <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 opacity-0 transition-opacity group-hover:opacity-100 max-md:hidden dark:bg-indigo-900 dark:text-indigo-300">
-                    + add
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-fuchsia-600 shadow-sm transition group-hover:bg-fuchsia-600 group-hover:text-white dark:bg-gray-900 dark:text-fuchsia-300">
+                    +
                   </span>
                 </button>
               ))}
               <div className="flex items-center gap-2 border-t border-gray-100 px-3 pt-2.5 dark:border-gray-800">
                 <span className="flex-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Total</span>
-                <span className="w-24 shrink-0 text-center text-xs font-bold text-gray-900 dark:text-white">{gbp(total)}</span>
-                {/* invisible spacer matching the row "+ add" badge so totals align (desktop only) */}
-                <span className="invisible rounded px-1.5 py-0.5 text-[10px] font-medium max-md:hidden">+ add</span>
+                <span className="shrink-0 text-sm font-bold tabular-nums text-gray-900 dark:text-white">{gbp(total)}</span>
+                {/* spacer the width of the row "+" so totals line up */}
+                <span className="w-6 shrink-0" />
               </div>
             </div>
           );
         })()}
       </QueryState>
-    </Card>
+    </div>
   );
 }
