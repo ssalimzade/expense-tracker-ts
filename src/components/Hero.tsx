@@ -40,7 +40,7 @@ export default function Hero({
   aside?: ReactNode;
   /** Breakpoint where the aside moves beside the headline — `lg` hides it below that. */
   asideFrom?: "md" | "lg";
-  /** Faint background SVG. */
+  /** Corner icon from HeroArt, positioned with IN_COLUMN. */
   decoration?: ReactNode;
   children?: ReactNode;
 }) {
@@ -48,15 +48,16 @@ export default function Hero({
     <section
       className={`relative overflow-hidden rounded-3xl bg-gradient-to-br text-white shadow-lg shadow-black/5 dark:shadow-none ${gradient}`}
     >
-      {decoration}
       <div
         className={`relative grid gap-6 p-5 sm:p-7 ${
           !aside ? "" : asideFrom === "lg" ? "lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch" : "md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
         }`}
       >
-        <div className="min-w-0">
+        <div className="relative min-w-0">
+          {/* The icon lives in this column so it can't sit under an aside. */}
+          {decoration}
           {badge && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 ${decoration ? "pr-16 sm:pr-24" : ""}`}>
               <span className="inline-block rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
                 {badge}
               </span>

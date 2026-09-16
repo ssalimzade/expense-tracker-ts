@@ -105,11 +105,10 @@ export default function TripTicket({
         <path d="M-10 140 C 120 20, 260 20, 410 90" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 6" />
       </svg>
 
-      <PlaneArt className="-right-4 top-6 h-44 w-44 md:right-72 md:top-2 md:h-52 md:w-52" />
-
       <div className="relative flex flex-col md:flex-row">
         {/* Main part */}
-        <div className="flex-1 p-5 sm:p-7">
+        <div className="relative flex-1 p-5 sm:p-7">
+          <PlaneArt className="right-5 top-14 h-14 w-14 sm:right-7 sm:top-16 sm:h-20 sm:w-20" />
           <div className="flex items-start justify-between gap-3">
             <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
               {STATUS_LABEL[status]}

@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
 
 /**
- * The big faint line icon in the corner of a tab's gradient header. All share
- * one stroke style (like Rent's house) so they read as a set.
+ * The faint line icon in the corner of a tab's gradient header. All share one
+ * stroke style (like Rent's house) so they read as a set. It sits in the corner,
+ * never behind figures; a className replaces its position and size entirely.
  */
-function Art({ children, className = "" }: { children: ReactNode; className?: string }) {
+/** Default spot: a small icon tucked into the header's top-right padding corner. */
+const CORNER = "right-5 top-5 h-14 w-14 sm:right-7 sm:top-7 sm:h-20 sm:w-20";
+
+/** For a header column that is already inside the padding (see Hero). */
+export const IN_COLUMN = "right-0 top-0 h-14 w-14 sm:h-20 sm:w-20";
+
+function Art({ children, className = CORNER }: { children: ReactNode; className?: string }) {
   return (
     <svg
       viewBox="0 0 200 200"
@@ -13,7 +20,7 @@ function Art({ children, className = "" }: { children: ReactNode; className?: st
       strokeWidth="6"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`pointer-events-none absolute -right-6 -top-4 h-60 w-60 text-white/10 ${className}`}
+      className={`pointer-events-none absolute text-white/25 ${className || CORNER}`}
       aria-hidden
     >
       {children}

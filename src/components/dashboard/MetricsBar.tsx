@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { gbp0 as gbp, formatMonthLabel, toMonthKey } from "../../lib/format";
 import Hero, { HeroChip, HeroProgress } from "../Hero";
-import { WalletArt } from "../HeroArt";
+import { WalletArt, IN_COLUMN } from "../HeroArt";
 
 interface Props {
   totalBudget: number;
@@ -33,7 +33,7 @@ export default function MetricsBar({ totalBudget, totalSpent, month, aside }: Pr
       label="Spent so far"
       value={gbp(totalSpent)}
       decoration={
-        <WalletArt className={aside ? "lg:left-[36%] lg:right-auto" : ""} />
+        <WalletArt className={IN_COLUMN} />
       }
       under={
         <div className="max-w-xl space-y-1.5">

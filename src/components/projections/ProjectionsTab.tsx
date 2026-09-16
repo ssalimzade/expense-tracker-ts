@@ -21,7 +21,7 @@ const SECTIONS = [
   { value: "plan", label: "Monthly plan" },
   { value: "charts", label: "Charts" },
 ] as const;
-import { TrendArt } from "../HeroArt";
+import { TrendArt, IN_COLUMN } from "../HeroArt";
 
 const currentMonth = (() => {
   const d = new Date();
@@ -172,7 +172,7 @@ export default function ProjectionsTab() {
               label="Put aside this year"
               value={gbp0(totalAllocated)}
               decoration={
-                <TrendArt className="lg:left-[36%] lg:right-auto" />
+                <TrendArt className={IN_COLUMN} />
               }
               under={
                 <HeroChip>

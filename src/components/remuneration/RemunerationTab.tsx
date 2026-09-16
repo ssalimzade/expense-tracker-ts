@@ -6,7 +6,7 @@ import type { RemunerationRow } from "../../types/remuneration";
 import RemunerationTable from "./RemunerationTable";
 import { PayGrowthChart } from "./RemunerationCharts";
 import TakeHomeCalculator from "./TakeHomeCalculator";
-import { BanknotesArt } from "../HeroArt";
+import { BanknotesArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
@@ -82,10 +82,9 @@ function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: Remu
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 text-white shadow-lg shadow-teal-500/20 dark:from-emerald-700 dark:via-teal-800 dark:to-cyan-900 dark:shadow-none">
-      <BanknotesArt className="md:right-72" />
-
       <div className="relative grid gap-6 p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-        <div className="min-w-0">
+        <div className="relative min-w-0">
+          <BanknotesArt className={IN_COLUMN} />
           <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
             {current.period}
           </span>

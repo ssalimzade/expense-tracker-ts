@@ -7,8 +7,8 @@ import DailyRepaymentChart from "./DailyRepaymentChart";
 import SyntheticRepaymentsPanel from "./SyntheticRepaymentsPanel";
 import { filterActiveRepayments, pivot, visibleRepaymentMonths } from "../../lib/repayments";
 import { gbp0, formatMonthLabel } from "../../lib/format";
-import Hero, { HeroChip } from "../Hero";
-import { CardArt } from "../HeroArt";
+import Hero from "../Hero";
+import { CardArt, IN_COLUMN } from "../HeroArt";
 import type { Repayment } from "../../types/repayment";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
@@ -57,6 +57,8 @@ export default function RepaymentsTab() {
         const grand = totals.reduce((t, x) => t + x.total, 0);
         const peak = Math.max(1, ...totals.map((x) => x.total));
         const monthName = (m: string) => formatMonthLabel(m).split(" ")[0];
+        const next = totals.find((x) => x.total > 0);
+        const busiest = totals.reduce((a, b) => (b.total > a.total ? b : a), totals[0]);
 
         return (
           <div className="mx-auto max-w-7xl space-y-5">
@@ -64,13 +66,15 @@ export default function RepaymentsTab() {
               gradient="from-[#8c7c68] via-[#6b5d4d] to-[#3f362e]"
               badge={`${formatMonthLabel(months[0])} – ${formatMonthLabel(months[months.length - 1])}`}
               label="Flex still to repay"
-              decoration={<CardArt className="md:right-80" />}
+              decoration={<CardArt className={IN_COLUMN} />}
               value={gbp0(grand)}
-              under={
-                <HeroChip>
-                  {active.length} active repayment{active.length === 1 ? "" : "s"}
-                </HeroChip>
-              }
+              fields={[
+                next
+                  ? { label: "Next payment", value: gbp0(next.total), sub: `due 1 ${monthName(next.month)}` }
+                  : { label: "Next payment", value: "—", sub: "nothing due" },
+                { label: "Busiest month", value: gbp0(busiest.total), sub: monthName(busiest.month) },
+                { label: "Purchases", value: String(active.length), sub: "still being repaid" },
+              ]}
               aside={
                 <div className="flex h-28 items-end gap-3">
                   {totals.map((x) => (

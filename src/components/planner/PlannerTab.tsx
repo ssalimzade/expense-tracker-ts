@@ -155,7 +155,7 @@ export default function PlannerTab() {
           <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6d82a6] via-[#51658a] to-[#333f5c] text-white shadow-lg shadow-black/10 dark:shadow-none">
             <CalendarArt />
             <div className="relative p-5 sm:p-7">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 pr-16 sm:pr-24">
                 <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
                   Planning {formatMonthLabel(planMonth)}
                 </span>

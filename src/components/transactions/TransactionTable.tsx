@@ -184,12 +184,12 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
           </thead>
           {days.map((day) => (
           <tbody key={day.key} className="divide-y divide-gray-50 dark:divide-gray-800/60">
-            <tr className="bg-gray-50/80 dark:bg-gray-800/30">
-              <td colSpan={8} className="px-6 py-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{day.label}</span>
-                  <span className="font-semibold tabular-nums text-gray-500 dark:text-gray-400">{dayTotal(day.net)}</span>
-                </div>
+            <tr className="bg-gray-50/80 text-xs dark:bg-gray-800/30">
+              <td colSpan={6} className="px-6 py-2 font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {day.label}
+              </td>
+              <td colSpan={2} className="py-2 pl-0 pr-6 text-left font-semibold tabular-nums text-gray-500 dark:text-gray-400">
+                <span className="inline-block w-[88px] whitespace-nowrap text-center">{dayTotal(day.net)}</span>
               </td>
             </tr>
             {day.rows.map((t) => (

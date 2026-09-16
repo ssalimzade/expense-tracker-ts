@@ -19,7 +19,7 @@ const SECTIONS = [
 ] as const;
 import { useIsMobile } from "../../hooks/useIsMobile";
 import Hero, { HeroProgress } from "../Hero";
-import { RewindClockArt } from "../HeroArt";
+import { RewindClockArt, IN_COLUMN } from "../HeroArt";
 
 // "2026-06" → "Jun '26" for chart axes (month name + short year across years).
 const monthTick = (m: string) => {
@@ -102,7 +102,7 @@ export default function HistoryTab() {
           label="Spent"
           value={archiveQuery.isSuccess ? gbp(totalSpent) : "—"}
           decoration={
-            <RewindClockArt />
+            <RewindClockArt className={IN_COLUMN} />
           }
           under={
             archiveQuery.isSuccess && (

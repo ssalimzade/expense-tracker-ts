@@ -37,19 +37,19 @@ export default function CategoryBreakdownTable({
     <div className="hidden overflow-x-auto md:block">
       <table className="w-full min-w-[640px] text-sm">
         <colgroup>
-          <col className="w-[18%]" />
+          <col className="w-[20%]" />
+          <col className="w-[15%]" />
+          <col className="w-[15%]" />
+          <col className="w-[15%]" />
           <col />
-          <col className="w-36" />
-          <col className="w-36" />
-          <col className="w-40" />
         </colgroup>
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
             <th className={`${th} pl-6 text-left`}>Category</th>
-            <th className={`${th} pl-4 text-left`}>Used</th>
             <th className={`${th} pl-4 text-right`}>Budget</th>
             <th className={`${th} pl-4 text-right`}>Spent</th>
-            <th className={`${th} pl-4 pr-6 text-right`}>Remaining</th>
+            <th className={`${th} pl-4 text-right`}>Remaining</th>
+            <th className={`${th} pl-10 pr-6 text-left`}>Used</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
@@ -59,7 +59,12 @@ export default function CategoryBreakdownTable({
             return (
               <tr key={row.category} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                 <td className="py-3 pl-6 font-medium text-gray-800 dark:text-gray-100">{row.category}</td>
-                <td className="py-3 pl-4">
+                <td className={`${num} text-gray-900 dark:text-white`}>
+                  {renderBudget ? renderBudget(row) : gbp(row.budget)}
+                </td>
+                <td className={`${num} text-gray-600 dark:text-gray-300`}>{gbp(row.spent)}</td>
+                <td className={`${num} font-semibold ${remainingClass(remaining)}`}>{gbp(remaining)}</td>
+                <td className="py-3 pl-10 pr-6">
                   <div className="flex items-center gap-3">
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                       <div
@@ -72,11 +77,6 @@ export default function CategoryBreakdownTable({
                     </span>
                   </div>
                 </td>
-                <td className={`${num} text-gray-900 dark:text-white`}>
-                  {renderBudget ? renderBudget(row) : gbp(row.budget)}
-                </td>
-                <td className={`${num} text-gray-600 dark:text-gray-300`}>{gbp(row.spent)}</td>
-                <td className={`${num} pr-6 font-semibold ${remainingClass(remaining)}`}>{gbp(remaining)}</td>
               </tr>
             );
           })}
@@ -85,7 +85,12 @@ export default function CategoryBreakdownTable({
           <tfoot>
             <tr className="border-t-2 border-gray-200 dark:border-gray-700">
               <td className="py-3 pl-6 text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">Total</td>
-              <td className="py-3 pl-4">
+              <td className={`${num} font-bold text-gray-900 dark:text-white`}>{gbp(totals.budget)}</td>
+              <td className={`${num} font-bold text-gray-900 dark:text-white`}>{gbp(totals.spent)}</td>
+              <td className={`${num} font-bold ${remainingClass(totals.budget - totals.spent)}`}>
+                {gbp(totals.budget - totals.spent)}
+              </td>
+              <td className="py-3 pl-10 pr-6">
                 <div className="flex items-center gap-3">
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                     <div
@@ -97,11 +102,6 @@ export default function CategoryBreakdownTable({
                     {usedPct(totals.budget, totals.spent) >= 999 ? "—" : `${usedPct(totals.budget, totals.spent).toFixed(0)}%`}
                   </span>
                 </div>
-              </td>
-              <td className={`${num} font-bold text-gray-900 dark:text-white`}>{gbp(totals.budget)}</td>
-              <td className={`${num} font-bold text-gray-900 dark:text-white`}>{gbp(totals.spent)}</td>
-              <td className={`${num} pr-6 font-bold ${remainingClass(totals.budget - totals.spent)}`}>
-                {gbp(totals.budget - totals.spent)}
               </td>
             </tr>
           </tfoot>

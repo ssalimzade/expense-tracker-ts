@@ -12,7 +12,7 @@ import RentTable from "./RentTable";
 import RentPots from "./RentPots";
 import { potViews, potsTotal } from "../../lib/pots";
 import { CostBreakdownChart, PaidProgressChart } from "./RentCharts";
-import { HouseArt } from "../HeroArt";
+import { HouseArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
@@ -91,7 +91,7 @@ export default function RentTab({ onOpenTransactions }: Props) {
               label="Rent & bills so far"
               value={gbp0(costYtd)}
               decoration={
-                <HouseArt />
+                <HouseArt className={IN_COLUMN} />
               }
               under={
                 <HeroChip>
