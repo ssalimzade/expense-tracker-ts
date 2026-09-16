@@ -28,7 +28,7 @@ import PaymentStrip from "./PaymentStrip";
 const TRIP_STORAGE_KEY = "travel-trip";
 const VIEW_STORAGE_KEY = "travel-view";
 const DISPLAY_STORAGE_KEY = "travel-display";
-type View = "journal" | "plan";
+type View = "journal" | "plan" | "summary";
 
 const shortRange = (t: Trip) => {
   if (!t.start_date) return "No dates";
@@ -53,9 +53,10 @@ export default function TravelTab() {
   const [tripEditor, setTripEditor] = useState<{ trip?: Trip } | null>(null);
   const [expenseEditor, setExpenseEditor] = useState<ExpenseEditor>(null);
   const [linking, setLinking] = useState(false);
-  const [view, setView] = useState<View>(() =>
-    localStorage.getItem(VIEW_STORAGE_KEY) === "plan" ? "plan" : "journal",
-  );
+  const [view, setView] = useState<View>(() => {
+    const v = localStorage.getItem(VIEW_STORAGE_KEY);
+    return v === "plan" || v === "summary" ? v : "journal";
+  });
   const [displayPref, setDisplayPref] = useState(() => localStorage.getItem(DISPLAY_STORAGE_KEY) ?? "GBP");
   const changeDisplay = (code: string) => {
     setDisplayPref(code);
@@ -146,6 +147,13 @@ export default function TravelTab() {
     toast.success(`Linked ${linked.length} transaction${linked.length === 1 ? "" : "s"}`);
   };
 
+  const strips = trip && summary && (
+    <>
+      <CategoryStrip summary={summary} money={money} />
+      <PaymentStrip trip={trip} expenses={expenses} summary={summary} repayments={repayments.data} money={money} />
+    </>
+  );
+
   return (
     <QueryState isLoading={travel.isLoading} error={travel.error}>
       <div className="mx-auto max-w-6xl space-y-5">
@@ -179,46 +187,47 @@ export default function TravelTab() {
               />
 
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-                <aside className="space-y-4 lg:sticky lg:top-5 lg:order-last lg:self-start">
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setExpenseEditor({})}
-                      className="flex items-center justify-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
-                    >
-                      <span className="text-lg leading-none">+</span> Expense
-                    </button>
-                    <button
-                      onClick={() => setLinking(true)}
-                      className="flex items-center justify-center gap-1.5 rounded-2xl bg-white px-3 py-3 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 transition hover:ring-sky-300 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-700"
-                    >
-                      <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-sky-500">
-                        <path d="M8 1 1.5 4.5V6h13V4.5L8 1ZM2.5 7v5h2V7h-2Zm4.5 0v5h2V7H7Zm4.5 0v5h2V7h-2ZM1.5 13v2h13v-2h-13Z" />
-                      </svg>
-                      From bank
-                    </button>
-                  </div>
-                  <CategoryStrip summary={summary} money={money} />
-                  <PaymentStrip trip={trip} expenses={expenses} summary={summary} repayments={repayments.data} money={money} />
+                {/* Desktop sidebar; on phones these live under the Summary tab instead */}
+                <aside className="hidden space-y-4 lg:sticky lg:top-5 lg:order-last lg:block lg:self-start">
+                  <ActionButtons onAdd={() => setExpenseEditor({})} onLink={() => setLinking(true)} />
+                  {strips}
                 </aside>
 
                 <div className="min-w-0 space-y-4">
-                  <div className="flex w-fit gap-1 rounded-2xl bg-gray-100 p-1 dark:bg-gray-800/70">
-                    {(["journal", "plan"] as const).map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => changeView(v)}
-                        className={`rounded-xl px-4 py-1.5 text-sm font-semibold capitalize transition ${
-                          view === v
-                            ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
-                            : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
+                  <div className="lg:hidden">
+                    <ActionButtons onAdd={() => setExpenseEditor({})} onLink={() => setLinking(true)} />
+                  </div>
+                  <div className="flex w-full gap-1 rounded-2xl bg-gray-100 p-1 dark:bg-gray-800/70 lg:w-fit">
+                    {(["journal", "plan", "summary"] as const).map((v) => {
+                      const active = view === v;
+                      // On wide screens Summary isn't a tab, so Journal stands in for it.
+                      const activeWide = active || (v === "journal" && view === "summary");
+                      return (
+                        <button
+                          key={v}
+                          onClick={() => changeView(v)}
+                          className={`flex-1 rounded-xl px-4 py-1.5 text-sm font-semibold capitalize transition lg:flex-none ${
+                            v === "summary" ? "lg:hidden" : ""
+                          } ${
+                            active
+                              ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+                              : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                          } ${
+                            activeWide && !active
+                              ? "lg:bg-white lg:text-gray-900 lg:shadow-sm lg:dark:bg-gray-700 lg:dark:text-white"
+                              : ""
+                          }`}
+                        >
+                          {v}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {view === "journal" ? (
+                  {view === "summary" && <div className="space-y-4 lg:hidden">{strips}</div>}
+                  {view !== "plan" ? (
+                    // Summary is phone-only; wider screens show the journal in its place.
+                    <div className={view === "summary" ? "hidden lg:block" : ""}>
                     <Itinerary
                       trip={trip}
                       expenses={expenses}
@@ -227,6 +236,7 @@ export default function TravelTab() {
                       onEdit={(expense) => setExpenseEditor({ expense })}
                       onDelete={onDeleteExpense}
                     />
+                    </div>
                   ) : (
                     <TripPlan
                       // Per trip: its unsaved per-day choices mustn't follow you to another trip.
@@ -275,6 +285,28 @@ export default function TravelTab() {
         />
       )}
     </QueryState>
+  );
+}
+
+function ActionButtons({ onAdd, onLink }: { onAdd: () => void; onLink: () => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <button
+        onClick={onAdd}
+        className="flex items-center justify-center gap-1.5 rounded-2xl bg-gray-900 px-3 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+      >
+        <span className="text-lg leading-none">+</span> Expense
+      </button>
+      <button
+        onClick={onLink}
+        className="flex items-center justify-center gap-1.5 rounded-2xl bg-white px-3 py-3 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 transition hover:ring-sky-300 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-700"
+      >
+        <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-sky-500">
+          <path d="M8 1 1.5 4.5V6h13V4.5L8 1ZM2.5 7v5h2V7h-2Zm4.5 0v5h2V7H7Zm4.5 0v5h2V7h-2ZM1.5 13v2h13v-2h-13Z" />
+        </svg>
+        From bank
+      </button>
+    </div>
   );
 }
 

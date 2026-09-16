@@ -96,12 +96,12 @@ export default function Itinerary({
   return (
     <ol className="relative">
       {/* The timeline spine */}
-      <span className="absolute bottom-4 left-[1.375rem] top-4 w-px bg-gradient-to-b from-sky-300 via-indigo-200 to-transparent dark:from-sky-700 dark:via-indigo-900" aria-hidden />
+      <span className="absolute bottom-4 left-[1.125rem] top-4 sm:left-[1.375rem] w-px bg-gradient-to-b from-sky-300 via-indigo-200 to-transparent dark:from-sky-700 dark:via-indigo-900" aria-hidden />
 
       {groups.map((g) => (
-        <li key={g.key} className="relative pb-6 pl-14 last:pb-0">
+        <li key={g.key} className="relative pb-6 pl-11 last:pb-0 sm:pl-14">
           <span
-            className={`absolute left-0 top-0 flex h-11 w-11 items-center justify-center rounded-2xl text-xs font-extrabold shadow-sm ${
+            className={`absolute left-0 top-0 flex h-9 w-9 items-center sm:h-11 sm:w-11 justify-center rounded-2xl text-xs font-extrabold shadow-sm ${
               g.isToday
                 ? "bg-gradient-to-br from-sky-500 to-indigo-500 text-white"
                 : "border border-gray-200 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
@@ -110,12 +110,12 @@ export default function Itinerary({
             {g.marker}
           </span>
 
-          <div className="flex min-h-[2.75rem] items-center gap-3">
+          <div className="flex min-h-[2.25rem] items-center gap-3 sm:min-h-[2.75rem]">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold">{g.title}</p>
               <div className="mt-1 flex items-center gap-2">
                 {/^\d{4}-/.test(g.key) && (
-                  <span className="h-1 w-24 overflow-hidden rounded-full bg-gray-200/70 dark:bg-gray-800">
+                  <span className="h-1 w-16 shrink-0 overflow-hidden sm:w-24 rounded-full bg-gray-200/70 dark:bg-gray-800">
                     <span
                       className="block h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-500"
                       style={{ width: `${(g.total / maxDay) * 100}%` }}
@@ -133,7 +133,7 @@ export default function Itinerary({
               <li
                 key={e.id}
                 onClick={() => onEdit(e)}
-                className="group flex cursor-pointer items-center gap-3 rounded-2xl bg-white px-3 py-2.5 ring-1 ring-gray-100 transition hover:-translate-y-px hover:shadow-md hover:ring-gray-200 dark:bg-gray-900 dark:ring-gray-800 dark:hover:ring-gray-700"
+                className="group flex cursor-pointer items-center gap-2.5 rounded-2xl bg-white px-2.5 py-2.5 sm:gap-3 sm:px-3 ring-1 ring-gray-100 transition hover:-translate-y-px hover:shadow-md hover:ring-gray-200 dark:bg-gray-900 dark:ring-gray-800 dark:hover:ring-gray-700"
               >
                 <span
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold text-white"
@@ -181,7 +181,7 @@ export default function Itinerary({
                   }}
                   title={e.tx_ref ? "Unlink transaction" : "Delete expense"}
                   aria-label={e.tx_ref ? "Unlink transaction" : "Delete expense"}
-                  className="shrink-0 rounded-lg p-1 text-gray-300 transition hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 dark:text-gray-600 dark:hover:bg-red-950/40"
+                  className="hidden shrink-0 rounded-lg p-1 text-gray-300 transition hover:bg-red-50 hover:text-red-500 md:block md:opacity-0 md:group-hover:opacity-100 dark:text-gray-600 dark:hover:bg-red-950/40"
                 >
                   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="h-3.5 w-3.5">
                     <path d="M4 4l8 8M12 4l-8 8" />

@@ -61,11 +61,11 @@ function DayDots({ trip }: { trip: Trip }) {
   );
 }
 
-function Field({ label, value, wrap = false }: { label: string; value: string; wrap?: boolean }) {
+function Field({ label, value, className = "" }: { label: string; value: React.ReactNode; className?: string }) {
   return (
-    <div className="min-w-0">
+    <div className={`min-w-0 ${className}`}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">{label}</p>
-      <p className={`mt-0.5 text-sm font-semibold ${wrap ? "" : "truncate"}`}>{value}</p>
+      <p className="mt-0.5 text-sm font-semibold">{value}</p>
     </div>
   );
 }
@@ -128,7 +128,7 @@ export default function TripTicket({
             </div>
           </div>
 
-          <h1 className="mt-4 break-words text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{trip.name}</h1>
+          <h1 className="mt-3 break-words text-3xl sm:mt-4 font-extrabold leading-tight tracking-tight sm:text-4xl">{trip.name}</h1>
           {trip.destination && (
             <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-white/80">
               <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -138,19 +138,31 @@ export default function TripTicket({
             </p>
           )}
 
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <Field label="Dates" value={formatTripDates(trip)} />
+          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 sm:mt-6 sm:grid-cols-3">
+            <Field label="Dates" value={<span className="block truncate">{formatTripDates(trip)}</span>} />
             <Field
               label="Day"
               value={!days ? "—" : status === "ongoing" ? `${elapsed} of ${days}` : `${days} day${days === 1 ? "" : "s"}`}
             />
             <Field
-              wrap
-              label="Exchange"
-              value={locals.length ? `£1 = ${locals.map((c) => `${c.rate} ${c.code}`).join(" · ")}` : "Pounds"}
+              className="col-span-2 sm:col-span-1"
+              label={locals.length ? "£1 buys" : "Exchange"}
+              value={
+                locals.length ? (
+                  <span className="flex flex-wrap gap-x-3">
+                    {locals.map((c) => (
+                      <span key={c.code} className="whitespace-nowrap tabular-nums">
+                        {c.rate} <span className="text-white/70">{c.code}</span>
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  "Pounds"
+                )
+              }
             />
           </div>
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4">
             <DayDots trip={trip} />
           </div>
         </div>
@@ -163,7 +175,7 @@ export default function TripTicket({
         </div>
 
         {/* Stub */}
-        <div className="flex items-center gap-4 p-5 sm:p-7 md:w-72 md:flex-col md:items-start md:justify-center">
+        <div className="flex items-end gap-4 p-5 sm:p-7 md:w-72 md:flex-col md:items-start md:justify-center">
           <div className="min-w-0 flex-1 md:flex-none">
             {viewCodes.length > 1 && (
               <div className="mb-3 flex w-fit gap-0.5 rounded-lg bg-white/15 p-0.5" role="group" aria-label="Show amounts in">
