@@ -8,6 +8,7 @@ import { rentShare } from "../../lib/rent";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { Card } from "../common";
 import ChartLegend from "../ChartLegend";
+import { HeroBarChart, HeroChartHeader } from "../HeroCharts";
 
 const mo = (m: string) => new Date(`${m}-01`).toLocaleString("en-GB", { month: "short" });
 const money = (v: number) => `£${v.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
@@ -26,18 +27,9 @@ const ITEM_COLORS: Record<string, string> = {
   hot_water: CHART.sand,
 };
 
-/** Stacked monthly bills (your share), rent aside. "hero" draws it for the gradient header. */
-export function CostBreakdownChart({
-  data,
-  months,
-  variant = "card",
-}: {
-  data: RentData;
-  months: string[];
-  variant?: "card" | "hero";
-}) {
+/** Stacked monthly bills (your share), rent aside. */
+export function CostBreakdownChart({ data, months }: { data: RentData; months: string[] }) {
   const isMobile = useIsMobile();
-  const hero = variant === "hero";
   const bills = data.items.filter((it) => it.key !== RENT_KEY);
   const rentItem = data.items.find((it) => it.key === RENT_KEY);
   const rows = months.map((m) => {
@@ -49,20 +41,20 @@ export function CostBreakdownChart({
   const rentPerMonth = rentItem && months.length
     ? months.reduce((s, m) => s + rentShare(data, m, RENT_KEY), 0) / months.length
     : 0;
-  const tickStyle = hero ? { fontSize: 11, fill: "rgba(255,255,255,0.65)" } : axisTick;
+  const tickStyle = axisTick;
   const legendItems = bills.map((it) => ({ label: it.label, color: ITEM_COLORS[it.key] ?? CHART.grey }));
 
   const chart = (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={rows} margin={{ top: 4, right: 4, bottom: 4, left: 0 }} barCategoryGap={isMobile ? "18%" : "24%"}>
-        <CartesianGrid vertical={false} stroke={hero ? "rgba(255,255,255,0.12)" : gridStroke} />
+        <CartesianGrid vertical={false} stroke={gridStroke} />
         <XAxis dataKey="month" tick={{ ...tickStyle, fontSize: isMobile ? 10 : 11 }} axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} />
         <YAxis tick={tickStyle} width={40} tickFormatter={tick} axisLine={false} tickLine={false} />
         <Tooltip
           formatter={(v: number) => money(v)}
           itemSorter={(item) => -(item.value as number)}
           contentStyle={tooltipStyle()} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle}
-          cursor={hero ? { fill: "rgba(255,255,255,0.08)" } : cursorStyle()}
+          cursor={cursorStyle()}
         />
         {bills.map((it, i) => (
           <Bar
@@ -77,21 +69,6 @@ export function CostBreakdownChart({
     </ResponsiveContainer>
   );
 
-  if (hero) {
-    return (
-      <div className="flex h-full flex-col justify-end">
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Bills each month</p>
-          {rentPerMonth > 0 && (
-            <span className="text-xs tabular-nums text-white/75">plus rent of about {gbp0(rentPerMonth)} a month</span>
-          )}
-        </div>
-        <ChartLegend className="mb-2 !text-white/75" items={legendItems} />
-        <div className="h-40 w-[26rem] xl:w-[32rem]">{chart}</div>
-      </div>
-    );
-  }
-
   return (
     <Card>
       <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -105,5 +82,32 @@ export function CostBreakdownChart({
       <ChartLegend className="mb-3" items={legendItems} />
       <div className="h-52 sm:h-56">{chart}</div>
     </Card>
+  );
+}
+
+/** The Rent header's minimal chart: bills (your share, rent left out) per month. */
+export function BillsHeroChart({ data, months, className }: { data: RentData; months: string[]; className?: string }) {
+  const bills = data.items.filter((it) => it.key !== RENT_KEY);
+  const rentPerMonth = months.length ? months.reduce((s, m) => s + rentShare(data, m, RENT_KEY), 0) / months.length : 0;
+  return (
+    <div>
+      <HeroChartHeader
+        title="Bills each month"
+        note={rentPerMonth > 0 ? `plus rent of about ${gbp0(rentPerMonth)} a month` : undefined}
+      />
+      <HeroBarChart
+        className={className}
+        valueLabel="Bills"
+        format={gbp0}
+        data={months.map((m) => {
+          const d = new Date(`${m}-01`);
+          return {
+            label: d.toLocaleString("en-GB", { month: "long" }),
+            title: d.toLocaleString("en-GB", { month: "long", year: "numeric" }),
+            value: bills.reduce((s, it) => s + rentShare(data, m, it.key), 0),
+          };
+        })}
+      />
+    </div>
   );
 }

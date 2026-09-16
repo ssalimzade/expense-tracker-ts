@@ -1,22 +1,55 @@
-import { useState } from "react";
+import { lazy, Suspense, useState, type ComponentType } from "react";
 import NavBar, { type TabKey } from "./components/layout/NavBar";
 import RequisitionBanner from "./components/layout/RequisitionBanner";
 import { toMonthKey } from "./lib/format";
 import DashboardTab from "./components/dashboard/DashboardTab";
-import TransactionsTab from "./components/transactions/TransactionsTab";
-import PlannerTab from "./components/planner/PlannerTab";
-import RepaymentsTab from "./components/repayments/RepaymentsTab";
-import SavingsTab from "./components/savings/SavingsTab";
-import ProjectionsTab from "./components/projections/ProjectionsTab";
-import RentTab from "./components/rent/RentTab";
-import RemunerationTab from "./components/remuneration/RemunerationTab";
-import HistoryTab from "./components/history/HistoryTab";
-import NotesTab from "./components/notes/NotesTab";
-import TravelTab from "./components/travel/TravelTab";
-import type { RentMatch } from "./types/rent";
 import { Toaster } from "./lib/toast";
 import { useAutoArchive } from "./hooks/useAutoArchive";
 import { useHiddenTransactions } from "./hooks/useHiddenTransactions";
+import type { RentMatch } from "./types/rent";
+
+// Budget opens first, so it ships with the app; every other tab loads when opened.
+// A page left open across a deploy asks for files that no longer exist, so a
+// failed load reloads once to pick up the new version instead of breaking.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lazyTab<T extends ComponentType<any>>(load: () => Promise<{ default: T }>) {
+  const flag = "tab-reloaded";
+  const storage = () => {
+    try {
+      return window.sessionStorage;
+    } catch {
+      return null;
+    }
+  };
+  return lazy(() =>
+    load().then(
+      (mod) => {
+        storage()?.removeItem(flag);
+        return mod;
+      },
+      (err) => {
+        const s = storage();
+        if (s && !s.getItem(flag)) {
+          s.setItem(flag, "1");
+          window.location.reload();
+          return new Promise<never>(() => {});
+        }
+        throw err;
+      },
+    ),
+  );
+}
+
+const TransactionsTab = lazyTab(() => import("./components/transactions/TransactionsTab"));
+const PlannerTab = lazyTab(() => import("./components/planner/PlannerTab"));
+const RepaymentsTab = lazyTab(() => import("./components/repayments/RepaymentsTab"));
+const SavingsTab = lazyTab(() => import("./components/savings/SavingsTab"));
+const ProjectionsTab = lazyTab(() => import("./components/projections/ProjectionsTab"));
+const RentTab = lazyTab(() => import("./components/rent/RentTab"));
+const RemunerationTab = lazyTab(() => import("./components/remuneration/RemunerationTab"));
+const HistoryTab = lazyTab(() => import("./components/history/HistoryTab"));
+const NotesTab = lazyTab(() => import("./components/notes/NotesTab"));
+const TravelTab = lazyTab(() => import("./components/travel/TravelTab"));
 
 const MONTH_TABS: TabKey[] = ["dashboard", "transactions"];
 
@@ -89,6 +122,13 @@ export default function App() {
       />
       <RequisitionBanner />
       <main className="flex-1 overflow-x-auto p-3 md:p-5 max-md:!pb-[calc(5rem_+_env(safe-area-inset-bottom))]">
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center p-12">
+              <div className="h-7 w-7 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            </div>
+          }
+        >
         {tab === "dashboard"    && <DashboardTab month={month} />}
         {tab === "transactions" && (
           <TransactionsTab
@@ -111,6 +151,7 @@ export default function App() {
         {tab === "history"     && <HistoryTab />}
         {tab === "notes"       && <NotesTab />}
         {tab === "travel"      && <TravelTab />}
+        </Suspense>
       </main>
       <Toaster />
     </div>

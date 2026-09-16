@@ -3,6 +3,7 @@ import { useSavings } from "../../hooks/useSavings";
 import { QueryState } from "../common";
 import SavingsTable from "./SavingsTable";
 import { SavingsGrowthChart } from "./SavingsCharts";
+import { HeroChartHeader, HeroLineChart } from "../HeroCharts";
 import { gbp0 } from "../../lib/format";
 import type { SavingsRow } from "../../types/savings";
 import { PiggyBankArt, IN_COLUMN } from "../HeroArt";
@@ -121,7 +122,28 @@ function VaultHero({ rows, year, showInvestments }: { rows: SavingsRow[]; year: 
         </div>
         </div>
         <div className="hidden border-dashed border-white/25 lg:block lg:border-l lg:pl-7">
-          <SavingsGrowthChart rows={rows} variant="hero" />
+          <div className="w-[26rem] xl:w-[32rem]">
+            <HeroChartHeader title="Balance through the year" note={`${gbp0(yearEnd)} by ${monthName(rows[rows.length - 1].start_date)}`} />
+            <HeroLineChart
+              className="h-32"
+              labelKey="label"
+              tipTitleKey="title"
+              format={gbp0}
+              series={[
+                { key: "actual", label: "Balance", kind: "area" },
+                { key: "future", label: "Expected", kind: "dashed" },
+              ]}
+              data={rows.map((r) => {
+                const key = r.start_date.slice(0, 7);
+                return {
+                  label: monthName(r.start_date),
+                  title: `${monthName(r.start_date)} ${year}`,
+                  actual: key <= currentKey ? r.ending_balance : null,
+                  future: key >= currentKey ? r.ending_balance : null,
+                };
+              })}
+            />
+          </div>
         </div>
       </div>
     </section>

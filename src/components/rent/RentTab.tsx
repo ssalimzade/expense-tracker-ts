@@ -11,7 +11,7 @@ import { rentIsPaid, rentShare } from "../../lib/rent";
 import RentTable from "./RentTable";
 import RentPots from "./RentPots";
 import { potViews, potsTotal } from "../../lib/pots";
-import { CostBreakdownChart } from "./RentCharts";
+import { BillsHeroChart, CostBreakdownChart } from "./RentCharts";
 import { HouseArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
@@ -98,7 +98,7 @@ export default function RentTab({ onOpenTransactions }: Props) {
                   {gbp0(costYtd / activeMonths)} a month on average, your share
                 </HeroChip>
               }
-              aside={<CostBreakdownChart data={data} months={months} variant="hero" />}
+              aside={<div className="w-[26rem] xl:w-[32rem]"><BillsHeroChart data={data} months={months} className="h-32" /></div>}
               asideFrom="lg"
               fields={[
                 {

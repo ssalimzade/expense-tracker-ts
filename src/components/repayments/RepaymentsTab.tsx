@@ -5,7 +5,7 @@ import RepaymentTable from "./RepaymentTable";
 import RepaymentPivot from "./RepaymentPivot";
 import DailyRepaymentChart from "./DailyRepaymentChart";
 import SyntheticRepaymentsPanel from "./SyntheticRepaymentsPanel";
-import { catColor, filterActiveRepayments, pivot, visibleRepaymentMonths } from "../../lib/repayments";
+import { filterActiveRepayments, pivot, visibleRepaymentMonths } from "../../lib/repayments";
 import { gbp0, formatMonthLabel } from "../../lib/format";
 import Hero from "../Hero";
 import { CardArt, IN_COLUMN } from "../HeroArt";
@@ -13,8 +13,8 @@ import type { Repayment } from "../../types/repayment";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
-  { value: "schedule", label: "Schedule" },
   { value: "due", label: "Due dates" },
+  { value: "schedule", label: "Schedule" },
   { value: "monzo", label: "Pushed to Monzo" },
 ] as const;
 
@@ -80,12 +80,6 @@ export default function RepaymentsTab() {
                   totals={totals}
                   peak={peak}
                   monthName={monthName}
-                  breakdown={(m) =>
-                    pivotRows
-                      .filter((r) => r.category !== "Uncategorized" && (r.values[m] ?? 0) > 0)
-                      .map((r) => ({ category: r.category, amount: r.values[m] ?? 0 }))
-                      .sort((a, b) => b.amount - a.amount)
-                  }
                 />
               }
             />
@@ -140,26 +134,23 @@ export default function RepaymentsTab() {
 }
 
 /**
- * The header's month bars. Hovering (or tapping) a bar shows what makes up that
- * month, by category, like the tooltips on the other tabs' charts.
+ * The header's month bars. Hovering (or tapping) a bar shows that month's total
+ * and when it's due.
  */
 function MonthBars({
   totals,
   peak,
   monthName,
-  breakdown,
 }: {
   totals: { month: string; total: number }[];
   peak: number;
   monthName: (m: string) => string;
-  breakdown: (m: string) => { category: string; amount: number }[];
 }) {
   const [active, setActive] = useState<string | null>(null);
   return (
     <div className="relative flex h-28 items-end gap-3" onMouseLeave={() => setActive(null)}>
       {totals.map((x, i) => {
         const on = active === x.month;
-        const parts = on ? breakdown(x.month) : [];
         return (
           <button
             key={x.month}
@@ -180,28 +171,12 @@ function MonthBars({
               <span
                 // Above the bar on phones; beside it on wider screens, where the
                 // header is too short to fit it above without clipping.
-                className={`absolute z-20 w-52 rounded-xl bg-gray-900/95 p-3 text-left text-xs text-gray-300 shadow-xl ring-1 ring-white/10 max-md:bottom-full max-md:mb-2 md:bottom-0 md:right-full md:mr-2 ${
+                className={`absolute z-20 w-max rounded-xl bg-gray-950/85 px-3 py-2 text-left backdrop-blur text-xs text-gray-300 shadow-xl ring-1 ring-white/10 max-md:bottom-full max-md:mb-2 md:bottom-0 md:right-full md:mr-2 ${
                   i >= totals.length - 2 ? "max-md:right-0" : "max-md:left-0"
                 }`}
               >
-                <span className="mb-1.5 block font-semibold text-gray-400">{formatMonthLabel(x.month)}</span>
-                {parts.length === 0 ? (
-                  <span className="block text-gray-400">Nothing due</span>
-                ) : (
-                  parts.map((p) => (
-                    <span key={p.category} className="flex items-center justify-between gap-3 py-0.5">
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: catColor(p.category) }} />
-                        {p.category}
-                      </span>
-                      <span className="tabular-nums">{gbp0(p.amount)}</span>
-                    </span>
-                  ))
-                )}
-                <span className="mt-1.5 flex justify-between border-t border-white/10 pt-1.5 font-bold text-white">
-                  <span>Total</span>
-                  <span className="tabular-nums">{gbp0(x.total)}</span>
-                </span>
+                <span className="block text-gray-400">Due 1 {formatMonthLabel(x.month)}</span>
+                <span className="block text-sm font-bold tabular-nums text-white">{gbp0(x.total)}</span>
               </span>
             )}
           </button>

@@ -11,11 +11,10 @@ const currentKey = (() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 })();
 
-export function SavingsGrowthChart({ rows, variant = "card" }: { rows: SavingsRow[]; variant?: "card" | "hero" }) {
+export function SavingsGrowthChart({ rows }: { rows: SavingsRow[] }) {
   const isMobile = useIsMobile();
-  const hero = variant === "hero";
-  const line = hero ? "#ffffff" : "#8fae73";
-  const tickStyle = hero ? { fontSize: 11, fill: "rgba(255,255,255,0.65)" } : axisTick;
+  const line = "#8fae73";
+  const tickStyle = axisTick;
   // Split the series: year-to-date (solid line + shade) and future (dashed, no
   // shade). The future series starts at the current month so the lines connect.
   const data = rows.map((r) => {
@@ -42,12 +41,12 @@ export function SavingsGrowthChart({ rows, variant = "card" }: { rows: SavingsRo
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={data} margin={{ top: 8, right: 18, bottom: 4, left: 0 }}>
         <defs>
-          <linearGradient id={`balanceGradient-${variant}`} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor={line} stopOpacity={0.2} />
             <stop offset="95%" stopColor={line} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke={hero ? "rgba(255,255,255,0.12)" : gridStroke} />
+        <CartesianGrid vertical={false} stroke={gridStroke} />
         <XAxis dataKey="month" tick={{ ...tickStyle, fontSize: isMobile ? 10 : 11 }} axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} />
         <YAxis
           tick={tickStyle}
@@ -64,14 +63,14 @@ export function SavingsGrowthChart({ rows, variant = "card" }: { rows: SavingsRo
           contentStyle={tooltipStyle()}
           itemStyle={tooltipItemStyle}
           labelStyle={tooltipLabelStyle}
-          cursor={hero ? { stroke: "rgba(255,255,255,0.35)" } : cursorStyle()}
+          cursor={cursorStyle()}
         />
         <Area
           type="monotone"
           dataKey="actual"
           stroke={line}
           strokeWidth={2.5}
-          fill={`url(#balanceGradient-${variant})`}
+          fill="url(#balanceGradient)"
           dot={{ r: 3, fill: line }}
           activeDot={{ r: 5 }}
           connectNulls={false}
@@ -89,22 +88,6 @@ export function SavingsGrowthChart({ rows, variant = "card" }: { rows: SavingsRo
       </ComposedChart>
     </ResponsiveContainer>
   );
-
-  if (hero) {
-    return (
-      <div className="flex h-full flex-col justify-end">
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Balance through the year</p>
-          {rows.length > 0 && (
-            <span className="text-xs font-semibold tabular-nums text-white/80">
-              {lastMonth} £{lastBalance.toLocaleString("en-GB", { maximumFractionDigits: 0 })}
-            </span>
-          )}
-        </div>
-        <div className="h-44 w-[26rem] xl:w-[32rem]">{chart}</div>
-      </div>
-    );
-  }
 
   return (
     <div className="rounded-3xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">

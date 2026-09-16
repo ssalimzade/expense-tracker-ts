@@ -158,8 +158,9 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
   }
 
   return (
-    <Card className="p-0 overflow-hidden max-md:!p-0">
-      <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:py-4 2xl:px-6">
+    // Phones drop the outer card: each repayment is its own box, like Savings.
+    <Card className="p-0 overflow-hidden max-md:!p-0 max-md:overflow-visible max-md:!bg-transparent max-md:!ring-0">
+      <div className="px-1 pb-3 md:border-b md:border-gray-100 md:px-4 md:py-4 md:dark:border-gray-800 2xl:px-6">
         <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
           Repayment Schedule
         </h2>
@@ -341,13 +342,18 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
       </div>
 
       {/* Mobile cards */}
-      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+      <ul className="space-y-2 md:hidden">
         {filtered.map((r) => {
           const total = Math.abs(r.amount);
           const left = leftToPay(r);
           const paidPct = total > 0 ? Math.min(100, Math.max(0, ((total - left) / total) * 100)) : 0;
           return (
-          <li key={r.id} className={`space-y-3 px-4 py-3.5 ${r.refunded ? "bg-[#8c7c68]/10 dark:bg-[#8c7c68]/15" : ""}`}>
+          <li
+            key={r.id}
+            className={`space-y-3 rounded-2xl p-3.5 ring-1 ring-gray-100 dark:ring-gray-800 ${
+              r.refunded ? "bg-[#efe9e2] dark:bg-[#2a2622]" : "bg-white dark:bg-gray-900"
+            }`}
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
@@ -433,7 +439,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
           );
         })}
         {filtered.length === 0 && (
-          <li className="px-4 py-6 text-center text-sm text-gray-400">{emptyMessage}</li>
+          <li className="rounded-2xl bg-white px-4 py-6 text-center text-sm text-gray-400 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">{emptyMessage}</li>
         )}
       </ul>
     </Card>

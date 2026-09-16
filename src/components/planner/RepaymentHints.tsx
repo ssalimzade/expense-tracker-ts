@@ -61,6 +61,8 @@ export default function RepaymentHints({ month, onApply }: Props) {
               <div className="flex items-center gap-2 border-t border-gray-100 px-3 pt-2.5 dark:border-gray-800">
                 <span className="flex-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Total</span>
                 <span className="shrink-0 text-sm font-bold tabular-nums text-gray-900 dark:text-white">{gbp(total)}</span>
+                {/* Half the "+" width, so the total sits between the amounts and the buttons. */}
+                <span className="w-3 shrink-0" />
               </div>
             </div>
           );

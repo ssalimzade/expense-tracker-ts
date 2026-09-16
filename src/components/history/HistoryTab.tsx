@@ -10,6 +10,7 @@ import { Card, QueryState } from "../common";
 import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
 import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle, CHART, axisTick, gridStroke } from "../../lib/chart";
 import ChartLegend from "../ChartLegend";
+import { HeroChartHeader, HeroLineChart } from "../HeroCharts";
 import CategoryBreakdownTable from "../dashboard/CategoryBreakdownTable";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
@@ -123,7 +124,19 @@ export default function HistoryTab() {
           asideFrom="lg"
           aside={
             allArchives.data.length > 1 ? (
-              <SpendingOverTime data={allArchives.data} avgSpend={avgSpend} selected={month} variant="hero" />
+              <div className="w-[26rem] xl:w-[32rem]">
+                <HeroChartHeader title="Spending over time" note={`${gbp(avgSpend)} a month on average`} />
+                <HeroLineChart
+                  className="h-32"
+                  labelKey="label"
+                  format={gbp}
+                  series={[
+                    { key: "spent", label: "Spent", kind: "area" },
+                    { key: "budget", label: "Budget", kind: "dashed" },
+                  ]}
+                  data={allArchives.data.map((d) => ({ ...d, label: formatMonthLabel(d.month) }))}
+                />
+              </div>
             ) : undefined
           }
         >
@@ -279,24 +292,21 @@ function OverUnder({
   );
 }
 
-/** Spent vs budget for every archived month. "hero" draws it for the gradient header. */
+/** Spent vs budget for every archived month. */
 function SpendingOverTime({
   data,
   avgSpend,
   selected,
-  variant = "card",
 }: {
   data: { month: string; spent: number; budget: number }[];
   avgSpend: number;
   selected: string | null;
-  variant?: "card" | "hero";
 }) {
   const isMobile = useIsMobile();
-  const hero = variant === "hero";
-  const spentColor = hero ? "#ffffff" : CHART.indigo;
-  const budgetColor = hero ? "rgba(255,255,255,0.55)" : CHART.grey;
-  const tick = hero ? { fontSize: 11, fill: "rgba(255,255,255,0.65)" } : axisTick;
-  const gradientId = `historySpendGradient-${variant}`;
+  const spentColor = CHART.indigo;
+  const budgetColor = CHART.grey;
+  const tick = axisTick;
+  const gradientId = "historySpendGradient";
 
   const chart = (
     <ResponsiveContainer width="100%" height="100%">
@@ -307,7 +317,7 @@ function SpendingOverTime({
             <stop offset="95%" stopColor={spentColor} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke={hero ? "rgba(255,255,255,0.12)" : gridStroke} />
+        <CartesianGrid vertical={false} stroke={gridStroke} />
         <XAxis dataKey="month" tick={tick} tickFormatter={monthTick} interval={isMobile ? 2 : "preserveStartEnd"} axisLine={false} tickLine={false} />
         <YAxis
           tick={tick}
@@ -324,18 +334,18 @@ function SpendingOverTime({
           contentStyle={tooltipStyle()}
           itemStyle={tooltipItemStyle}
           labelStyle={tooltipLabelStyle}
-          cursor={hero ? { stroke: "rgba(255,255,255,0.35)" } : cursorStyle()}
+          cursor={cursorStyle()}
         />
         {avgSpend > 0 && (
           <ReferenceLine
             y={avgSpend}
-            stroke={hero ? "#ffffff" : CHART.grey}
+            stroke={CHART.grey}
             strokeOpacity={0.5}
             strokeDasharray="2 4"
-            label={{ value: "average", position: "insideTopRight", fontSize: 10, fill: hero ? "rgba(255,255,255,0.7)" : "#9ca3af" }}
+            label={{ value: "average", position: "insideTopRight", fontSize: 10, fill: "#9ca3af" }}
           />
         )}
-        {selected && <ReferenceLine x={selected} stroke={hero ? "rgba(255,255,255,0.4)" : "rgba(148,163,184,0.4)"} />}
+        {selected && <ReferenceLine x={selected} stroke="rgba(148,163,184,0.4)" />}
         <Line type="monotone" dataKey="budget" stroke={budgetColor} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={{ r: 3 }} />
         <Area type="monotone" dataKey="spent" stroke={spentColor} strokeWidth={2.5} fill={`url(#${gradientId})`} dot={{ r: 2.5, fill: spentColor, strokeWidth: 0 }} activeDot={{ r: 5 }} />
       </ComposedChart>
@@ -346,19 +356,6 @@ function SpendingOverTime({
     { label: "Spent", color: spentColor },
     { label: "Budget", color: budgetColor, dashed: true },
   ];
-
-  if (hero) {
-    return (
-      <div className="flex h-full flex-col justify-end">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Spending over time</p>
-          <ChartLegend items={legend} className="!text-white/75" />
-        </div>
-        <div className="h-44 w-[26rem] xl:w-[32rem]">{chart}</div>
-        {avgSpend > 0 && <p className="mt-1 text-right text-xs tabular-nums text-white/70">average {gbp(avgSpend)} a month</p>}
-      </div>
-    );
-  }
 
   return (
     <Card>

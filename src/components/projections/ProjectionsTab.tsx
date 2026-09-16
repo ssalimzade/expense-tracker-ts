@@ -14,13 +14,7 @@ import type { SavingsRow } from "../../types/savings";
 import { gbp0 } from "../../lib/format";
 import { currentNetMonthly } from "../../lib/remuneration";
 import ProjectionsTable from "./ProjectionsTable";
-import { AllocationChart, LeftoverChart } from "./ProjectionsCharts";
-import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
-
-const SECTIONS = [
-  { value: "plan", label: "Monthly plan" },
-  { value: "charts", label: "Charts" },
-] as const;
+import { HeroBarChart, HeroChartHeader } from "../HeroCharts";
 import { TrendArt, IN_COLUMN } from "../HeroArt";
 
 const currentMonth = (() => {
@@ -46,7 +40,6 @@ export default function ProjectionsTab() {
 
   const currentYear = String(new Date().getFullYear());
   const [year, setYear] = useState(currentYear);
-  const section = usePhoneSection("projections-section", SECTIONS);
 
   const loading =
     projQuery.isLoading || savingsQuery.isLoading || remQuery.isLoading || rentQuery.isLoading || plannerQuery.isLoading;
@@ -162,12 +155,39 @@ export default function ProjectionsTab() {
         const avgRate = avgSalary ? totalAllocated / sum((r) => r.salary) : 0;
 
         const leftover = sum((r) => r.buffer);
+
+        // What's left of each month's income once costs are paid.
+        const leftAfterCosts = rows.map((r) => r.salary + r.bonus + r.other_pl - r.totalCosts);
+        const elapsedLeft = leftAfterCosts.filter((_, i) => rows[i].month <= currentMonth);
+        const avgLeft = elapsedLeft.length ? elapsedLeft.reduce((a, b) => a + b, 0) / elapsedLeft.length : 0;
+        const leftoverChart = (className: string) => (
+          <div>
+            <HeroChartHeader
+              title="Left after costs"
+              note={elapsedLeft.length ? `${avgLeft < 0 ? "−" : ""}${gbp0(Math.abs(avgLeft))} a month on average` : undefined}
+            />
+            <HeroBarChart
+              className={className}
+              valueLabel="Left over"
+              format={(v) => `${v < 0 ? "−" : ""}${gbp0(Math.abs(v))}`}
+              data={rows.map((r, i) => {
+                const d = new Date(`${r.month}-01`);
+                return {
+                  label: d.toLocaleString("en-GB", { month: "long" }),
+                  title: d.toLocaleString("en-GB", { month: "long", year: "numeric" }),
+                  value: leftAfterCosts[i],
+                  faded: r.month > currentMonth,
+                };
+              })}
+            />
+          </div>
+        );
         return (
           <div className="mx-auto max-w-7xl space-y-5">
             <YearSwitch years={years} year={year} onChange={setYear} />
 
             <Hero
-              gradient="from-violet-600 via-purple-600 to-indigo-700 dark:from-violet-800 dark:via-purple-900 dark:to-indigo-950"
+              gradient="from-[#4d7c8a] via-[#3b6070] to-[#243c47]"
               badge={`${year} · ${elapsed.length} month${elapsed.length === 1 ? "" : "s"} so far`}
               label="Put aside this year"
               value={gbp0(totalAllocated)}
@@ -179,33 +199,23 @@ export default function ProjectionsTab() {
                   {Math.round(avgRate * 100)}% of salary into home, savings & investments
                 </HeroChip>
               }
-              aside={<LeftoverChart rows={rows} variant="hero" />}
+              aside={<div className="w-[26rem] xl:w-[32rem]">{leftoverChart("h-32")}</div>}
               asideFrom="lg"
               fields={[
                 { label: "Average salary", value: gbp0(avgSalary), sub: "a month, before bonus" },
                 { label: "Average costs", value: gbp0(avgCosts), sub: `${Math.round((avgCosts / (avgSalary || 1)) * 100)}% of salary` },
                 { label: "Buffer so far", value: gbp0(leftover), sub: "left after everything", warn: leftover < 0 },
               ]}
-            />
+            >
+              <div className="mt-6 border-t border-dashed border-white/25 pt-5 lg:hidden">{leftoverChart("h-24")}</div>
+            </Hero>
 
-            <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
-
-            <div className={`grid gap-4 ${section.show("charts")}`}>
-              <AllocationChart rows={rows} />
-              {/* Wide screens show this one inside the header. */}
-              <div className="lg:hidden">
-                <LeftoverChart rows={rows} />
-              </div>
-            </div>
-
-            <div className={section.show("plan")}>
             <ProjectionsTable
               rows={rows}
               onProjectionField={(m, f, v) => saveProjectionField(m, f, v)}
               onNotes={(m, v) => saveProjectionField(m, "notes", v)}
               onAllocation={onAllocation}
             />
-            </div>
           </div>
         );
       })()}

@@ -20,7 +20,7 @@ interface Props {
   onAllocation: (month: string, field: AllocationField, value: number) => void;
 }
 
-const CURRENT_TINT = "bg-violet-50/70 dark:bg-violet-500/[0.07]";
+const CURRENT_TINT = "bg-[#4d7c8a]/[0.08] dark:bg-[#4d7c8a]/[0.14]";
 
 function monthCellClass(month: string) {
   const isFuture = month > currentMonth;
@@ -98,8 +98,9 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
   ];
 
   return (
-    <Card className="p-0 overflow-hidden max-md:!p-0">
-      <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
+    // Phones drop the outer card: each month is its own box, like Savings.
+    <Card className="p-0 overflow-hidden max-md:!p-0 max-md:overflow-visible max-md:!bg-transparent max-md:!ring-0">
+      <div className="px-1 pb-3 md:border-b md:border-gray-100 md:px-6 md:py-4 md:dark:border-gray-800">
         <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
           Monthly Plan
         </h2>
@@ -118,7 +119,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
                 >
                   {mo(row.month)}
                   {row.month === currentMonth && (
-                    <span className="mt-0.5 block text-[9px] font-bold tracking-[0.14em] text-violet-500 dark:text-violet-300">Now</span>
+                    <span className="mt-0.5 block text-[9px] font-bold tracking-[0.14em] text-[#3b6070] dark:text-[#8fbfcc]">Now</span>
                   )}
                 </th>
               ))}
@@ -186,7 +187,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
         <button
           type="button"
           onClick={() => setShowEarlier(true)}
-          className="flex w-full items-center justify-center gap-1.5 border-b border-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/40 md:hidden"
+          className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-gray-500 ring-1 ring-gray-100 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-400 dark:ring-gray-800 dark:hover:bg-gray-800/60 md:hidden"
         >
           <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
             <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
@@ -194,7 +195,7 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
           Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
         </button>
       )}
-      <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
+      <ul className="space-y-2 md:hidden">
         {phoneRows.map((row) => {
           const field = (label: string, value: number, onCommit: (n: number) => void, color?: string) => (
             <div className="flex items-center justify-between gap-2">
@@ -205,9 +206,18 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
           return (
             <li
               key={row.month}
-              className={`px-4 py-2.5 ${row.month > currentMonth ? "opacity-60" : ""} ${row.month === currentMonth ? "bg-violet-50/70 dark:bg-violet-500/[0.07]" : ""}`}
+              className={`rounded-2xl bg-white p-3.5 ring-1 dark:bg-gray-900 ${row.month > currentMonth ? "opacity-60" : ""} ${
+                row.month === currentMonth ? "ring-[#4d7c8a]/70" : "ring-gray-100 dark:ring-gray-800"
+              }`}
             >
-              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">{mo(row.month)}</div>
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-100">
+                {mo(row.month)}
+                {row.month === currentMonth && (
+                  <span className="rounded-full bg-[#4d7c8a]/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#3b6070] dark:text-[#8fbfcc]">
+                    Now
+                  </span>
+                )}
+              </div>
               <div className="mt-2 grid grid-cols-2 gap-x-5 gap-y-1 text-xs">
                 <div className="space-y-1">
                   {field("Salary", row.salary, (n) => onProjectionField(row.month, "salary", n))}

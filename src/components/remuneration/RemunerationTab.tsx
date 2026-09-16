@@ -4,7 +4,7 @@ import { gbp0 } from "../../lib/format";
 import { resolvePay, currentRow } from "../../lib/remuneration";
 import type { RemunerationRow } from "../../types/remuneration";
 import RemunerationTable from "./RemunerationTable";
-import { PayGrowthChart } from "./RemunerationCharts";
+import { PayGrowthChart, PayHeroChart } from "./RemunerationCharts";
 import TakeHomeCalculator from "./TakeHomeCalculator";
 import { BanknotesArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
@@ -116,15 +116,13 @@ function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: Remu
             <Sparkline values={rows.map((r) => resolvePay(r).net_pm)} />
           </div>
           {rows.length > 1 && (
-            <div className="hidden lg:block">
-              <PayGrowthChart
+            <div className="hidden w-[26rem] lg:block xl:w-[32rem]">
+              <PayHeroChart
                 rows={rows}
-                variant="hero"
                 note={
                   <>
                     {growth >= 0 ? "+" : "−"}
                     {Math.abs(growth * 100).toFixed(0)}% since {since}
-                    {firstPay && <span className="font-normal text-white/70"> · from {gbp0(firstPay.net_pm)} a month</span>}
                   </>
                 }
               />

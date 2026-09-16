@@ -9,16 +9,9 @@ import { MAIN_CATEGORIES } from "../../types/categories";
 import { QueryState } from "../common";
 import MetricsBar from "./MetricsBar";
 import BudgetSummaryTable from "./BudgetSummaryTable";
-import CumulativeSpendChart from "./CumulativeSpendChart";
+import PaceChart from "./PaceChart";
 import BalanceSection from "./BalanceSection";
 import { toMonthKey } from "../../lib/format";
-import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
-
-const SECTIONS = [
-  { value: "categories", label: "Categories" },
-  { value: "pace", label: "Pace" },
-  { value: "balances", label: "Balances" },
-] as const;
 
 export default function DashboardTab({ month }: { month: string }) {
   const currentMonth = toMonthKey(new Date());
@@ -30,8 +23,6 @@ export default function DashboardTab({ month }: { month: string }) {
   const archiveQuery = useArchive(isPastMonth ? month : null);
   const syntheticQuery = useSyntheticRepayments();
   const saveBudget = useSaveBudget(month);
-
-  const section = usePhoneSection("budget-section", SECTIONS);
 
   const [draft, setDraft] = useState<BudgetMap>({});
   const serverBudgets = budgetQuery.data?.budgets;
@@ -90,39 +81,25 @@ export default function DashboardTab({ month }: { month: string }) {
               totalBudget={totalBudget}
               totalSpent={totalSpentValue}
               month={month}
-              aside={
-                <CumulativeSpendChart
-                  variant="hero"
+              renderChart={(className) => (
+                <PaceChart
                   transactions={transactions}
                   month={month}
                   totalBudget={totalBudget}
                   repaymentsBaseline={repaymentsBaseline}
+                  className={className}
                 />
-              }
+              )}
             />
-            <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
-            {/* Wide screens show the pace chart inside the header instead. */}
-            <div className={`lg:hidden ${section.show("pace")}`}>
-              <CumulativeSpendChart
-                transactions={transactions}
-                month={month}
-                totalBudget={totalBudget}
-                repaymentsBaseline={repaymentsBaseline}
-              />
-            </div>
-            <div className={section.show("balances")}>
-              <BalanceSection month={month} />
-            </div>
-            <div className={section.show("categories")}>
-              <BudgetSummaryTable
-                draft={draft}
-                spentByCategory={spent}
-                onChange={setCategory}
-                onCommit={commit}
-                saving={saveBudget.isPending}
-                month={month}
-              />
-            </div>
+            <BalanceSection month={month} />
+            <BudgetSummaryTable
+              draft={draft}
+              spentByCategory={spent}
+              onChange={setCategory}
+              onCommit={commit}
+              saving={saveBudget.isPending}
+              month={month}
+            />
           </div>
         );
       })()}

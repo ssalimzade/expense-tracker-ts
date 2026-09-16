@@ -13,7 +13,8 @@ import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
   { value: "plan", label: "Plan" },
-  { value: "calendar", label: "Days off & Flex" },
+  { value: "calendar", label: "Days off" },
+  { value: "flex", label: "Flex" },
 ] as const;
 
 // Current month + the next 11 months — the planning horizon.
@@ -205,7 +206,8 @@ export default function PlannerTab() {
               onCommit={commitCategory}
             />
             </div>
-            <aside className={`space-y-4 lg:sticky lg:top-5 lg:self-start ${section.show("calendar")}`}>
+            <aside className={`lg:sticky lg:top-5 lg:space-y-4 lg:self-start ${section.value === "plan" ? "max-lg:hidden" : ""}`}>
+              <div className={section.show("calendar")}>
               <PlannerCalendar
                 month={planMonth}
                 daysOff={daysOff}
@@ -215,7 +217,10 @@ export default function PlannerTab() {
                   if (s.bankHolidays !== bankHolidays) setBankHolidays(s.bankHolidays);
                 }}
               />
-              <RepaymentHints month={planMonth} onApply={applyHint} />
+              </div>
+              <div className={section.show("flex")}>
+                <RepaymentHints month={planMonth} onApply={applyHint} />
+              </div>
             </aside>
           </div>
         </div>

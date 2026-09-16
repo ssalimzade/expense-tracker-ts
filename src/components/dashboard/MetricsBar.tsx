@@ -7,11 +7,11 @@ interface Props {
   totalBudget: number;
   totalSpent: number;
   month: string;
-  /** Shown beside the figures on wide screens (the pace chart). */
-  aside?: ReactNode;
+  /** The pace chart: beside the figures on wide screens, under them on phones. */
+  renderChart?: (className: string) => ReactNode;
 }
 
-export default function MetricsBar({ totalBudget, totalSpent, month, aside }: Props) {
+export default function MetricsBar({ totalBudget, totalSpent, month, renderChart }: Props) {
   const remaining = totalBudget - totalSpent;
   const pct = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
@@ -31,16 +31,16 @@ export default function MetricsBar({ totalBudget, totalSpent, month, aside }: Pr
       badge={formatMonthLabel(month)}
       badgeNote={
         isCurrent ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-black/15 py-0.5 pl-1 pr-3">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-extrabold tabular-nums text-indigo-700">
-              {now.getDate()}
-            </span>
-            <span className="font-semibold text-white">{todayWeekday}</span>
-            <span className="text-white/70">{todayDate}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-white/70" aria-hidden>
+              <path fillRule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2V1.75ZM3.5 7v5c0 .28.22.5.5.5h8a.5.5 0 0 0 .5-.5V7h-9Z" clipRule="evenodd" />
+            </svg>
+            <span className="font-semibold text-white">{todayWeekday},</span>
+            <span className="text-white/80">{todayDate}</span>
           </span>
         ) : undefined
       }
-      aside={aside}
+      aside={renderChart && <div className="w-[26rem] xl:w-[32rem]">{renderChart("h-32")}</div>}
       asideFrom="lg"
       label="Spent so far"
       value={gbp(totalSpent)}
@@ -66,6 +66,10 @@ export default function MetricsBar({ totalBudget, totalSpent, month, aside }: Pr
             ]
           : []),
       ]}
-    />
+    >
+      {renderChart && (
+        <div className="mt-6 border-t border-dashed border-white/25 pt-5 lg:hidden">{renderChart("h-24")}</div>
+      )}
+    </Hero>
   );
 }
