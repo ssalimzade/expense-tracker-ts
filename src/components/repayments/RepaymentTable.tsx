@@ -17,6 +17,9 @@ import Tooltip from "../Tooltip";
 
 // Sentinel option value that opens a prompt to create a new category.
 const ADD_NEW = "__add_category__";
+// Sentinel filter values for the schedule's category filter.
+const ALL_CATEGORIES = "__all__";
+const UNCATEGORISED = "__none__";
 
 type SplitNum = 1 | 2 | 3;
 
@@ -76,6 +79,23 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
   };
 
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
+
+  // Filter choices: only categories that appear in the current rows.
+  const filterOptions: SelectOption[] = useMemo(() => {
+    const present = new Set(repayments.map((r) => r.category || ""));
+    // Keep the active choice listed even if its last row was recategorised.
+    if (categoryFilter !== ALL_CATEGORIES) present.add(categoryFilter === UNCATEGORISED ? "" : categoryFilter);
+    const known = categoryOptions
+      .filter((o) => o.value && o.value !== ADD_NEW && present.has(o.value))
+      .map((o) => o.value);
+    const unknown = [...present].filter((c) => c && !known.includes(c)).sort();
+    return [
+      { value: ALL_CATEGORIES, label: "All categories" },
+      ...[...known, ...unknown].map((c) => ({ value: c, label: c })),
+      ...(present.has("") ? [{ value: UNCATEGORISED, label: "Uncategorised" }] : []),
+    ];
+  }, [repayments, categoryOptions, categoryFilter]);
 
   // Ephemeral "ticked" rows — a visual scratchpad only. Not persisted, so it
   // resets on refresh or when switching tabs.
@@ -116,13 +136,18 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
   // Filter by description or amount (digits only for the amount match).
   const q = search.trim().toLowerCase();
   const amtQ = q.replace(/[£,\s]/g, "");
-  const filtered = q
-    ? repayments.filter(
-        (r) =>
-          r.description.toLowerCase().includes(q) ||
-          (amtQ !== "" && String(Math.abs(r.amount)).includes(amtQ)),
-      )
-    : repayments;
+  const filtered = repayments.filter((r) => {
+    if (categoryFilter === UNCATEGORISED && r.category) return false;
+    if (categoryFilter !== ALL_CATEGORIES && categoryFilter !== UNCATEGORISED && r.category !== categoryFilter) {
+      return false;
+    }
+    return (
+      !q ||
+      r.description.toLowerCase().includes(q) ||
+      (amtQ !== "" && String(Math.abs(r.amount)).includes(amtQ))
+    );
+  });
+  const emptyMessage = q ? `No repayments match “${search}”` : "No repayments in this category";
 
   if (repayments.length === 0) {
     return (
@@ -138,7 +163,8 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           Repayment Schedule
         </h2>
-        <div className="relative mt-3 w-full max-w-xs max-md:max-w-none">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-xs max-md:max-w-none">
           <svg viewBox="0 0 20 20" fill="currentColor" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
             <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
           </svg>
@@ -148,6 +174,13 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
             placeholder="Search description or amount…"
             className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-9 pr-3 text-sm dark:border-gray-700 dark:bg-gray-800"
           />
+        </div>
+        <Select
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          options={filterOptions}
+          className="w-48 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800 max-md:w-full"
+        />
         </div>
       </div>
       <div className="hidden overflow-x-auto md:block">
@@ -301,7 +334,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={12} className="px-6 py-6 text-center text-sm text-gray-400">
-                  No repayments match “{search}”
+                  {emptyMessage}
                 </td>
               </tr>
             )}
@@ -380,7 +413,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
           </li>
         ))}
         {filtered.length === 0 && (
-          <li className="px-4 py-6 text-center text-sm text-gray-400">No repayments match “{search}”</li>
+          <li className="px-4 py-6 text-center text-sm text-gray-400">{emptyMessage}</li>
         )}
       </ul>
     </Card>
