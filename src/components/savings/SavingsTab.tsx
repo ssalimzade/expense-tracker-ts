@@ -2,15 +2,15 @@ import { useState } from "react";
 import { useSavings } from "../../hooks/useSavings";
 import { QueryState } from "../common";
 import SavingsTable from "./SavingsTable";
-import { SavingsGrowthChart, MonthlyBreakdownChart } from "./SavingsCharts";
+import { SavingsGrowthChart } from "./SavingsCharts";
 import { gbp0 } from "../../lib/format";
 import type { SavingsRow } from "../../types/savings";
-import { CoinsArt } from "../HeroArt";
+import { PiggyBankArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
   { value: "months", label: "Months" },
-  { value: "charts", label: "Charts" },
+  { value: "charts", label: "Balance chart" },
 ] as const;
 
 const currentKey = (() => {
@@ -60,9 +60,9 @@ export default function SavingsTab() {
 
         <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
 
-        <div className={`grid gap-5 lg:grid-cols-2 ${section.show("charts")}`}>
+        {/* Wide screens show the balance chart inside the header. */}
+        <div className={`lg:hidden ${section.show("charts")}`}>
           <SavingsGrowthChart rows={rows} />
-          <MonthlyBreakdownChart rows={rows} showInvestments={showInvestments} />
         </div>
 
         <div className={section.show("months")}>
@@ -94,9 +94,9 @@ function VaultHero({ rows, year, showInvestments }: { rows: SavingsRow[]; year: 
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6f8a58] via-[#526a44] to-[#34472f] text-white shadow-lg shadow-black/10 dark:shadow-none">
-      <CoinsArt />
-
-      <div className="relative p-5 sm:p-7">
+      <div className="relative grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+        <div className="relative min-w-0">
+        <PiggyBankArt className={IN_COLUMN} />
         <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
           {latest ? `As of ${monthName(latest.start_date)} ${year}` : `${year} plan`}
         </span>
@@ -114,10 +114,14 @@ function VaultHero({ rows, year, showInvestments }: { rows: SavingsRow[]; year: 
         </div>
 
         <div className={`mt-6 grid grid-cols-2 gap-4 ${showInvestments ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
-          <HeroField label="Saved this year" value={gbp0(totalSaved)} sub={`avg ${gbp0(avgPerMonth)}/mo`} />
+          <HeroField label="Saved this year" value={gbp0(totalSaved)} sub={`average ${gbp0(avgPerMonth)} a month`} />
           <HeroField label="Home" value={gbp0(sum("home_contributions"))} sub="contributions" />
           {showInvestments && <HeroField label="Invested" value={gbp0(sum("investments"))} sub="this year" />}
           <HeroField label="Growth" value={`${now - start >= 0 ? "+" : "−"}${gbp0(Math.abs(now - start))}`} sub="since January" />
+        </div>
+        </div>
+        <div className="hidden border-dashed border-white/25 lg:block lg:border-l lg:pl-7">
+          <SavingsGrowthChart rows={rows} variant="hero" />
         </div>
       </div>
     </section>

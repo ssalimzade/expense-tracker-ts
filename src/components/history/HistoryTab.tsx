@@ -36,7 +36,6 @@ export default function HistoryTab() {
   const allMonths = monthsQuery.data ?? [];
   const allArchives = useAllArchives(allMonths);
   const qc = useQueryClient();
-  const isMobile = useIsMobile();
   const section = usePhoneSection("history-section", SECTIONS);
 
   const refreshSnapshot = useMutation({
@@ -118,88 +117,37 @@ export default function HistoryTab() {
             { label: "Budget", value: gbp(totalBudget) },
             { label: totalRemaining < 0 ? "Over budget" : "Left over", value: gbp(Math.abs(totalRemaining)), warn: totalRemaining < 0 },
             ...(avgSpend > 0
-              ? [{ label: "vs average", value: `${totalSpent >= avgSpend ? "+" : "−"}${gbp(Math.abs(totalSpent - avgSpend))}`, sub: `avg ${gbp(avgSpend)}/mo` }]
+              ? [{ label: "Against average", value: `${totalSpent >= avgSpend ? "+" : "−"}${gbp(Math.abs(totalSpent - avgSpend))}`, sub: `average ${gbp(avgSpend)} a month` }]
               : []),
           ]}
+          asideFrom="lg"
           aside={
+            allArchives.data.length > 1 ? (
+              <SpendingOverTime data={allArchives.data} avgSpend={avgSpend} selected={month} variant="hero" />
+            ) : undefined
+          }
+        >
             <button
               onClick={() => refreshSnapshot.mutate(month)}
               disabled={refreshSnapshot.isPending}
               title="Recompute and overwrite this month's snapshot from live data"
-              className="flex items-center gap-1.5 rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-semibold backdrop-blur transition hover:bg-white/25 disabled:opacity-50 max-md:w-full max-md:justify-center"
+              className="mt-5 flex w-fit items-center gap-1.5 rounded-2xl bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25 disabled:opacity-50 max-md:w-full max-md:justify-center"
             >
               <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 ${refreshSnapshot.isPending ? "animate-spin" : ""}`}>
                 <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clipRule="evenodd" />
               </svg>
               {refreshSnapshot.isPending ? "Refreshing…" : "Refresh snapshot"}
             </button>
-          }
-        />
+        </Hero>
       )}
 
       {month && <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />}
 
-      {/* Historical spending chart (all months) */}
+      {/* Historical spending chart (all months); wide screens show it in the header */}
       {allArchives.data.length > 1 && (
-        <Card className={section.show("charts")}>
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-              Spending Over Time
-            </h2>
-            {avgSpend > 0 && (
-              <span className="text-xs tabular-nums text-gray-400">avg {gbp(avgSpend)}/mo</span>
-            )}
-          </div>
-          <ChartLegend
-            className="mb-3"
-            items={[
-              { label: "Spent", color: CHART.indigo },
-              { label: "Budget", color: CHART.grey, dashed: true },
-            ]}
-          />
-          <div className="h-52 sm:h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={allArchives.data} margin={{ top: 8, right: 20, bottom: 4, left: 0 }}>
-                <defs>
-                  <linearGradient id="historySpendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART.indigo} stopOpacity={0.28} />
-                    <stop offset="95%" stopColor={CHART.indigo} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke={gridStroke} />
-                <XAxis dataKey="month" tick={axisTick} tickFormatter={monthTick} interval={isMobile ? 2 : "preserveStartEnd"} axisLine={false} tickLine={false} />
-                <YAxis
-                  tick={axisTick}
-                  width={48}
-                  tickCount={isMobile ? 4 : 5}
-                  tickFormatter={(v) => (v === 0 ? "£0" : `£${(v / 1000).toFixed(1)}k`)}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  formatter={(v: number, name: string) => [gbp(v), name === "spent" ? "Spent" : "Budget"]}
-                  labelFormatter={(m) => formatMonthLabel(m as string)}
-                  itemSorter={(item) => (item.dataKey === "spent" ? 0 : 1)}
-                  contentStyle={tooltipStyle()}
-                  itemStyle={tooltipItemStyle}
-                  labelStyle={tooltipLabelStyle}
-                  cursor={cursorStyle()}
-                />
-                {avgSpend > 0 && (
-                  <ReferenceLine
-                    y={avgSpend}
-                    stroke={CHART.grey}
-                    strokeOpacity={0.5}
-                    strokeDasharray="2 4"
-                    label={{ value: "avg", position: "insideTopRight", fontSize: 10, fill: "#9ca3af" }}
-                  />
-                )}
-                <Line type="monotone" dataKey="budget" stroke={CHART.grey} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={{ r: 3 }} />
-                <Area type="monotone" dataKey="spent" stroke={CHART.indigo} strokeWidth={2.5} fill="url(#historySpendGradient)" dot={{ r: 2.5, fill: CHART.indigo, strokeWidth: 0 }} activeDot={{ r: 5 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
+        <div className={`lg:hidden ${section.show("charts")}`}>
+          <SpendingOverTime data={allArchives.data} avgSpend={avgSpend} selected={month} />
+        </div>
       )}
 
       <QueryState isLoading={archiveQuery.isLoading} error={archiveQuery.error}>
@@ -327,6 +275,103 @@ function OverUnder({
           })}
         </ul>
       )}
+    </Card>
+  );
+}
+
+/** Spent vs budget for every archived month. "hero" draws it for the gradient header. */
+function SpendingOverTime({
+  data,
+  avgSpend,
+  selected,
+  variant = "card",
+}: {
+  data: { month: string; spent: number; budget: number }[];
+  avgSpend: number;
+  selected: string | null;
+  variant?: "card" | "hero";
+}) {
+  const isMobile = useIsMobile();
+  const hero = variant === "hero";
+  const spentColor = hero ? "#ffffff" : CHART.indigo;
+  const budgetColor = hero ? "rgba(255,255,255,0.55)" : CHART.grey;
+  const tick = hero ? { fontSize: 11, fill: "rgba(255,255,255,0.65)" } : axisTick;
+  const gradientId = `historySpendGradient-${variant}`;
+
+  const chart = (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={data} margin={{ top: 8, right: 20, bottom: 4, left: 0 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={spentColor} stopOpacity={0.28} />
+            <stop offset="95%" stopColor={spentColor} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} stroke={hero ? "rgba(255,255,255,0.12)" : gridStroke} />
+        <XAxis dataKey="month" tick={tick} tickFormatter={monthTick} interval={isMobile ? 2 : "preserveStartEnd"} axisLine={false} tickLine={false} />
+        <YAxis
+          tick={tick}
+          width={48}
+          tickCount={isMobile ? 4 : 5}
+          tickFormatter={(v) => (v === 0 ? "£0" : `£${(v / 1000).toFixed(1)}k`)}
+          axisLine={false}
+          tickLine={false}
+        />
+        <Tooltip
+          formatter={(v: number, name: string) => [gbp(v), name === "spent" ? "Spent" : "Budget"]}
+          labelFormatter={(m) => formatMonthLabel(m as string)}
+          itemSorter={(item) => (item.dataKey === "spent" ? 0 : 1)}
+          contentStyle={tooltipStyle()}
+          itemStyle={tooltipItemStyle}
+          labelStyle={tooltipLabelStyle}
+          cursor={hero ? { stroke: "rgba(255,255,255,0.35)" } : cursorStyle()}
+        />
+        {avgSpend > 0 && (
+          <ReferenceLine
+            y={avgSpend}
+            stroke={hero ? "#ffffff" : CHART.grey}
+            strokeOpacity={0.5}
+            strokeDasharray="2 4"
+            label={{ value: "average", position: "insideTopRight", fontSize: 10, fill: hero ? "rgba(255,255,255,0.7)" : "#9ca3af" }}
+          />
+        )}
+        {selected && <ReferenceLine x={selected} stroke={hero ? "rgba(255,255,255,0.4)" : "rgba(148,163,184,0.4)"} />}
+        <Line type="monotone" dataKey="budget" stroke={budgetColor} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={{ r: 3 }} />
+        <Area type="monotone" dataKey="spent" stroke={spentColor} strokeWidth={2.5} fill={`url(#${gradientId})`} dot={{ r: 2.5, fill: spentColor, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+
+  const legend = [
+    { label: "Spent", color: spentColor },
+    { label: "Budget", color: budgetColor, dashed: true },
+  ];
+
+  if (hero) {
+    return (
+      <div className="flex h-full flex-col justify-end">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Spending over time</p>
+          <ChartLegend items={legend} className="!text-white/75" />
+        </div>
+        <div className="h-44 w-[26rem] xl:w-[32rem]">{chart}</div>
+        {avgSpend > 0 && <p className="mt-1 text-right text-xs tabular-nums text-white/70">average {gbp(avgSpend)} a month</p>}
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+          Spending Over Time
+        </h2>
+        {avgSpend > 0 && (
+          <span className="text-xs tabular-nums text-gray-400">average {gbp(avgSpend)} a month</span>
+        )}
+      </div>
+      <ChartLegend className="mb-3" items={legend} />
+      <div className="h-52 sm:h-56">{chart}</div>
     </Card>
   );
 }

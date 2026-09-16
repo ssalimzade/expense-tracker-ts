@@ -11,14 +11,14 @@ import { rentIsPaid, rentShare } from "../../lib/rent";
 import RentTable from "./RentTable";
 import RentPots from "./RentPots";
 import { potViews, potsTotal } from "../../lib/pots";
-import { CostBreakdownChart, PaidProgressChart } from "./RentCharts";
+import { CostBreakdownChart } from "./RentCharts";
 import { HouseArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
   { value: "months", label: "Months" },
   { value: "pots", label: "Pots" },
-  { value: "charts", label: "Charts" },
+  { value: "charts", label: "Bills chart" },
 ] as const;
 
 const currentMonth = (() => {
@@ -95,9 +95,11 @@ export default function RentTab({ onOpenTransactions }: Props) {
               }
               under={
                 <HeroChip>
-                  {gbp0(costYtd / activeMonths)} a month on average · your share
+                  {gbp0(costYtd / activeMonths)} a month on average, your share
                 </HeroChip>
               }
+              aside={<CostBreakdownChart data={data} months={months} variant="hero" />}
+              asideFrom="lg"
               fields={[
                 {
                   label: "Outstanding",
@@ -112,9 +114,9 @@ export default function RentTab({ onOpenTransactions }: Props) {
 
             <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
 
-            <div className={`grid gap-4 lg:grid-cols-2 ${section.show("charts")}`}>
+            {/* Wide screens show the bills chart inside the header. */}
+            <div className={`lg:hidden ${section.show("charts")}`}>
               <CostBreakdownChart data={data} months={months} />
-              <PaidProgressChart data={data} months={months} />
             </div>
 
             <div className={section.show("pots")}>

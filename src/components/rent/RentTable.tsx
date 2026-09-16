@@ -58,7 +58,7 @@ function PaidToggle({
         type="button"
         onClick={(e) => onToggle(e.currentTarget.getBoundingClientRect())}
         title={`Auto-paid${hint} — click for options`}
-        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-sky-500 text-white"
+        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#6f9fb8] text-white"
       >
         <svg viewBox="0 0 16 16" fill="currentColor" className="h-2.5 w-2.5">
           <path d="M7.78 3.16a2.75 2.75 0 0 1 3.89 3.89l-1.6 1.6a.75.75 0 0 1-1.06-1.06l1.6-1.6a1.25 1.25 0 0 0-1.77-1.77l-1.6 1.6A.75.75 0 1 1 6.18 4.76l1.6-1.6Zm.5 4.02a.75.75 0 0 1 0 1.06l-1.6 1.6a1.25 1.25 0 0 0 1.77 1.77l1.6-1.6a.75.75 0 1 1 1.06 1.06l-1.6 1.6a2.75 2.75 0 0 1-3.89-3.89l1.6-1.6a.75.75 0 0 1 1.06 0Z" />
@@ -79,8 +79,8 @@ function PaidToggle({
         paid
           ? toPot
             ? "border-[#b39767] bg-[#b39767] text-white"
-            : "border-emerald-500 bg-emerald-500 text-white"
-          : "border-gray-300 text-transparent hover:border-emerald-400 dark:border-gray-600"
+            : "border-[#5fa88a] bg-[#5fa88a] text-white"
+          : "border-gray-300 text-transparent hover:border-[#5fa88a] dark:border-gray-600"
       }`}
     >
       <svg viewBox="0 0 12 12" fill="none" className="h-2.5 w-2.5">
@@ -662,17 +662,17 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
     <Card className="p-0 overflow-hidden max-md:!p-0">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
         <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-          Rent &amp; Utilities (Wyndham)
+          Rent &amp; bills · Wyndham
         </h2>
         <div className="hidden items-center gap-3 text-xs text-gray-400 sm:flex">
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#c8b58f]" /> set aside to savings
+            <span className="h-2 w-2 rounded-full bg-[#c8b58f]" /> set aside in a pot
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> paid
+            <span className="h-2 w-2 rounded-full bg-[#5fa88a]" /> paid
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-sky-500" /> auto-paid
+            <span className="h-2 w-2 rounded-full bg-[#6f9fb8]" /> paid automatically
           </span>
         </div>
       </div>
@@ -680,15 +680,18 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
         <table className="w-full min-w-[860px] text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Month</th>
+              <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">Month</th>
               {visibleItems.map((it: RentItemDef) => (
-                <th key={it.key} className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
-                  <span className={it.saved ? "text-[#96794a] dark:text-[#d2bc92]" : "text-gray-600 dark:text-white"}>
-                    {it.label}
-                  </span>
+                <th
+                  key={it.key}
+                  className={`whitespace-nowrap px-3 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                    it.saved ? "bg-[#c8b58f]/[0.06] text-[#96794a] dark:text-[#d2bc92]" : "text-gray-400"
+                  }`}
+                >
+                  {it.label}
                 </th>
               ))}
-              <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Total</th>
+              <th className="px-6 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
@@ -698,29 +701,37 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
               const total = monthTotal(month);
               const paid = monthPaid(month);
               const fullyPaid = total > 0 && paid >= total - 0.001;
+              const paidPct = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
               return (
                 <tr
                   key={month}
                   className={`group hover:bg-gray-50 dark:hover:bg-gray-800/40 ${isFuture ? "opacity-50" : ""} ${
-                    isCurrent ? "bg-teal-50/60 dark:bg-teal-500/[0.06]" : ""
+                    isCurrent ? "bg-teal-50/60 shadow-[inset_3px_0_0_#5fa8a8] dark:bg-teal-500/[0.06]" : ""
                   }`}
                 >
-                  <td className="px-6 py-2.5 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                    {mo(month)}
+                  <td className="whitespace-nowrap px-6 py-2">
+                    <span className="font-semibold text-gray-800 dark:text-gray-100">{mo(month)}</span>
+                    {isCurrent && (
+                      <span className="ml-2 rounded-full bg-teal-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-teal-700 dark:text-teal-300">
+                        Now
+                      </span>
+                    )}
                   </td>
                   {visibleItems.map((it) => {
                     const c = cell(month, it.key);
+                    const potTint = it.saved ? "bg-[#c8b58f]/[0.06]" : "";
                     // Keep the column aligned, but leave the cell blank for
                     // months after this pot was settled.
                     if (isRetired(month, it.key)) {
                       return (
-                        <td key={it.key} className="px-3 py-2.5 text-center text-gray-300 dark:text-gray-700">
+                        <td key={it.key} className={`px-3 py-2 text-center text-gray-300 dark:text-gray-700 ${potTint}`}>
                           —
                         </td>
                       );
                     }
+                    const note = splitNote(month, it);
                     return (
-                      <td key={it.key} className="px-3 py-2.5">
+                      <td key={it.key} className={`px-3 py-2 ${potTint}`}>
                         <div className="flex flex-col items-center">
                           <div className="flex items-center justify-center gap-1.5">
                             <MoneyInput
@@ -737,15 +748,21 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                               onToggle={(anchor) => onToggle(month, it, anchor)}
                             />
                           </div>
-                          <div className="flex h-3.5 items-center">{splitNote(month, it)}</div>
+                          {/* Split-able columns keep the slot so rows don't jump on hover. */}
+                          {(note || canSplit(it.key)) && <div className="flex h-3.5 items-center">{note}</div>}
                         </div>
                       </td>
                     );
                   })}
-                  <td className="px-6 py-2.5 text-center whitespace-nowrap">
-                    <div className="font-bold tabular-nums text-gray-800 dark:text-gray-100">{gbp0(total)}</div>
-                    <div className={`text-[11px] font-medium ${fullyPaid ? "text-emerald-500" : "text-gray-400"}`}>
-                      {fullyPaid ? "paid" : `${gbp0(total - paid)} left`}
+                  <td className="whitespace-nowrap px-6 py-2 text-right">
+                    <div className="font-bold tabular-nums text-gray-900 dark:text-white">{gbp0(total)}</div>
+                    <div className="mt-1 flex items-center justify-end gap-2">
+                      <span className={`text-[11px] font-medium tabular-nums ${fullyPaid ? "text-[#4f9a7c] dark:text-[#7cc4a5]" : "text-gray-400"}`}>
+                        {fullyPaid ? "paid" : `${gbp0(total - paid)} left`}
+                      </span>
+                      <span className="h-1 w-12 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                        <span className="block h-full rounded-full bg-[#5fa88a]" style={{ width: `${paidPct}%` }} />
+                      </span>
                     </div>
                   </td>
                 </tr>
@@ -783,7 +800,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{mo(month)}</span>
                 <span className="flex items-baseline gap-2 pr-1">
-                  <span className={`text-[11px] font-medium ${fullyPaid ? "text-emerald-500" : "text-gray-400"}`}>
+                  <span className={`text-[11px] font-medium ${fullyPaid ? "text-[#4f9a7c] dark:text-[#7cc4a5]" : "text-gray-400"}`}>
                     {fullyPaid ? "paid" : `${gbp0(total - paid)} left`}
                   </span>
                   <span className="font-bold tabular-nums text-gray-800 dark:text-gray-100">{gbp0(total)}</span>

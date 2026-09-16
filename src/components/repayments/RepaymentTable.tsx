@@ -184,23 +184,21 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
         </div>
       </div>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[1280px] text-sm">
+        <table className="w-full min-w-[1080px] text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">
               <th className="w-10 px-3 py-3" />
-              <th className="w-20 px-3 2xl:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Date</th>
-              <th className="min-w-[150px] px-3 2xl:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Description</th>
-              <th className="w-24 px-3 2xl:px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Amount</th>
-              <th className="w-24 px-3 2xl:px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">Left to Pay</th>
-              <th className="w-40 px-3 2xl:px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Category</th>
-              <th className="min-w-[160px] px-3 2xl:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Notes</th>
+              <th className="min-w-[180px] px-3 2xl:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Description</th>
+              <th className="w-28 px-3 2xl:px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">Left to pay</th>
+              <th className="w-36 px-3 2xl:px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Category</th>
+              <th className="min-w-[140px] px-3 2xl:px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Notes</th>
               {([1, 2, 3] as const).map((n) => (
                 <th key={n} className="w-32 px-3 2xl:px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">
                   Repayment {n}
                 </th>
               ))}
               <th className="w-16 px-3 2xl:px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Refund</th>
-              <th className="w-20 px-3 2xl:px-6 py-3" />
+              <th className="w-10 px-2 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
@@ -233,21 +231,17 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
                     </svg>
                   </button>
                 </td>
-                <td className="whitespace-nowrap px-3 2xl:px-6 py-3 text-gray-500 dark:text-gray-400">
-                  {shortDate(r.created)}
-                </td>
-                <td className="max-w-[150px] px-3 2xl:px-6 py-3">
+                <td className="max-w-[220px] px-3 2xl:px-6 py-3">
                   <Tooltip label={r.description} className="block">
                     <span className="block cursor-default truncate font-medium text-gray-800 dark:text-gray-200">
                       {r.description}
                     </span>
                   </Tooltip>
+                  <span className="mt-0.5 block whitespace-nowrap text-xs text-gray-400">{shortDate(r.created)}</span>
                 </td>
-                <td className="px-3 2xl:px-6 py-3 text-center font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">
-                  {gbp(Math.abs(r.amount))}
-                </td>
-                <td className="px-3 2xl:px-6 py-3 text-center font-semibold whitespace-nowrap text-indigo-600 dark:text-indigo-400">
-                  {gbp(leftToPay(r))}
+                <td className="px-3 2xl:px-6 py-3 text-right whitespace-nowrap">
+                  <span className="block font-semibold tabular-nums text-gray-900 dark:text-white">{gbp(leftToPay(r))}</span>
+                  <span className="block text-xs tabular-nums text-gray-400">of {gbp(Math.abs(r.amount))}</span>
                 </td>
                 <td className="px-3 2xl:px-6 py-3">
                   {addingFor === r.id ? (
@@ -289,7 +283,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
                   const amount = amountOf(r, n);
                   const isPast = date && date.slice(0, 10) < today;
                   return (
-                    <td key={n} className="px-2 2xl:px-4 py-3">
+                    <td key={n} className="px-1.5 2xl:px-4 py-3">
                       <div className={`flex flex-col items-center gap-1.5 ${isPast ? "opacity-50" : ""}`}>
                         <DatePicker
                           selected={date ? parseLocal(date.slice(0, 10)) : null}
@@ -320,12 +314,16 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
                     className="h-4 w-4 rounded border-gray-300 accent-[#8c7c68]"
                   />
                 </td>
-                <td className="px-3 2xl:px-6 py-3">
+                <td className="px-2 py-3">
                   <button
                     onClick={() => onDelete(r)}
-                    className="whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium text-red-400 opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                    title="Delete"
+                    aria-label={`Delete ${r.description}`}
+                    className="rounded-lg p-1.5 text-red-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 focus:opacity-100 group-hover:opacity-100 dark:hover:bg-red-950/40"
                   >
-                    Delete
+                    <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4">
+                      <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                    </svg>
                   </button>
                 </td>
               </tr>
@@ -333,7 +331,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-6 py-6 text-center text-sm text-gray-400">
+                <td colSpan={10} className="px-6 py-6 text-center text-sm text-gray-400">
                   {emptyMessage}
                 </td>
               </tr>

@@ -5,7 +5,7 @@ import RepaymentTable from "./RepaymentTable";
 import RepaymentPivot from "./RepaymentPivot";
 import DailyRepaymentChart from "./DailyRepaymentChart";
 import SyntheticRepaymentsPanel from "./SyntheticRepaymentsPanel";
-import { filterActiveRepayments, pivot, visibleRepaymentMonths } from "../../lib/repayments";
+import { catColor, filterActiveRepayments, pivot, visibleRepaymentMonths } from "../../lib/repayments";
 import { gbp0, formatMonthLabel } from "../../lib/format";
 import Hero from "../Hero";
 import { CardArt, IN_COLUMN } from "../HeroArt";
@@ -76,15 +76,17 @@ export default function RepaymentsTab() {
                 { label: "Purchases", value: String(active.length), sub: "still being repaid" },
               ]}
               aside={
-                <div className="flex h-28 items-end gap-3">
-                  {totals.map((x) => (
-                    <div key={x.month} className="flex w-16 flex-col items-center gap-1">
-                      <span className="text-[11px] font-bold tabular-nums">{gbp0(x.total)}</span>
-                      <div className="w-12 rounded-t-lg bg-white/80" style={{ height: `${Math.max(4, (x.total / peak) * 64)}px` }} />
-                      <span className="text-[11px] font-semibold text-white/75">{monthName(x.month)}</span>
-                    </div>
-                  ))}
-                </div>
+                <MonthBars
+                  totals={totals}
+                  peak={peak}
+                  monthName={monthName}
+                  breakdown={(m) =>
+                    pivotRows
+                      .filter((r) => r.category !== "Uncategorized" && (r.values[m] ?? 0) > 0)
+                      .map((r) => ({ category: r.category, amount: r.values[m] ?? 0 }))
+                      .sort((a, b) => b.amount - a.amount)
+                  }
+                />
               }
             />
 
@@ -134,5 +136,77 @@ export default function RepaymentsTab() {
         );
       })()}
     </QueryState>
+  );
+}
+
+/**
+ * The header's month bars. Hovering (or tapping) a bar shows what makes up that
+ * month, by category, like the tooltips on the other tabs' charts.
+ */
+function MonthBars({
+  totals,
+  peak,
+  monthName,
+  breakdown,
+}: {
+  totals: { month: string; total: number }[];
+  peak: number;
+  monthName: (m: string) => string;
+  breakdown: (m: string) => { category: string; amount: number }[];
+}) {
+  const [active, setActive] = useState<string | null>(null);
+  return (
+    <div className="relative flex h-28 items-end gap-3" onMouseLeave={() => setActive(null)}>
+      {totals.map((x, i) => {
+        const on = active === x.month;
+        const parts = on ? breakdown(x.month) : [];
+        return (
+          <button
+            key={x.month}
+            type="button"
+            onMouseEnter={() => setActive(x.month)}
+            onFocus={() => setActive(x.month)}
+            onBlur={() => setActive(null)}
+            onClick={() => setActive(on ? null : x.month)}
+            className="group relative flex w-16 flex-col items-center gap-1 focus:outline-none"
+          >
+            <span className="text-[11px] font-bold tabular-nums">{gbp0(x.total)}</span>
+            <span
+              className={`block w-12 rounded-t-lg transition-colors ${on ? "bg-white" : "bg-white/75 group-hover:bg-white"}`}
+              style={{ height: `${Math.max(4, (x.total / peak) * 64)}px` }}
+            />
+            <span className={`text-[11px] font-semibold ${on ? "text-white" : "text-white/75"}`}>{monthName(x.month)}</span>
+            {on && (
+              <span
+                // Above the bar on phones; beside it on wider screens, where the
+                // header is too short to fit it above without clipping.
+                className={`absolute z-20 w-52 rounded-xl bg-gray-900/95 p-3 text-left text-xs text-gray-300 shadow-xl ring-1 ring-white/10 max-md:bottom-full max-md:mb-2 md:bottom-0 md:right-full md:mr-2 ${
+                  i >= totals.length - 2 ? "max-md:right-0" : "max-md:left-0"
+                }`}
+              >
+                <span className="mb-1.5 block font-semibold text-gray-400">{formatMonthLabel(x.month)}</span>
+                {parts.length === 0 ? (
+                  <span className="block text-gray-400">Nothing due</span>
+                ) : (
+                  parts.map((p) => (
+                    <span key={p.category} className="flex items-center justify-between gap-3 py-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: catColor(p.category) }} />
+                        {p.category}
+                      </span>
+                      <span className="tabular-nums">{gbp0(p.amount)}</span>
+                    </span>
+                  ))
+                )}
+                <span className="mt-1.5 flex justify-between border-t border-white/10 pt-1.5 font-bold text-white">
+                  <span>Total</span>
+                  <span className="tabular-nums">{gbp0(x.total)}</span>
+                </span>
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }

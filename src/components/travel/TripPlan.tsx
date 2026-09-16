@@ -35,13 +35,14 @@ export default function TripPlan({
   return (
     <div className="space-y-4">
       {/* Totals */}
-      <div className="grid grid-cols-3 gap-2 rounded-3xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800 sm:p-5">
+      <div className="grid grid-cols-3 gap-2 rounded-3xl bg-white px-5 py-4 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800 sm:p-5">
         {[
           { label: "Planned", value: planned, tone: "text-indigo-600 dark:text-indigo-400" },
           { label: "Spent", value: spent, tone: "" },
           { label: "Expected total", value: roundedExpected, tone: "text-gray-500 dark:text-gray-400" },
-        ].map((s) => (
-          <div key={s.label} className="text-center">
+        ].map((s, i) => (
+          // Outer figures hug the edges so the three spread evenly across the card.
+          <div key={s.label} className={["text-left", "text-center", "text-right"][i]}>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">{s.label}</p>
             <p className={`mt-1 text-xl font-extrabold tabular-nums tracking-tight sm:text-2xl ${s.tone}`}>{gbp0(s.value)}</p>
           </div>

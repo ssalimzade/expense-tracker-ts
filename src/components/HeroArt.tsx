@@ -80,12 +80,13 @@ export const BanknotesArt = ({ className }: P) => (
   </Art>
 );
 
-export const CoinsArt = ({ className }: P) => (
+export const PiggyBankArt = ({ className }: P) => (
   <Art className={className}>
-    <ellipse cx="100" cy="58" rx="56" ry="18" />
-    <path d="M44 58 V88 a56 18 0 0 0 112 0 V58" />
-    <path d="M44 88 V118 a56 18 0 0 0 112 0 V88" />
-    <path d="M44 118 V148 a56 18 0 0 0 112 0 V118" />
+    <circle cx="100" cy="30" r="12" />
+    <path d="M86 66 H114" />
+    <path d="M52 76 A62 46 0 0 1 150 80 L150 60 L166 82 A62 46 0 0 1 162 112 H178 V130 H158 A62 46 0 0 1 136 150 V172 H118 V156 A70 46 0 0 1 82 156 V172 H64 V148 A62 46 0 0 1 52 76 Z" />
+    <circle cx="146" cy="100" r="3" />
+    <path d="M40 104 c-14 -2 -18 -16 -6 -22" />
   </Art>
 );
 

@@ -31,7 +31,7 @@ export default function RemunerationTab() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className={`min-w-0 lg:space-y-5 ${section.value === "whatif" ? "max-lg:hidden" : ""}`}>
             {rows.length > 1 && (
-              <div className={section.show("chart")}>
+              <div className={`lg:hidden ${section.show("chart")}`}>
                 <PayGrowthChart rows={rows} />
               </div>
             )}
@@ -92,7 +92,7 @@ function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: Remu
           <p className="mt-1 text-4xl font-extrabold tabular-nums tracking-tight sm:text-5xl">{gbp0(pay.net_pm)}</p>
           {prev && Math.round(lastRise) !== 0 && (
             <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">
-              {lastRise > 0 ? "▲" : "▼"} {gbp0(Math.abs(lastRise))}/mo since the last change
+              {lastRise > 0 ? "▲" : "▼"} {gbp0(Math.abs(lastRise))} a month {lastRise > 0 ? "more" : "less"} since the last change
             </p>
           )}
 
@@ -104,15 +104,32 @@ function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: Remu
         </div>
 
         <div className="flex items-end justify-between gap-4 border-t border-dashed border-white/25 pt-5 md:flex-col md:items-end md:border-l md:border-t-0 md:pl-7 md:pt-0">
-          <div className="md:text-right">
+          <div className="md:text-right lg:hidden">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Growth{since ? ` since ${since}` : ""}</p>
             <p className="mt-1 text-3xl font-extrabold tabular-nums">
               {growth >= 0 ? "+" : "−"}
               {Math.abs(growth * 100).toFixed(0)}%
             </p>
-            {firstPay && <p className="text-xs text-white/70">from {gbp0(firstPay.net_pm)}/mo</p>}
+            {firstPay && <p className="text-xs text-white/70">from {gbp0(firstPay.net_pm)} a month</p>}
           </div>
-          <Sparkline values={rows.map((r) => resolvePay(r).net_pm)} />
+          <div className="lg:hidden">
+            <Sparkline values={rows.map((r) => resolvePay(r).net_pm)} />
+          </div>
+          {rows.length > 1 && (
+            <div className="hidden lg:block">
+              <PayGrowthChart
+                rows={rows}
+                variant="hero"
+                note={
+                  <>
+                    {growth >= 0 ? "+" : "−"}
+                    {Math.abs(growth * 100).toFixed(0)}% since {since}
+                    {firstPay && <span className="font-normal text-white/70"> · from {gbp0(firstPay.net_pm)} a month</span>}
+                  </>
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
     </section>
