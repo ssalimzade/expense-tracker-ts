@@ -121,7 +121,7 @@ export default function App() {
         showMonth={MONTH_TABS.includes(tab)}
       />
       <RequisitionBanner />
-      <main className="flex-1 overflow-x-auto p-3 md:p-5 max-md:!pb-[calc(5rem_+_env(safe-area-inset-bottom))]">
+      <main className="flex-1 overflow-x-auto p-3 md:p-5 max-md:!pb-[calc(6rem_+_env(safe-area-inset-bottom))]">
         <Suspense
           fallback={
             <div className="flex items-center justify-center p-12">

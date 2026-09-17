@@ -17,33 +17,33 @@ export type TabKey =
 
 // Tabs are split into groups, rendered left→right with a divider
 // between each group on the desktop bar.
-type TabGroup = "spending" | "monthly" | "planning" | "records" | "notes" | "travel";
+type TabGroup = "spending" | "planning" | "records";
 
 const TABS: { key: TabKey; label: string; group: TabGroup }[] = [
   { key: "dashboard",    label: "Budget",       group: "spending" },
   { key: "transactions", label: "Transactions", group: "spending" },
-  { key: "planner",      label: "Planner",      group: "monthly"  },
-  { key: "repayments",   label: "Repayments",   group: "monthly"  },
+  { key: "repayments",   label: "Repayments",   group: "spending" },
+  { key: "planner",      label: "Planner",      group: "planning" },
   { key: "projections",  label: "Projections",  group: "planning" },
   { key: "rent",         label: "Rent",         group: "planning" },
   { key: "savings",      label: "Savings",      group: "planning" },
-  { key: "remuneration", label: "Salary",       group: "records"  },
+  { key: "remuneration", label: "Salary",       group: "planning" },
+  { key: "travel",       label: "Travel",       group: "records"  },
   { key: "history",      label: "History",      group: "records"  },
-  { key: "notes",        label: "Notes",        group: "notes"    },
-  { key: "travel",       label: "Travel",       group: "travel"   },
+  { key: "notes",        label: "Notes",        group: "records"  },
 ];
 
-// Mobile-only icons (bottom bar)
+// Mobile-only icons (bottom bar). The tabs with a header icon reuse its shape —
+// a wallet for Budget, a piggy bank for Savings — so the two bars agree.
 const ICONS: Record<TabKey, ReactNode> = {
   dashboard: (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-      <path d="M2 10a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z M10 5a1 1 0 0 1 1 1v4.586l2.707 2.707a1 1 0 0 1-1.414 1.414l-3-3A1 1 0 0 1 9 11V6a1 1 0 0 1 1-1Z" />
-      <path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+      <path fillRule="evenodd" d="M2.25 7.5A3.25 3.25 0 0 1 5.5 4.25h11.25A1.75 1.75 0 0 1 18.5 6v.75h1A2.25 2.25 0 0 1 21.75 9v8.25a2.5 2.5 0 0 1-2.5 2.5H5.5a3.25 3.25 0 0 1-3.25-3.25V7.5Zm14.75 6.75a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z" clipRule="evenodd" />
     </svg>
   ),
   transactions: (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-      <path fillRule="evenodd" d="M1 2.75A.75.75 0 0 1 1.75 2h16.5a.75.75 0 0 1 0 1.5H18v8.75A2.75 2.75 0 0 1 15.25 15h-1.072l.798 3.06a.75.75 0 0 1-1.452.38L13.41 18H6.59l-.114.44a.75.75 0 0 1-1.452-.38L5.823 15H4.75A2.75 2.75 0 0 1 2 12.25V3.5h-.25A.75.75 0 0 1 1 2.75Z" clipRule="evenodd" />
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+      <path fillRule="evenodd" d="M15.97 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1 0 1.06l-4.5 4.5a.75.75 0 1 1-1.06-1.06l3.22-3.22H7.5a.75.75 0 0 1 0-1.5h11.69l-3.22-3.22a.75.75 0 0 1 0-1.06Zm-7.94 9a.75.75 0 0 1 0 1.06l-3.22 3.22H16.5a.75.75 0 0 1 0 1.5H4.81l3.22 3.22a.75.75 0 1 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
     </svg>
   ),
   planner: (
@@ -57,9 +57,13 @@ const ICONS: Record<TabKey, ReactNode> = {
     </svg>
   ),
   savings: (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-      <path d="M10.75 10.818v2.614A3.13 3.13 0 0 0 11.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 0 0-1.138-.432ZM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 0 0-.35.13c-.14.065-.27.143-.386.233-.335.257-.48.552-.481.787 0 .233.143.518.297.657Z" />
-      <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a2.25 2.25 0 0 1 .28-.25V6.5a.75.75 0 0 1 1.5 0v.518l.145.065c.386.173.715.433.96.728.237.289.365.616.365.939 0 .325-.127.651-.364.94a2.76 2.76 0 0 1-.96.728l-.146.065v2.82c.406-.12.734-.334.96-.614a.75.75 0 1 1 1.297.75 4.075 4.075 0 0 1-1.058.816v.432a.75.75 0 0 1-1.5 0v-.518l-.145-.065a3.706 3.706 0 0 1-.96-.728 2.25 2.25 0 0 1-.365-.94c0-.325.127-.651.364-.94a2.76 2.76 0 0 1 .96-.728l.146-.065V7.488a2.44 2.44 0 0 0-.156.224.75.75 0 1 1-1.297-.75c.117-.203.252-.39.402-.541Z" clipRule="evenodd" />
+    <svg viewBox="0 0 200 200" fill="currentColor" className="h-5 w-5">
+      <path
+        fillRule="evenodd"
+        d="M52 76 A62 46 0 0 1 150 80 L150 60 L166 82 A62 46 0 0 1 162 112 H178 V130 H158 A62 46 0 0 1 136 150 V172 H118 V156 A70 46 0 0 1 82 156 V172 H64 V148 A62 46 0 0 1 52 76 Z M146 94 a7 7 0 1 0 0 14 7 7 0 0 0 0-14 Z"
+        clipRule="evenodd"
+      />
+      <path d="M84 52 h32 v12 h-32 Z" />
     </svg>
   ),
   projections: (
@@ -73,8 +77,9 @@ const ICONS: Record<TabKey, ReactNode> = {
     </svg>
   ),
   remuneration: (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-      <path d="M1 4.25C1 3.56 1.56 3 2.25 3h15.5c.69 0 1.25.56 1.25 1.25v8.5c0 .69-.56 1.25-1.25 1.25H2.25C1.56 14 1 13.44 1 12.75v-8.5ZM10 6a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM4.75 6a.75.75 0 0 0 0 1.5.75.75 0 0 1 .75.75.75.75 0 0 0 1.5 0A2.25 2.25 0 0 0 4.75 6Zm10.5 0A2.25 2.25 0 0 0 13 8.25a.75.75 0 0 0 1.5 0 .75.75 0 0 1 .75-.75.75.75 0 0 0 0-1.5ZM3 16.25a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z" />
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+      <path d="M4 4.75h13A1.75 1.75 0 0 1 18.75 6.5v.75H6.5A2.25 2.25 0 0 0 4.25 9.5v6.25H4A1.75 1.75 0 0 1 2.25 14V6.5A1.75 1.75 0 0 1 4 4.75Z" />
+      <path fillRule="evenodd" d="M6.5 8.75h13A2.25 2.25 0 0 1 21.75 11v6a2.25 2.25 0 0 1-2.25 2.25h-13A2.25 2.25 0 0 1 4.25 17v-6A2.25 2.25 0 0 1 6.5 8.75ZM13 16.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z" clipRule="evenodd" />
     </svg>
   ),
   history: (
@@ -174,13 +179,13 @@ export default function NavBar({ active, onChange, selectedMonth, onMonthChange,
       </header>
 
       {/* ── Mobile bottom bar (horizontally scrollable) ──────── */}
-      <nav className="md:hidden fixed inset-x-0 bottom-0 z-10 flex gap-1 overflow-x-auto border-t border-gray-200 bg-white px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] dark:border-gray-800 dark:bg-gray-900 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="md:hidden fixed inset-x-0 bottom-0 z-10 flex gap-1 overflow-x-auto border-t border-gray-200 bg-white px-2 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] dark:border-gray-800 dark:bg-gray-900 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             ref={active === tab.key ? activeRef : undefined}
             onClick={() => onChange(tab.key)}
-            className={`flex shrink-0 min-w-[4.25rem] flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-[10px] font-medium transition-all ${
+            className={`flex shrink-0 min-w-[4.75rem] flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-all [&>svg]:h-6 [&>svg]:w-6 ${
               active === tab.key
                 ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400"
                 : "text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"

@@ -151,8 +151,11 @@ export default function ProjectionsTab() {
         const sum = (pick: (r: ProjectionView) => number) => elapsed.reduce((acc, r) => acc + pick(r), 0);
         const avgSalary = sum((r) => r.salary) / n; // base salary only, excludes bonus
         const avgCosts = sum((r) => r.totalCosts) / n;
-        const totalAllocated = sum((r) => r.home_contributions + r.savings + r.investments);
-        const avgRate = avgSalary ? totalAllocated / sum((r) => r.salary) : 0;
+        // The year's cash flow, which is what this tab plans: everything that came
+        // in, and the share of it the months have already spent.
+        const totalIn = sum((r) => r.salary + r.bonus + r.other_pl);
+        const totalCosts = sum((r) => r.totalCosts);
+        const costRate = totalIn ? totalCosts / totalIn : 0;
 
         const leftover = sum((r) => r.buffer);
 
@@ -189,14 +192,14 @@ export default function ProjectionsTab() {
             <Hero
               gradient="from-[#4d7c8a] via-[#3b6070] to-[#243c47]"
               badge={`${year} · ${elapsed.length} month${elapsed.length === 1 ? "" : "s"} so far`}
-              label="Put aside this year"
-              value={gbp0(totalAllocated)}
+              label="Money in this year"
+              value={gbp0(totalIn)}
               decoration={
                 <TrendArt className={IN_COLUMN} />
               }
               under={
                 <HeroChip>
-                  {Math.round(avgRate * 100)}% of salary into home, savings & investments
+                  {gbp0(totalCosts)} of it spent — {Math.round(costRate * 100)}% of everything that came in
                 </HeroChip>
               }
               aside={<div className="w-[26rem] xl:w-[32rem]">{leftoverChart("h-32")}</div>}

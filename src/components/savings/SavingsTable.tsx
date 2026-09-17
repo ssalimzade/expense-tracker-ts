@@ -104,6 +104,23 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
   };
 
   const monthNow = rows.find((r) => monthKey(r.start_date) === currentKey)?.start_date;
+  // Open at this month; the months already behind you are one tap away.
+  const [showEarlier, setShowEarlier] = useState(false);
+  const hasCurrent = rows.some((r) => monthKey(r.start_date) === currentKey);
+  const shownRows = showEarlier || !hasCurrent ? rows : rows.filter((r) => monthKey(r.start_date) >= currentKey);
+  const hiddenEarlier = rows.length - shownRows.length;
+  const earlierButton = (
+    <button
+      type="button"
+      onClick={() => setShowEarlier(true)}
+      className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-500 ring-1 ring-gray-100 transition hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-400 dark:ring-gray-800 dark:hover:bg-gray-800/40"
+    >
+      <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+        <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
+      </svg>
+      Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
+    </button>
+  );
   // Scale for the little "what went in" bars: the biggest month's total inflow.
   const inflow = (r: SavingsRow) =>
     Math.max(0, r.home_contributions) + Math.max(0, r.savings) + Math.max(0, r.adjustments) + (showInvestments ? Math.max(0, r.investments ?? 0) : 0);
@@ -152,6 +169,8 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
         </div>
       </div>
 
+      {hiddenEarlier > 0 && <div className="mb-2">{earlierButton}</div>}
+
       {/* Desktop ledger */}
       <div className="hidden overflow-hidden rounded-3xl bg-white ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800 md:block">
         <div className={`grid items-center gap-x-2 border-b border-gray-100 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400 dark:border-gray-800 ${desktopCols}`}>
@@ -163,7 +182,7 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
           <span className="pl-3">Notes</span>
         </div>
         <ul className="divide-y divide-gray-50 dark:divide-gray-800/60">
-          {rows.map((row) => {
+          {shownRows.map((row) => {
             const isFuture = monthKey(row.start_date) > currentKey;
             const isNow = row.start_date === monthNow;
             return (
@@ -225,7 +244,7 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
 
       {/* Phone: one card per month */}
       <ul className="space-y-2 md:hidden">
-        {rows.map((row) => {
+        {shownRows.map((row) => {
           const isFuture = monthKey(row.start_date) > currentKey;
           const isNow = row.start_date === monthNow;
           const startingDerived = row.start_date !== seedDate;

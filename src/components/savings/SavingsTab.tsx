@@ -2,17 +2,10 @@ import { useState } from "react";
 import { useSavings } from "../../hooks/useSavings";
 import { QueryState } from "../common";
 import SavingsTable from "./SavingsTable";
-import { SavingsGrowthChart } from "./SavingsCharts";
 import { HeroChartHeader, HeroLineChart } from "../HeroCharts";
 import { gbp0 } from "../../lib/format";
 import type { SavingsRow } from "../../types/savings";
 import { PiggyBankArt, IN_COLUMN } from "../HeroArt";
-import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
-
-const SECTIONS = [
-  { value: "months", label: "Months" },
-  { value: "charts", label: "Balance chart" },
-] as const;
 
 const currentKey = (() => {
   const d = new Date();
@@ -25,7 +18,6 @@ export default function SavingsTab() {
   const savingsQuery = useSavings();
   const currentYear = String(new Date().getFullYear());
   const [year, setYear] = useState(currentYear);
-  const section = usePhoneSection("savings-section", SECTIONS);
 
   const allRows = savingsQuery.data ?? [];
   const years = [...new Set(allRows.map((r) => r.start_date.slice(0, 4)))].sort();
@@ -59,20 +51,11 @@ export default function SavingsTab() {
 
         {rows.length > 0 && <VaultHero rows={rows} year={year} showInvestments={showInvestments} />}
 
-        <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
-
-        {/* Wide screens show the balance chart inside the header. */}
-        <div className={`lg:hidden ${section.show("charts")}`}>
-          <SavingsGrowthChart rows={rows} />
-        </div>
-
-        <div className={section.show("months")}>
-          <SavingsTable
-            rows={rows}
-            showInvestments={showInvestments}
-            seedDate={allRows.reduce((min, r) => (!min || r.start_date < min ? r.start_date : min), "")}
-          />
-        </div>
+        <SavingsTable
+          rows={rows}
+          showInvestments={showInvestments}
+          seedDate={allRows.reduce((min, r) => (!min || r.start_date < min ? r.start_date : min), "")}
+        />
       </div>
     </QueryState>
   );
@@ -92,6 +75,31 @@ function VaultHero({ rows, year, showInvestments }: { rows: SavingsRow[]; year: 
   const finished = elapsed.length === rows.length;
   // How far along the year's path from January's start to December's end.
   const progress = yearEnd > start ? Math.min(1, Math.max(0, (now - start) / (yearEnd - start))) : 1;
+
+  const balanceChart = (className: string) => (
+    <div>
+      <HeroChartHeader title="Balance through the year" note={`${gbp0(yearEnd)} by ${monthName(rows[rows.length - 1].start_date)}`} />
+      <HeroLineChart
+        className={className}
+        labelKey="label"
+        tipTitleKey="title"
+        format={gbp0}
+        series={[
+          { key: "actual", label: "Balance", kind: "area" },
+          { key: "future", label: "Expected", kind: "dashed" },
+        ]}
+        data={rows.map((r) => {
+          const key = r.start_date.slice(0, 7);
+          return {
+            label: monthName(r.start_date),
+            title: `${monthName(r.start_date)} ${year}`,
+            actual: key <= currentKey ? r.ending_balance : null,
+            future: key >= currentKey ? r.ending_balance : null,
+          };
+        })}
+      />
+    </div>
+  );
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6f8a58] via-[#526a44] to-[#34472f] text-white shadow-lg shadow-black/10 dark:shadow-none">
@@ -120,30 +128,11 @@ function VaultHero({ rows, year, showInvestments }: { rows: SavingsRow[]; year: 
           {showInvestments && <HeroField label="Invested" value={gbp0(sum("investments"))} sub="this year" />}
           <HeroField label="Growth" value={`${now - start >= 0 ? "+" : "−"}${gbp0(Math.abs(now - start))}`} sub="since January" />
         </div>
+        {/* Phones get the same chart, under the figures rather than beside them. */}
+        <div className="mt-6 border-t border-dashed border-white/25 pt-5 lg:hidden">{balanceChart("h-24")}</div>
         </div>
         <div className="hidden border-dashed border-white/25 lg:block lg:border-l lg:pl-7">
-          <div className="w-[26rem] xl:w-[32rem]">
-            <HeroChartHeader title="Balance through the year" note={`${gbp0(yearEnd)} by ${monthName(rows[rows.length - 1].start_date)}`} />
-            <HeroLineChart
-              className="h-32"
-              labelKey="label"
-              tipTitleKey="title"
-              format={gbp0}
-              series={[
-                { key: "actual", label: "Balance", kind: "area" },
-                { key: "future", label: "Expected", kind: "dashed" },
-              ]}
-              data={rows.map((r) => {
-                const key = r.start_date.slice(0, 7);
-                return {
-                  label: monthName(r.start_date),
-                  title: `${monthName(r.start_date)} ${year}`,
-                  actual: key <= currentKey ? r.ending_balance : null,
-                  future: key >= currentKey ? r.ending_balance : null,
-                };
-              })}
-            />
-          </div>
+          <div className="w-[26rem] xl:w-[32rem]">{balanceChart("h-32")}</div>
         </div>
       </div>
     </section>

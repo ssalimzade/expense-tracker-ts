@@ -475,11 +475,11 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
 
   const [pop, setPop] = useState<Pop | null>(null);
 
-  // Phones open at this month; the months already behind you are one tap away.
+  // The table opens at this month; the months already behind you are one tap away.
   const [showEarlier, setShowEarlier] = useState(false);
   const hasCurrent = months.includes(currentMonth);
-  const phoneMonths = showEarlier || !hasCurrent ? months : months.filter((m) => m >= currentMonth);
-  const hiddenEarlier = months.length - phoneMonths.length;
+  const shownMonths = showEarlier || !hasCurrent ? months : months.filter((m) => m >= currentMonth);
+  const hiddenEarlier = months.length - shownMonths.length;
 
   // Ticking asks what actually left the account; unticking drops that figure so
   // it can't linger as a stale diff. A matched row opens the link menu instead.
@@ -676,6 +676,18 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
           </span>
         </div>
       </div>
+      {hiddenEarlier > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowEarlier(true)}
+          className="flex w-full items-center justify-center gap-1.5 border-b border-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/40"
+        >
+          <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+            <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
+          </svg>
+          Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
+        </button>
+      )}
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[860px] text-sm">
           <thead>
@@ -695,7 +707,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
-            {months.map((month) => {
+            {shownMonths.map((month) => {
               const isFuture = month > currentMonth;
               const isCurrent = month === currentMonth;
               const total = monthTotal(month);
@@ -773,20 +785,8 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
       </div>
 
       {/* Mobile cards */}
-      {hiddenEarlier > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowEarlier(true)}
-          className="flex w-full items-center justify-center gap-1.5 border-b border-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/40 md:hidden"
-        >
-          <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
-            <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
-          </svg>
-          Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
-        </button>
-      )}
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60 md:hidden">
-        {phoneMonths.map((month) => {
+        {shownMonths.map((month) => {
           const isFuture = month > currentMonth;
           const isCurrent = month === currentMonth;
           const total = monthTotal(month);

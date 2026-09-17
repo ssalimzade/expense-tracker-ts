@@ -11,14 +11,13 @@ import { rentIsPaid, rentShare } from "../../lib/rent";
 import RentTable from "./RentTable";
 import RentPots from "./RentPots";
 import { potViews, potsTotal } from "../../lib/pots";
-import { BillsHeroChart, CostBreakdownChart } from "./RentCharts";
+import { BillsHeroChart } from "./RentCharts";
 import { HouseArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
 
 const SECTIONS = [
   { value: "months", label: "Months" },
   { value: "pots", label: "Pots" },
-  { value: "charts", label: "Bills chart" },
 ] as const;
 
 const currentMonth = (() => {
@@ -110,14 +109,14 @@ export default function RentTab({ onOpenTransactions }: Props) {
                 { label: "In bills pots", value: gbp0(setAside), sub: openPots === 1 ? "1 open pot" : `${openPots} open pots` },
                 { label: "Rent to salary", value: `${rentToSalary.toFixed(0)}%`, sub: "this month" },
               ]}
-            />
+            >
+              {/* Phones get the same chart, under the figures rather than beside them. */}
+              <div className="mt-6 border-t border-dashed border-white/25 pt-5 lg:hidden">
+                <BillsHeroChart data={data} months={months} className="h-24" />
+              </div>
+            </Hero>
 
             <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />
-
-            {/* Wide screens show the bills chart inside the header. */}
-            <div className={`lg:hidden ${section.show("charts")}`}>
-              <CostBreakdownChart data={data} months={months} />
-            </div>
 
             <div className={section.show("pots")}>
               <RentPots data={data} upTo={currentMonth} />

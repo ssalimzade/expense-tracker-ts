@@ -2,33 +2,14 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useArchiveMonths, useArchive, useAllArchives } from "../../hooks/useArchive";
 import { recomputeArchive } from "../../api/archive";
-import {
-  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine,
-} from "recharts";
 import { Card, QueryState } from "../common";
 import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
-import { tooltipStyle, cursorStyle, tooltipItemStyle, tooltipLabelStyle, CHART, axisTick, gridStroke } from "../../lib/chart";
+import { CHART } from "../../lib/chart";
 import ChartLegend from "../ChartLegend";
 import { HeroChartHeader, HeroLineChart } from "../HeroCharts";
 import CategoryBreakdownTable from "../dashboard/CategoryBreakdownTable";
-import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
-
-const SECTIONS = [
-  { value: "categories", label: "Categories" },
-  { value: "charts", label: "Charts" },
-] as const;
-import { useIsMobile } from "../../hooks/useIsMobile";
 import Hero, { HeroProgress } from "../Hero";
 import { RewindClockArt, IN_COLUMN } from "../HeroArt";
-
-// "2026-06" → "Jun '26" for chart axes (month name + short year across years).
-const monthTick = (m: string) => {
-  if (!m || !m.includes("-")) return m;
-  const [y, mm] = m.split("-");
-  const d = new Date(Number(y), Number(mm) - 1, 1);
-  return `${d.toLocaleString("en-GB", { month: "short" })} '${y.slice(2)}`;
-};
 
 export default function HistoryTab() {
   const monthsQuery = useArchiveMonths();
@@ -37,7 +18,6 @@ export default function HistoryTab() {
   const allMonths = monthsQuery.data ?? [];
   const allArchives = useAllArchives(allMonths);
   const qc = useQueryClient();
-  const section = usePhoneSection("history-section", SECTIONS);
 
   const refreshSnapshot = useMutation({
     mutationFn: (m: string) => recomputeArchive(m),
@@ -58,6 +38,22 @@ export default function HistoryTab() {
   const totalBudget = rows.reduce((s, r) => s + r["Budget (£)"], 0);
   const totalSpent = rows.reduce((s, r) => s + r["Spent (£)"], 0);
   const totalRemaining = totalBudget - totalSpent;
+
+  const spendChart = (className: string) => (
+    <div>
+      <HeroChartHeader title="Spending over time" note={`${gbp(avgSpend)} a month on average`} />
+      <HeroLineChart
+        className={className}
+        labelKey="label"
+        format={gbp}
+        series={[
+          { key: "spent", label: "Spent", kind: "area" },
+          { key: "budget", label: "Budget", kind: "dashed" },
+        ]}
+        data={allArchives.data.map((d) => ({ ...d, label: formatMonthLabel(d.month) }))}
+      />
+    </div>
+  );
 
   const avgSpend = allArchives.data.length > 0
     ? allArchives.data.reduce((s, d) => s + d.spent, 0) / allArchives.data.length
@@ -122,23 +118,7 @@ export default function HistoryTab() {
               : []),
           ]}
           asideFrom="lg"
-          aside={
-            allArchives.data.length > 1 ? (
-              <div className="w-[26rem] xl:w-[32rem]">
-                <HeroChartHeader title="Spending over time" note={`${gbp(avgSpend)} a month on average`} />
-                <HeroLineChart
-                  className="h-32"
-                  labelKey="label"
-                  format={gbp}
-                  series={[
-                    { key: "spent", label: "Spent", kind: "area" },
-                    { key: "budget", label: "Budget", kind: "dashed" },
-                  ]}
-                  data={allArchives.data.map((d) => ({ ...d, label: formatMonthLabel(d.month) }))}
-                />
-              </div>
-            ) : undefined
-          }
+          aside={allArchives.data.length > 1 ? <div className="w-[26rem] xl:w-[32rem]">{spendChart("h-32")}</div> : undefined}
         >
             <button
               onClick={() => refreshSnapshot.mutate(month)}
@@ -151,16 +131,12 @@ export default function HistoryTab() {
               </svg>
               {refreshSnapshot.isPending ? "Refreshing…" : "Refresh snapshot"}
             </button>
+
+            {/* Phones get the same chart, under the figures rather than beside them. */}
+            {allArchives.data.length > 1 && (
+              <div className="mt-6 border-t border-dashed border-white/25 pt-5 lg:hidden">{spendChart("h-24")}</div>
+            )}
         </Hero>
-      )}
-
-      {month && <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} />}
-
-      {/* Historical spending chart (all months); wide screens show it in the header */}
-      {allArchives.data.length > 1 && (
-        <div className={`lg:hidden ${section.show("charts")}`}>
-          <SpendingOverTime data={allArchives.data} avgSpend={avgSpend} selected={month} />
-        </div>
       )}
 
       <QueryState isLoading={archiveQuery.isLoading} error={archiveQuery.error}>
@@ -168,10 +144,10 @@ export default function HistoryTab() {
           <p className="text-sm text-gray-400">Select a month above.</p>
         ) : (
           <>
-            <OverUnder month={month} rows={rows} className={section.show("charts")} />
+            <OverUnder month={month} rows={rows} />
 
             {/* Category table — same style as dashboard budget table */}
-            <Card className={`p-0 overflow-hidden max-md:!p-0 ${section.show("categories")}`}>
+            <Card className="p-0 overflow-hidden max-md:!p-0">
               <div className="flex items-center border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-6 sm:py-4">
                 <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Category Breakdown</h2>
               </div>
@@ -288,87 +264,6 @@ function OverUnder({
           })}
         </ul>
       )}
-    </Card>
-  );
-}
-
-/** Spent vs budget for every archived month. */
-function SpendingOverTime({
-  data,
-  avgSpend,
-  selected,
-}: {
-  data: { month: string; spent: number; budget: number }[];
-  avgSpend: number;
-  selected: string | null;
-}) {
-  const isMobile = useIsMobile();
-  const spentColor = CHART.indigo;
-  const budgetColor = CHART.grey;
-  const tick = axisTick;
-  const gradientId = "historySpendGradient";
-
-  const chart = (
-    <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={data} margin={{ top: 8, right: 20, bottom: 4, left: 0 }}>
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={spentColor} stopOpacity={0.28} />
-            <stop offset="95%" stopColor={spentColor} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid vertical={false} stroke={gridStroke} />
-        <XAxis dataKey="month" tick={tick} tickFormatter={monthTick} interval={isMobile ? 2 : "preserveStartEnd"} axisLine={false} tickLine={false} />
-        <YAxis
-          tick={tick}
-          width={48}
-          tickCount={isMobile ? 4 : 5}
-          tickFormatter={(v) => (v === 0 ? "£0" : `£${(v / 1000).toFixed(1)}k`)}
-          axisLine={false}
-          tickLine={false}
-        />
-        <Tooltip
-          formatter={(v: number, name: string) => [gbp(v), name === "spent" ? "Spent" : "Budget"]}
-          labelFormatter={(m) => formatMonthLabel(m as string)}
-          itemSorter={(item) => (item.dataKey === "spent" ? 0 : 1)}
-          contentStyle={tooltipStyle()}
-          itemStyle={tooltipItemStyle}
-          labelStyle={tooltipLabelStyle}
-          cursor={cursorStyle()}
-        />
-        {avgSpend > 0 && (
-          <ReferenceLine
-            y={avgSpend}
-            stroke={CHART.grey}
-            strokeOpacity={0.5}
-            strokeDasharray="2 4"
-            label={{ value: "average", position: "insideTopRight", fontSize: 10, fill: "#9ca3af" }}
-          />
-        )}
-        {selected && <ReferenceLine x={selected} stroke="rgba(148,163,184,0.4)" />}
-        <Line type="monotone" dataKey="budget" stroke={budgetColor} strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={{ r: 3 }} />
-        <Area type="monotone" dataKey="spent" stroke={spentColor} strokeWidth={2.5} fill={`url(#${gradientId})`} dot={{ r: 2.5, fill: spentColor, strokeWidth: 0 }} activeDot={{ r: 5 }} />
-      </ComposedChart>
-    </ResponsiveContainer>
-  );
-
-  const legend = [
-    { label: "Spent", color: spentColor },
-    { label: "Budget", color: budgetColor, dashed: true },
-  ];
-
-  return (
-    <Card>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
-          Spending Over Time
-        </h2>
-        {avgSpend > 0 && (
-          <span className="text-xs tabular-nums text-gray-400">average {gbp(avgSpend)} a month</span>
-        )}
-      </div>
-      <ChartLegend className="mb-3" items={legend} />
-      <div className="h-52 sm:h-56">{chart}</div>
     </Card>
   );
 }
