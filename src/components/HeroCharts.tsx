@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { useTouchDismiss } from "../hooks/useTouchDismiss";
 import { Area, Bar, BarChart, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 /**
@@ -76,8 +77,10 @@ export function HeroLineChart({
 }) {
   // Unique per instance: the same chart can be mounted twice (phone and wide layouts).
   const id = `hero-fill-${useId().replace(/:/g, "")}`;
+  // A tap elsewhere on the page closes the tooltip, as a tap outside a menu would.
+  const { ref, dismissed } = useTouchDismiss<HTMLDivElement>();
   return (
-    <div>
+    <div ref={ref}>
       <div className={className}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 6, right: 6, bottom: 2, left: 6 }}>
@@ -90,6 +93,7 @@ export function HeroLineChart({
             <XAxis dataKey={labelKey} hide />
             <YAxis hide domain={["dataMin", "dataMax"]} />
             <Tooltip
+              {...(dismissed ? { active: false } : {})}
               cursor={{ stroke: "rgba(255,255,255,0.35)" }}
               content={({ active, payload }) => {
                 const row = payload?.[0]?.payload as Row | undefined;
@@ -149,14 +153,16 @@ export function HeroBarChart({
   className?: string;
 }) {
   const hasNegative = data.some((d) => d.value < 0);
+  const { ref, dismissed } = useTouchDismiss<HTMLDivElement>();
   return (
-    <div>
+    <div ref={ref}>
       <div className={className}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 2, bottom: 0, left: 2 }} barCategoryGap="22%">
             <XAxis dataKey="label" hide />
             <YAxis hide />
             <Tooltip
+              {...(dismissed ? { active: false } : {})}
               cursor={{ fill: "rgba(255,255,255,0.08)" }}
               content={({ active, payload }) => {
                 const row = payload?.[0]?.payload as (typeof data)[number] | undefined;

@@ -3,6 +3,7 @@ import { useBalance, useSaveBalance, useAccountBalances } from "../../hooks/useB
 import { useRent } from "../../hooks/useRent";
 import MoneyInput from "../MoneyInput";
 import { gbp, gbp0, formatMonthLabel, toMonthKey } from "../../lib/format";
+import { STATUS } from "../../lib/chart";
 import { settlementsIn } from "../../lib/pots";
 import { rentIsPaid, rentShare } from "../../lib/rent";
 import type { BalanceValues } from "../../api/balance";
@@ -59,8 +60,8 @@ function DiffBreakdown({
   }, [open]);
   useEffect(() => cancel, []);
 
-  const neg = "text-red-500 dark:text-red-400";
-  const pos = "text-emerald-500 dark:text-emerald-400";
+  const neg = STATUS.over;
+  const pos = STATUS.under;
 
   // The wrapper spans the card (pointer-events-none) so the panel can anchor to
   // the card's right edge on mobile and stay on-screen; the button sits at the
@@ -170,14 +171,14 @@ const DEFAULTS: BalanceValues = {
 function cardStyle(v: number) {
   if (v > 0)
     return {
-      text: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-white dark:bg-gray-900 before:bg-emerald-400",
+      text: STATUS.under,
+      bg: "bg-white dark:bg-gray-900 before:bg-[#8fae73]",
       border: "ring-gray-100 dark:ring-gray-800",
     };
   if (v < 0)
     return {
-      text: "text-rose-600 dark:text-rose-400",
-      bg: "bg-white dark:bg-gray-900 before:bg-rose-400",
+      text: STATUS.over,
+      bg: "bg-white dark:bg-gray-900 before:bg-[#e0786f]",
       border: "ring-gray-100 dark:ring-gray-800",
     };
   return {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { gbp0 as gbp } from "../../lib/format";
+import { STATUS } from "../../lib/chart";
 
 export interface BreakdownRow {
   category: string;
@@ -11,8 +12,7 @@ export interface BreakdownRow {
 export const usedPct = (budget: number, spent: number) =>
   budget > 0 ? (spent / budget) * 100 : spent > 0 ? 999 : 0;
 
-export const usedBarColor = (pct: number) =>
-  pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500";
+export const usedBarColor = STATUS.bar;
 
 /**
  * The desktop category table shared by Budget and History, so the two stay
@@ -30,8 +30,7 @@ export default function CategoryBreakdownTable({
 }) {
   const th = "py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400";
   const num = "py-3 pl-4 text-right tabular-nums";
-  const remainingClass = (n: number) =>
-    n < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400";
+  const remainingClass = (n: number) => (n < 0 ? STATUS.over : STATUS.under);
 
   return (
     <div className="hidden overflow-x-auto md:block">

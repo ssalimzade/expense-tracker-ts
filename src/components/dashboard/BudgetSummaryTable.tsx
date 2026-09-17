@@ -4,7 +4,8 @@ import { downloadCsv } from "../../lib/csv";
 import { MAIN_CATEGORIES } from "../../types/categories";
 import { Card } from "../common";
 import CurrencyInput from "../CurrencyInput";
-import CategoryBreakdownTable from "./CategoryBreakdownTable";
+import CategoryBreakdownTable, { usedBarColor } from "./CategoryBreakdownTable";
+import { STATUS } from "../../lib/chart";
 
 interface Props {
   draft: BudgetMap;
@@ -81,7 +82,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
               <div className="mt-2.5 flex items-center gap-3">
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                   <div
-                    className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                    className={`h-full rounded-full ${usedBarColor(pct)}`}
                     style={{ width: `${Math.min(pct, 100)}%` }}
                   />
                 </div>
@@ -89,7 +90,7 @@ export default function BudgetSummaryTable({ draft, spentByCategory, onChange, o
               </div>
               <div className="mt-1.5 flex items-center justify-between text-xs">
                 <span className="text-gray-500 dark:text-gray-400">Spent {gbp(spent)}</span>
-                <span className={`font-semibold ${remaining < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                <span className={`font-semibold ${remaining < 0 ? STATUS.over : STATUS.under}`}>
                   {gbp(remaining)} left
                 </span>
               </div>

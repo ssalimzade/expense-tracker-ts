@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { useRemuneration } from "../../hooks/useRemuneration";
 import { QueryState } from "../common";
 import { gbp0 } from "../../lib/format";
 import { resolvePay, currentRow } from "../../lib/remuneration";
 import type { RemunerationRow } from "../../types/remuneration";
 import RemunerationTable from "./RemunerationTable";
-import { PayHeroChart, type PayView } from "./RemunerationCharts";
+import { PayHeroChart } from "./RemunerationCharts";
 import TakeHomeCalculator from "./TakeHomeCalculator";
 import { BanknotesArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
@@ -54,9 +53,6 @@ function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: Remu
   const prev = rows[rows.length - 2];
   const lastRise = prev ? pay.net_pm - resolvePay(prev).net_pm : 0;
   const since = first?.period.split(" - ")[0];
-  // Shared by the two copies of the chart below, so switching view on one width
-  // survives a resize to the other.
-  const [payView, setPayView] = useState<PayView>("net");
   const growthNote = (
     <>
       {growth >= 0 ? "+" : "−"}
@@ -89,7 +85,7 @@ function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: Remu
           {/* Phones get the same chart, under the figures rather than beside them. */}
           {rows.length > 1 && (
             <div className="mt-6 border-t border-dashed border-white/25 pt-5 lg:hidden">
-              <PayHeroChart rows={rows} note={growthNote} view={payView} onView={setPayView} className="h-24" />
+              <PayHeroChart rows={rows} note={growthNote} className="h-24" />
             </div>
           )}
         </div>
@@ -97,7 +93,7 @@ function PayslipHero({ rows, current }: { rows: RemunerationRow[]; current: Remu
         {rows.length > 1 && (
           <div className="hidden border-dashed border-white/25 lg:block lg:border-l lg:pl-7">
             <div className="w-[26rem] xl:w-[32rem]">
-              <PayHeroChart rows={rows} note={growthNote} view={payView} onView={setPayView} />
+              <PayHeroChart rows={rows} note={growthNote} />
             </div>
           </div>
         )}

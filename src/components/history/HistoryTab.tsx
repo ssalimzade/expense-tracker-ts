@@ -4,10 +4,10 @@ import { useArchiveMonths, useArchive, useAllArchives } from "../../hooks/useArc
 import { recomputeArchive } from "../../api/archive";
 import { Card, QueryState } from "../common";
 import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
-import { CHART } from "../../lib/chart";
+import { CHART, STATUS } from "../../lib/chart";
 import ChartLegend from "../ChartLegend";
 import { HeroChartHeader, HeroLineChart } from "../HeroCharts";
-import CategoryBreakdownTable from "../dashboard/CategoryBreakdownTable";
+import CategoryBreakdownTable, { usedBarColor } from "../dashboard/CategoryBreakdownTable";
 import Hero, { HeroProgress } from "../Hero";
 import { RewindClockArt, IN_COLUMN } from "../HeroArt";
 
@@ -89,7 +89,7 @@ export default function HistoryTab() {
 
       {month && (
         <Hero
-          gradient="from-slate-600 via-slate-700 to-indigo-900 dark:from-slate-700 dark:via-slate-800 dark:to-indigo-950"
+          gradient="from-[#5d6480] via-[#434a66] to-[#262a40] dark:from-[#4a5070] dark:via-[#333852] dark:to-[#191c2c]"
           badge={
             <span className="flex items-center gap-2">
               {formatMonthLabel(month)} · snapshot
@@ -172,7 +172,7 @@ export default function HistoryTab() {
                       <div className="mt-2.5 flex items-center gap-3">
                         <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                           <div
-                            className={`h-full rounded-full ${pct >= 100 ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-indigo-500"}`}
+                            className={`h-full rounded-full ${usedBarColor(pct)}`}
                             style={{ width: `${Math.min(pct, 100)}%` }}
                           />
                         </div>
@@ -180,7 +180,7 @@ export default function HistoryTab() {
                       </div>
                       <div className="mt-1.5 flex items-center justify-between text-xs">
                         <span className="text-gray-500 dark:text-gray-400">Spent {gbp(row["Spent (£)"])}</span>
-                        <span className={`font-semibold ${rem < 0 ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                        <span className={`font-semibold ${rem < 0 ? STATUS.over : STATUS.under}`}>
                           {gbp(rem)} left
                         </span>
                       </div>
@@ -191,7 +191,7 @@ export default function HistoryTab() {
                   <span className="uppercase tracking-wider text-gray-900 dark:text-white">Total</span>
                   <span className="flex items-center gap-3">
                     <span className="text-gray-500 dark:text-gray-400">Spent {gbp(totalSpent)}</span>
-                    <span className={totalRemaining < 0 ? "text-red-600" : "text-emerald-600"}>Left {gbp(totalRemaining)}</span>
+                    <span className={totalRemaining < 0 ? STATUS.over : STATUS.under}>Left {gbp(totalRemaining)}</span>
                   </span>
                 </li>
               </ul>
@@ -256,7 +256,7 @@ function OverUnder({
                     }}
                   />
                 </div>
-                <span className={`text-right text-xs font-semibold tabular-nums ${Math.round(it.diff) === 0 ? "text-gray-400" : over ? "text-red-500 dark:text-red-400" : "text-[#5d7a45] dark:text-[#a9c48f]"}`}>
+                <span className={`text-right text-xs font-semibold tabular-nums ${Math.round(it.diff) === 0 ? "text-gray-400" : over ? STATUS.over : STATUS.under}`}>
                   {Math.round(it.diff) === 0 ? "on budget" : `${gbp(Math.abs(it.diff))} ${over ? "over" : "under"}`}
                 </span>
               </li>

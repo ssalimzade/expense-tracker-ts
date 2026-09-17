@@ -27,7 +27,7 @@ export default function MetricsBar({ totalBudget, totalSpent, month, renderChart
 
   return (
     <Hero
-      gradient="from-indigo-500 via-blue-600 to-sky-600 dark:from-indigo-700 dark:via-blue-800 dark:to-sky-900"
+      gradient="from-[#6366f1] via-[#4f46e5] to-[#312e81] dark:from-[#4f46e5] dark:via-[#3730a3] dark:to-[#1e1b4b]"
       badge={formatMonthLabel(month)}
       badgeNote={
         isCurrent ? (

@@ -6,6 +6,7 @@ import RepaymentPivot from "./RepaymentPivot";
 import DailyRepaymentChart from "./DailyRepaymentChart";
 import SyntheticRepaymentsPanel from "./SyntheticRepaymentsPanel";
 import { filterActiveRepayments, pivot, visibleRepaymentMonths } from "../../lib/repayments";
+import { useTouchDismiss } from "../../hooks/useTouchDismiss";
 import { gbp0, formatMonthLabel } from "../../lib/format";
 import Hero from "../Hero";
 import { CardArt, IN_COLUMN } from "../HeroArt";
@@ -147,8 +148,10 @@ function MonthBars({
   monthName: (m: string) => string;
 }) {
   const [active, setActive] = useState<string | null>(null);
+  // On a phone the tooltip has no "moved away" to close it, so a tap elsewhere does.
+  const { ref } = useTouchDismiss<HTMLDivElement>(() => setActive(null));
   return (
-    <div className="relative flex h-28 items-end gap-3" onMouseLeave={() => setActive(null)}>
+    <div ref={ref} className="relative flex h-28 items-end gap-3" onMouseLeave={() => setActive(null)}>
       {totals.map((x, i) => {
         const on = active === x.month;
         return (

@@ -42,6 +42,20 @@ export const CHART = {
   /** Placeholder fill for "not yet"/"still to come" — faint in both themes. */
   mist: "rgba(148,163,184,0.28)",
   bad: "#e0786f",
+  /** Getting close to a budget — softer than a warning amber. */
+  warn: "#d9a86a",
+} as const;
+
+/**
+ * The same muted pair as the over/under bars, as Tailwind classes: money spent
+ * beyond a budget, and money still in hand. Softer than the stock red/emerald,
+ * and legible on both themes.
+ */
+export const STATUS = {
+  over: "text-[#c9584f] dark:text-[#e8938a]",
+  under: "text-[#5d7a45] dark:text-[#a9c48f]",
+  /** Fill for a "share of budget used" bar. */
+  bar: (pct: number) => (pct >= 100 ? "bg-[#e0786f]" : pct > 80 ? "bg-[#d9a86a]" : "bg-[#6f7fd6]"),
 } as const;
 
 /** Axis label style shared by every chart. */
