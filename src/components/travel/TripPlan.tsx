@@ -41,8 +41,9 @@ export default function TripPlan({
           { label: "Spent", value: spent, tone: "" },
           { label: "Expected total", value: roundedExpected, tone: "text-gray-500 dark:text-gray-400" },
         ].map((s, i) => (
-          // Outer figures hug the edges so the three spread evenly across the card.
-          <div key={s.label} className={["text-left", "text-center", "text-right"][i]}>
+          // The outer two are pulled in off the edges, so the row reads as a set
+          // rather than as two figures pinned to the corners.
+          <div key={s.label} className={["text-left sm:pl-6", "text-center", "text-right sm:pr-6"][i]}>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">{s.label}</p>
             <p className={`mt-1 text-xl font-extrabold tabular-nums tracking-tight sm:text-2xl ${s.tone}`}>{gbp0(s.value)}</p>
           </div>

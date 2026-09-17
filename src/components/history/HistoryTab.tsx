@@ -4,7 +4,7 @@ import { useArchiveMonths, useArchive, useAllArchives } from "../../hooks/useArc
 import { recomputeArchive } from "../../api/archive";
 import { Card, QueryState } from "../common";
 import { gbp0 as gbp, formatMonthLabel } from "../../lib/format";
-import { CHART, STATUS } from "../../lib/chart";
+import { STATUS } from "../../lib/chart";
 import ChartLegend from "../ChartLegend";
 import { HeroChartHeader, HeroLineChart } from "../HeroCharts";
 import CategoryBreakdownTable, { usedBarColor } from "../dashboard/CategoryBreakdownTable";
@@ -230,8 +230,8 @@ function OverUnder({
         </h2>
         <ChartLegend
           items={[
-            { label: "Under", color: CHART.moss },
-            { label: "Over", color: CHART.bad },
+            { label: "Under", color: STATUS.underFill },
+            { label: "Over", color: STATUS.overFill },
           ]}
         />
       </div>
@@ -251,7 +251,7 @@ function OverUnder({
                     className="absolute inset-y-0 rounded-full"
                     style={{
                       width,
-                      backgroundColor: over ? CHART.bad : CHART.moss,
+                      backgroundColor: over ? STATUS.overFill : STATUS.underFill,
                       ...(over ? { left: "50%" } : { right: "50%" }),
                     }}
                   />

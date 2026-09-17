@@ -54,6 +54,9 @@ export const CHART = {
 export const STATUS = {
   over: "text-[#c9584f] dark:text-[#e8938a]",
   under: "text-[#5d7a45] dark:text-[#a9c48f]",
+  /** The same two as fills, for charts that sit beside those figures. */
+  overFill: "#e0786f",
+  underFill: "#a9c48f",
   /** Fill for a "share of budget used" bar. */
   bar: (pct: number) => (pct >= 100 ? "bg-[#e0786f]" : pct > 80 ? "bg-[#d9a86a]" : "bg-[#6f7fd6]"),
 } as const;
