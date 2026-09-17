@@ -6,6 +6,11 @@ import { HeroBarChart, HeroChartHeader } from "../HeroCharts";
 /** Rent dwarfs every bill, so the breakdown leaves it out and names it instead. */
 const RENT_KEY = "flat";
 
+const currentMonth = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+})();
+
 /** The Rent header's minimal chart: bills (your share, rent left out) per month. */
 export function BillsHeroChart({ data, months, className }: { data: RentData; months: string[]; className?: string }) {
   const bills = data.items.filter((it) => it.key !== RENT_KEY);
@@ -26,6 +31,8 @@ export function BillsHeroChart({ data, months, className }: { data: RentData; mo
             label: d.toLocaleString("en-GB", { month: "long" }),
             title: d.toLocaleString("en-GB", { month: "long", year: "numeric" }),
             value: bills.reduce((s, it) => s + rentShare(data, m, it.key), 0),
+            // Months still to come are planned, not spent — the fainter bar says so.
+            faded: m > currentMonth,
           };
         })}
       />
