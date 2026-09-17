@@ -52,8 +52,9 @@ export default function TakeHomeCalculator({ defaultAnnual, currentNetMonthly }:
 
   return (
     <div className="rounded-3xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800">
-      <div className="flex items-baseline justify-between">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Calculator</p>
+      {/* On phones the section tab above already says Calculator. */}
+      <div className="flex items-baseline justify-between max-lg:justify-end">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400 max-lg:hidden">Calculator</p>
         <span className="text-[11px] text-gray-400">England 2025/26</span>
       </div>
 
