@@ -77,11 +77,9 @@ export default function RepaymentsTab() {
                 { label: "Purchases", value: String(active.length), sub: "still being repaid" },
               ]}
               aside={
-                <MonthBars
-                  totals={totals}
-                  peak={peak}
-                  monthName={monthName}
-                />
+                <div className="w-full md:w-[22rem] xl:w-[26rem]">
+                  <MonthBars totals={totals} peak={peak} monthName={monthName} />
+                </div>
               }
             />
 
@@ -151,7 +149,9 @@ function MonthBars({
   // On a phone the tooltip has no "moved away" to close it, so a tap elsewhere does.
   const { ref } = useTouchDismiss<HTMLDivElement>(() => setActive(null));
   return (
-    <div ref={ref} className="relative flex h-28 items-end gap-3" onMouseLeave={() => setActive(null)}>
+    // Bars share the width evenly, so a few months fill the space instead of
+    // bunching up on the left.
+    <div ref={ref} className="relative flex h-28 w-full items-end gap-3" onMouseLeave={() => setActive(null)}>
       {totals.map((x, i) => {
         const on = active === x.month;
         return (
@@ -162,11 +162,11 @@ function MonthBars({
             onFocus={() => setActive(x.month)}
             onBlur={() => setActive(null)}
             onClick={() => setActive(on ? null : x.month)}
-            className="group relative flex w-16 flex-col items-center gap-1 focus:outline-none"
+            className="group relative flex min-w-0 flex-1 flex-col items-center gap-1 focus:outline-none"
           >
             <span className="text-[11px] font-bold tabular-nums">{gbp0(x.total)}</span>
             <span
-              className={`block w-12 rounded-t-lg transition-colors ${on ? "bg-white" : "bg-white/75 group-hover:bg-white"}`}
+              className={`block w-full max-w-[3rem] rounded-t-lg transition-colors ${on ? "bg-white" : "bg-white/75 group-hover:bg-white"}`}
               style={{ height: `${Math.max(4, (x.total / peak) * 64)}px` }}
             />
             <span className={`text-[11px] font-semibold ${on ? "text-white" : "text-white/75"}`}>{monthName(x.month)}</span>
