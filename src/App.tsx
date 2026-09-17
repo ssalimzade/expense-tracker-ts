@@ -4,6 +4,7 @@ import RequisitionBanner from "./components/layout/RequisitionBanner";
 import { toMonthKey } from "./lib/format";
 import DashboardTab from "./components/dashboard/DashboardTab";
 import { Toaster } from "./lib/toast";
+import TabErrorBoundary from "./components/TabErrorBoundary";
 import { useAutoArchive } from "./hooks/useAutoArchive";
 import { useHiddenTransactions } from "./hooks/useHiddenTransactions";
 import type { RentMatch } from "./types/rent";
@@ -122,6 +123,7 @@ export default function App() {
       />
       <RequisitionBanner />
       <main className="flex-1 overflow-x-auto p-3 md:p-5 max-md:!pb-[calc(6rem_+_env(safe-area-inset-bottom))]">
+        <TabErrorBoundary resetKey={tab}>
         <Suspense
           fallback={
             <div className="flex items-center justify-center p-12">
@@ -152,6 +154,7 @@ export default function App() {
         {tab === "notes"       && <NotesTab />}
         {tab === "travel"      && <TravelTab />}
         </Suspense>
+        </TabErrorBoundary>
       </main>
       <Toaster />
     </div>

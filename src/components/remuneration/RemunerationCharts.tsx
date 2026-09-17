@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { RemunerationRow } from "../../types/remuneration";
 import { resolvePay } from "../../lib/remuneration";
 import { HeroChartHeader, HeroLineChart } from "../HeroCharts";
@@ -7,7 +7,8 @@ const VIEWS = {
   net: { label: "Take-home a month", color: "#10b981" },
   gross: { label: "Gross a year", color: "#14b8a6" },
 } as const;
-type View = keyof typeof VIEWS;
+export type PayView = keyof typeof VIEWS;
+type View = PayView;
 
 const money = (v: number) => `£${v.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
 
@@ -43,12 +44,27 @@ function ViewToggle({ view, onChange, onGradient }: { view: View; onChange: (v: 
   );
 }
 
-/** The Salary header's minimal pay line, with the same take-home / gross switch. */
-export function PayHeroChart({ rows, note, className = "h-32" }: { rows: RemunerationRow[]; note?: ReactNode; className?: string }) {
-  const [view, setView] = useState<View>("net");
+/**
+ * The Salary header's minimal pay line, with the same take-home / gross switch.
+ * The header mounts it twice (phone and wide layouts), so the chosen view is the
+ * caller's state — otherwise the two copies would disagree.
+ */
+export function PayHeroChart({
+  rows,
+  note,
+  view,
+  onView,
+  className = "h-32",
+}: {
+  rows: RemunerationRow[];
+  note?: ReactNode;
+  view: PayView;
+  onView: (v: PayView) => void;
+  className?: string;
+}) {
   return (
     <div>
-      <HeroChartHeader title="Pay over time" note={note} right={<ViewToggle view={view} onChange={setView} onGradient />} />
+      <HeroChartHeader title="Pay over time" note={note} right={<ViewToggle view={view} onChange={onView} onGradient />} />
       <HeroLineChart
         key={view}
         className={className}
