@@ -17,7 +17,7 @@ export type TabKey =
 
 // Tabs are split into groups, rendered left→right with a divider
 // between each group on the desktop bar.
-type TabGroup = "spending" | "planning" | "records";
+type TabGroup = "spending" | "planning" | "money" | "records";
 
 const TABS: { key: TabKey; label: string; group: TabGroup }[] = [
   { key: "dashboard",    label: "Budget",       group: "spending" },
@@ -26,8 +26,8 @@ const TABS: { key: TabKey; label: string; group: TabGroup }[] = [
   { key: "planner",      label: "Planner",      group: "planning" },
   { key: "projections",  label: "Projections",  group: "planning" },
   { key: "rent",         label: "Rent",         group: "planning" },
-  { key: "savings",      label: "Savings",      group: "planning" },
-  { key: "remuneration", label: "Salary",       group: "planning" },
+  { key: "savings",      label: "Savings",      group: "money"    },
+  { key: "remuneration", label: "Salary",       group: "money"    },
   { key: "travel",       label: "Travel",       group: "records"  },
   { key: "history",      label: "History",      group: "records"  },
   { key: "notes",        label: "Notes",        group: "records"  },
