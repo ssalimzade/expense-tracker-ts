@@ -28,12 +28,10 @@ function DiffBreakdown({
   parts,
   total,
   month,
-  overridden,
 }: {
   parts: DiffPart[];
   total: number;
   month: string;
-  overridden: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const timer = useRef<number | null>(null);
@@ -131,11 +129,9 @@ function DiffBreakdown({
                 </tfoot>
               </table>
             )}
-            {overridden && (
-              <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] leading-snug text-[#96794a] dark:border-gray-700/60 dark:text-[#d2bc92]">
-                Manual override in use — clear the field to switch to this total.
-              </p>
-            )}
+            <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] leading-snug text-gray-500 dark:border-gray-700/60 dark:text-gray-400">
+              Reported only — already reflected in Total Balance through Left to Pay.
+            </p>
           </div>
         </>
       )}
@@ -168,22 +164,47 @@ const DEFAULTS: BalanceValues = {
   amex_manual: false,
 };
 
-function cardStyle(v: number) {
+// The accent bar along the top of a card. Solid on the balances that make up
+// Total Balance, dashed on a card that only reports — the same "solid is what
+// happened, dashed is not the real thing" the charts use. The colour still
+// carries over/under either way, so the signal survives the distinction.
+//
+// Every class is spelled out rather than built from a colour: Tailwind scans
+// this file as text, and a class assembled at runtime is one it never emits.
+const ACCENT = {
+  under: {
+    solid: "before:bg-[#8fae73]",
+    dashed: "before:bg-[repeating-linear-gradient(90deg,#8fae73_0_5px,transparent_5px_9px)]",
+  },
+  over: {
+    solid: "before:bg-[#e0786f]",
+    dashed: "before:bg-[repeating-linear-gradient(90deg,#e0786f_0_5px,transparent_5px_9px)]",
+  },
+  flat: {
+    solid: "before:bg-gray-300 dark:before:bg-gray-600",
+    dashed:
+      "before:bg-[repeating-linear-gradient(90deg,#d1d5db_0_5px,transparent_5px_9px)] " +
+      "dark:before:bg-[repeating-linear-gradient(90deg,#4b5563_0_5px,transparent_5px_9px)]",
+  },
+};
+
+function cardStyle(v: number, dashed = false) {
+  const bar = dashed ? "dashed" : "solid";
   if (v > 0)
     return {
       text: STATUS.under,
-      bg: "bg-white dark:bg-gray-900 before:bg-[#8fae73]",
+      bg: `bg-white dark:bg-gray-900 ${ACCENT.under[bar]}`,
       border: "ring-gray-100 dark:ring-gray-800",
     };
   if (v < 0)
     return {
       text: STATUS.over,
-      bg: "bg-white dark:bg-gray-900 before:bg-[#e0786f]",
+      bg: `bg-white dark:bg-gray-900 ${ACCENT.over[bar]}`,
       border: "ring-gray-100 dark:ring-gray-800",
     };
   return {
     text: "text-gray-900 dark:text-white",
-    bg: "bg-white dark:bg-gray-900 before:bg-gray-300 dark:before:bg-gray-600",
+    bg: `bg-white dark:bg-gray-900 ${ACCENT.flat[bar]}`,
     border: "ring-gray-100 dark:ring-gray-800",
   };
 }
@@ -262,7 +283,11 @@ export default function BalanceSection({ month }: { month: string }) {
   }, [rentQuery.data, month]);
   const autoDiffInBills = autoDiff.total;
 
-  const diffInBills = draft.diff_in_bills_manual ? draft.diff_in_bills : autoDiffInBills;
+  // Reported, never summed — see the Total Balance card below. With nothing
+  // consuming the figure a manual override would change nothing on screen, so
+  // the card is read-only and the saved `diff_in_bills*` keys are left to lie
+  // where past months wrote them.
+  const diffInBills = autoDiffInBills;
 
   // "Left to pay" = rent & utilities still outstanding for this month plus any
   // still owed from last month (mirrors the rent table's Total column "… left").
@@ -313,15 +338,7 @@ export default function BalanceSection({ month }: { month: string }) {
 
   function commit(key: keyof BalanceValues, value: number) {
     const next: BalanceValues = { ...draft, [key]: value };
-    if (key === "diff_in_bills") {
-      if (value === 0) {
-        // Cleared the field → fall back to the auto-calculated value.
-        next.diff_in_bills = autoDiffInBills;
-        next.diff_in_bills_manual = false;
-      } else {
-        next.diff_in_bills_manual = true;
-      }
-    } else if (isAutoSource(key)) {
+    if (isAutoSource(key)) {
       if (value === 0) {
         // Cleared the field → fall back to the live account balance.
         (next as Record<string, unknown>)[`${key}_manual`] = false;
@@ -334,8 +351,17 @@ export default function BalanceSection({ month }: { month: string }) {
     save.mutate(next);
   }
 
+  // Diff in bills is deliberately left out. Paying a bill already settles the
+  // whole allocated row out of "Left to pay" while only the amount actually
+  // paid leaves the account — a £55 allocation settled by a £48.49 bill drops
+  // the liability £55 against £48.49 of cash, so the £6.51 underspend is in
+  // this total the moment it happens. Adding the card on top counted it twice,
+  // in both directions: a £10 overspend read as £20.
   const totalBalance =
-    ITEMS.reduce((sum, { key }) => sum + effectiveValue(key), 0) + leftToPayValue;
+    ITEMS.reduce(
+      (sum, { key }) => (key === "diff_in_bills" ? sum : sum + effectiveValue(key)),
+      0,
+    ) + leftToPayValue;
   const totalStyle = cardStyle(totalBalance);
 
   return (
@@ -344,20 +370,22 @@ export default function BalanceSection({ month }: { month: string }) {
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-8">
         {ITEMS.map(({ key, label }) => {
           const val = effectiveValue(key);
-          const { text, bg, border } = cardStyle(val);
+          const reports = key === "diff_in_bills"; // reported, not summed
+          const { text, bg, border } = cardStyle(val, reports);
           return (
             <div
               key={key}
-              title={key === "amex" ? amexTip : undefined}
+              title={
+                key === "amex"
+                  ? amexTip
+                  : reports
+                    ? "How your bills landed against what you allocated. Reported only — it is not part of Total Balance."
+                    : undefined
+              }
               className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4`}
             >
-              {key === "diff_in_bills" && (
-                <DiffBreakdown
-                  parts={autoDiff.parts}
-                  total={autoDiffInBills}
-                  month={month}
-                  overridden={draft.diff_in_bills_manual}
-                />
+              {reports && (
+                <DiffBreakdown parts={autoDiff.parts} total={autoDiffInBills} month={month} />
               )}
               <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                 {label}
@@ -367,6 +395,7 @@ export default function BalanceSection({ month }: { month: string }) {
                   <MoneyInput
                     value={val}
                     onCommit={(v) => commit(key, v)}
+                    readOnly={reports}
                     allowNegative
                     pound
                     className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
