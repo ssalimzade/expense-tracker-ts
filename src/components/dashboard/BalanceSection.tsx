@@ -364,47 +364,49 @@ export default function BalanceSection({ month }: { month: string }) {
     ) + leftToPayValue;
   const totalStyle = cardStyle(totalBalance);
 
+  const renderCard = ({ key, label }: (typeof ITEMS)[number]) => {
+    const val = effectiveValue(key);
+    const reports = key === "diff_in_bills"; // reported, not summed
+    const { text, bg, border } = cardStyle(val, reports);
+    return (
+      <div
+        key={key}
+        title={
+          key === "amex"
+            ? amexTip
+            : reports
+              ? "How your bills landed against what you allocated. Reported only — it is not part of Total Balance."
+              : undefined
+        }
+        className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4`}
+      >
+        {reports && (
+          <DiffBreakdown parts={autoDiff.parts} total={autoDiffInBills} month={month} />
+        )}
+        <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
+          {label}
+        </p>
+        <div className="mt-1.5 flex justify-center">
+          <div className="relative w-full">
+            <MoneyInput
+              value={val}
+              onCommit={(v) => commit(key, v)}
+              readOnly={reports}
+              allowNegative
+              pound
+              className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-2">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Balances</p>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-8">
-        {ITEMS.map(({ key, label }) => {
-          const val = effectiveValue(key);
-          const reports = key === "diff_in_bills"; // reported, not summed
-          const { text, bg, border } = cardStyle(val, reports);
-          return (
-            <div
-              key={key}
-              title={
-                key === "amex"
-                  ? amexTip
-                  : reports
-                    ? "How your bills landed against what you allocated. Reported only — it is not part of Total Balance."
-                    : undefined
-              }
-              className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4`}
-            >
-              {reports && (
-                <DiffBreakdown parts={autoDiff.parts} total={autoDiffInBills} month={month} />
-              )}
-              <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
-                {label}
-              </p>
-              <div className="mt-1.5 flex justify-center">
-                <div className="relative w-full">
-                  <MoneyInput
-                    value={val}
-                    onCommit={(v) => commit(key, v)}
-                    readOnly={reports}
-                    allowNegative
-                    pound
-                    className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
-                  />
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {ITEMS.filter(({ key }) => key !== "diff_in_bills").map(renderCard)}
 
         {/* Derived: rent & utilities still outstanding (this month + last month). */}
         {(() => {
@@ -433,6 +435,9 @@ export default function BalanceSection({ month }: { month: string }) {
             </div>
           );
         })()}
+
+        {/* Reported only — sits beside the total it is not part of. */}
+        {ITEMS.filter(({ key }) => key === "diff_in_bills").map(renderCard)}
 
         {/* Read-only sum of all balances above */}
         <div className={`relative col-span-2 rounded-2xl ring-1 ${totalStyle.border} ${totalStyle.bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-3 py-2.5 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
