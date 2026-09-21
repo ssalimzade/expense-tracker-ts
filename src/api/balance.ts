@@ -15,8 +15,16 @@ export interface BalanceData {
   amex_manual: boolean;
 }
 
-/** Live account balances keyed by source (monzo/chase/hsbc/amex). */
-export type AccountBalances = Partial<Record<"monzo" | "chase" | "hsbc" | "amex", number>>;
+/**
+ * Live account balances keyed by source (monzo/chase/hsbc/amex).
+ *
+ * `amex` already has the pending charges folded in; `amex_pending` is that
+ * adjustment on its own, so the card can explain why it differs from the
+ * figure the AMEX app shows.
+ */
+export type AccountBalances = Partial<
+  Record<"monzo" | "chase" | "hsbc" | "amex" | "amex_pending", number>
+>;
 
 export const fetchAccountBalances = () => api.get<AccountBalances>("/account-balances");
 

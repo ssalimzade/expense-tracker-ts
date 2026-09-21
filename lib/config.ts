@@ -289,8 +289,44 @@ export async function saveBalance(sql: Sql, month: string, values: Dict) {
 }
 
 /**
+ * Pending AMEX charges the newest pull still reports, as a negative number.
+ *
+ * Two kinds of pending row have to stay out of it. Rows the feed has stopped
+ * returning are left behind rather than deleted, and a charge that has since
+ * booked comes back under a fresh id — counting the stale row too would double
+ * it. Matching the newest `last_seen_at` keeps only what the last pull still
+ * called pending; where nothing has been stamped yet the MAX is null, no row
+ * matches, and the balance is left exactly as the issuer reported it.
+ *
+ * Bare "TFL TRAVEL CHARGE" rows are the pre-booking duplicates that
+ * `serializeTransactions` drops, so folding them in here would reopen the gap
+ * this closes.
+ */
+async function pendingAmex(sql: Sql): Promise<number> {
+  const rows = (await sql`
+    SELECT COALESCE(SUM(amount), 0) AS total
+      FROM amex_transactions
+     WHERE status = 'pending'
+       AND btrim(description) <> 'TFL TRAVEL CHARGE'
+       AND last_seen_at = (SELECT MAX(last_seen_at) FROM amex_transactions)
+  `) as { total: number }[];
+  return Number(rows[0]?.total ?? 0);
+}
+
+/**
  * Live per-account balances (updated daily by an external job). Positive for
  * debit accounts, negative for the AMEX credit card. Keyed by source.
+ *
+ * AMEX reports a booked-only balance, but a pending charge counts as spend on
+ * the dashboard the day it appears — so the card and "Remaining" drift apart by
+ * whatever is in flight until the charge posts. Folding the pending total in
+ * here keeps the two reading the same charges. `amex_pending` rides along so
+ * the card can say why it differs from the figure in the AMEX app; it is not a
+ * card key itself, so nothing else picks it up.
+ *
+ * Only AMEX is adjusted. The debit feeds report a balance that already includes
+ * what has left the account, and Chase keeps months-old travel rows pending
+ * that its balance settled long ago.
  */
 export async function loadAccountBalances(sql: Sql): Promise<Dict> {
   const rows = (await sql`SELECT source, balance FROM account_balances`) as {
@@ -299,6 +335,11 @@ export async function loadAccountBalances(sql: Sql): Promise<Dict> {
   }[];
   const out: Dict = {};
   for (const r of rows) out[r.source] = Number(r.balance ?? 0);
+  if ("amex" in out) {
+    const pending = await pendingAmex(sql);
+    out.amex = Math.round((out.amex + pending) * 100) / 100;
+    out.amex_pending = pending;
+  }
   return out;
 }
 

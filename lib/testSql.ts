@@ -29,6 +29,8 @@ export interface TxFixture {
   source?: string;
   /** Flex repayment splits. The first three are read back as r1/r2/r3. */
   repayments?: { date: string | null; amount: number | null }[];
+  /** When the sync last saw the row. Null for one the feed has stopped sending. */
+  last_seen_at?: string | null;
 }
 
 export interface FakeDb {
@@ -36,6 +38,8 @@ export interface FakeDb {
   config?: Record<string, unknown>;
   /** Bank rows across all tables; the fake buckets them by `table` itself. */
   transactions?: TxFixture[];
+  /** `account_balances` — source to the balance the feed last reported. */
+  balances?: Record<string, number>;
 }
 
 /**
@@ -119,6 +123,29 @@ export function fakeSql(db: FakeDb = {}): Sql {
       config[key] = JSON.parse(json);
       bump(key);
       return [{ key }];
+    }
+    if (/FROM account_balances/.test(text)) {
+      return Object.entries(db.balances ?? {}).map(([source, balance]) => ({ source, balance }));
+    }
+    // pendingAmex. Mirrors the real predicate rather than trusting a fixture to
+    // pre-filter itself: only pending rows the newest pull still stamped, and
+    // never the bare TFL rows the transaction list drops.
+    if (/SUM\(amount\)/.test(text) && /FROM amex_transactions/.test(text)) {
+      const amex = from("amex_transactions");
+      let newest: string | null = null;
+      for (const t of amex) {
+        if (t.last_seen_at && (newest === null || t.last_seen_at > newest)) newest = t.last_seen_at;
+      }
+      const total = amex
+        .filter(
+          (t) =>
+            t.status === "pending" &&
+            t.description.trim() !== "TFL TRAVEL CHARGE" &&
+            newest !== null &&
+            t.last_seen_at === newest,
+        )
+        .reduce((s, t) => s + t.amount, 0);
+      return [{ total }];
     }
     if (/FROM app_config WHERE key =/.test(text)) {
       const key = values[0] as string;

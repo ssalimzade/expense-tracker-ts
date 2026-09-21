@@ -287,6 +287,15 @@ export default function BalanceSection({ month }: { month: string }) {
   }, [rentQuery.data, month]);
   const leftToPayValue = -leftToPay.total; // negative in the card
 
+  // The AMEX balance counts charges the issuer has not posted yet, so the card
+  // deliberately reads lower than the AMEX app does. Say so, rather than leave
+  // the two looking like one of them is wrong.
+  const amexPending = isCurrentMonth && !draft.amex_manual ? Number(live.amex_pending ?? 0) : 0;
+  const amexTip = amexPending
+    ? `Includes ${gbp(-amexPending)} of pending charges. AMEX shows ` +
+      `${gbp((live.amex ?? 0) - amexPending)} until they post.`
+    : undefined;
+
   // The value a card actually shows: manual override → saved amount; otherwise
   // the live account balance (current month) falling back to the saved amount.
   const effectiveValue = (key: BalanceCardKey): number => {
@@ -339,6 +348,7 @@ export default function BalanceSection({ month }: { month: string }) {
           return (
             <div
               key={key}
+              title={key === "amex" ? amexTip : undefined}
               className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4`}
             >
               {key === "diff_in_bills" && (

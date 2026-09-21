@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { fakeSql } from "./testSql";
-import { RENT_DEFAULT_ITEMS, loadRentData, upsertRentItem } from "./config";
+import { fakeSql, type TxFixture } from "./testSql";
+import {
+  RENT_DEFAULT_ITEMS,
+  loadAccountBalances,
+  loadRentData,
+  upsertRentItem,
+} from "./config";
 
 type Item = { key: string; label: string; saved: boolean; pot_default?: boolean };
 
@@ -92,5 +97,58 @@ describe("upsertRentItem — a brand new pot", () => {
     const data = await upsertRentItem(sql, { label: "Service Charge", saved: true, pot_default: true });
     expect(itemsOf(data)).toHaveLength(RENT_DEFAULT_ITEMS.length + 1);
     expect(find(data, "flat")).toBeDefined();
+  });
+});
+
+describe("loadAccountBalances — pending AMEX charges", () => {
+  const PULL = "2026-09-21T16:00:14";
+  const amex = (t: Partial<TxFixture>): TxFixture => ({
+    table: "amex_transactions",
+    created: "2026-09-20T23:00:00",
+    description: "PRET A MANGER",
+    amount: -5.6,
+    status: "pending",
+    last_seen_at: PULL,
+    ...t,
+  });
+
+  const load = (transactions: TxFixture[]) =>
+    loadAccountBalances(fakeSql({ balances: { amex: -635.64, monzo: 98.46 }, transactions }));
+
+  it("folds live pending charges into the AMEX balance", async () => {
+    const out = await load([
+      amex({}),
+      amex({ description: "VAPE STATION", amount: -7 }),
+      amex({ description: "WAITROSE", amount: -73.6, status: "booked" }),
+    ]);
+    expect(out.amex).toBe(-648.24);
+    expect(out.amex_pending).toBe(-12.6);
+  });
+
+  it("leaves the debit balances alone", async () => {
+    const out = await load([amex({})]);
+    expect(out.monzo).toBe(98.46);
+  });
+
+  it("ignores pending rows the feed has stopped sending", async () => {
+    // The stale row's charge already booked under a fresh id, so counting it
+    // would take it off the balance twice.
+    const out = await load([
+      amex({ description: "CO-OP", amount: -7 }),
+      amex({ description: "BOLT", amount: -6, last_seen_at: null }),
+      amex({ description: "UBER", amount: -9, last_seen_at: "2026-07-04T04:00:23" }),
+    ]);
+    expect(out.amex).toBe(-642.64);
+  });
+
+  it("ignores the bare TFL rows the transaction list drops", async () => {
+    const out = await load([amex({ description: "TFL TRAVEL CHARGE", amount: -10.5 })]);
+    expect(out.amex).toBe(-635.64);
+    expect(out.amex_pending).toBe(0);
+  });
+
+  it("reports the issuer balance untouched when nothing is pending", async () => {
+    const out = await load([amex({ amount: -73.6, status: "booked" })]);
+    expect(out.amex).toBe(-635.64);
   });
 });
