@@ -28,9 +28,6 @@ export default function RentPots({ data, upTo }: Props) {
   const potless = (data.items ?? []).filter((it) => !it.saved);
 
   const removePot = (pot: PotView) => {
-    if (!window.confirm(`Delete ${pot.label}? This removes it from rent, all its months, and its pot history.`)) {
-      return;
-    }
     saveItem.mutate({ key: pot.key, label: pot.label, saved: false, delete: true });
   };
 
