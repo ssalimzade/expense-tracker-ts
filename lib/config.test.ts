@@ -59,6 +59,29 @@ describe("upsertRentItem — giving an existing bill a pot", () => {
     const data = await upsertRentItem(sql, { key: "water", label: "Water", saved: false });
     expect(find(data, "water")).toEqual({ key: "water", label: "Water", saved: false });
   });
+
+  it("removes the item, its months, and settlement history when a pot is truly deleted", async () => {
+    const sql = sqlWith({
+      items: [{ key: "hot_water", label: "Hot Water", saved: true }],
+      months: {
+        "2026-01": { hot_water: { amount: 50, paid: true, to_pot: true } },
+        "2026-02": { hot_water: { amount: 40, paid: true, to_pot: true } },
+      },
+      pots: { hot_water: { settlements: [{ month: "2026-01", bill: 90 }] } },
+    });
+
+    const data = await upsertRentItem(sql, {
+      key: "hot_water",
+      label: "Hot Water",
+      saved: false,
+      delete: true,
+    });
+
+    expect(find(data, "hot_water")).toBeUndefined();
+    expect(data.months["2026-01"]).toBeUndefined();
+    expect(data.months["2026-02"]).toBeUndefined();
+    expect(data.pots?.hot_water).toBeUndefined();
+  });
 });
 
 describe("upsertRentItem — a brand new pot", () => {

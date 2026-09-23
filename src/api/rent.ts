@@ -15,4 +15,5 @@ export const saveRentItem = (item: {
   label: string;
   saved: boolean;
   pot_default?: boolean;
+  delete?: boolean;
 }) => api.post<RentData>("/rent/item", item);

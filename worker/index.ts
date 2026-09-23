@@ -316,6 +316,7 @@ app.post("/rent/item", async (c) => {
       label,
       saved: Boolean(b.saved),
       pot_default: b.pot_default == null ? undefined : Boolean(b.pot_default),
+      delete: Boolean(b.delete),
     }),
   );
 });

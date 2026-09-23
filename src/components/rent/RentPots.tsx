@@ -28,15 +28,10 @@ export default function RentPots({ data, upTo }: Props) {
   const potless = (data.items ?? []).filter((it) => !it.saved);
 
   const removePot = (pot: PotView) => {
-    if (
-      !window.confirm(
-        `Remove the ${pot.label} pot?\n\nThe line item stays and its months keep their amounts — ` +
-          `they just stop accruing. Settlement history is kept, so adding the pot back restores it.`,
-      )
-    ) {
+    if (!window.confirm(`Delete ${pot.label}? This removes it from rent, all its months, and its pot history.`)) {
       return;
     }
-    saveItem.mutate({ key: pot.key, label: pot.label, saved: false });
+    saveItem.mutate({ key: pot.key, label: pot.label, saved: false, delete: true });
   };
 
   const settle = (pot: PotView, bill: number) => {

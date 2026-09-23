@@ -179,13 +179,28 @@ const rentItemKey = (label: string) =>
  */
 export async function upsertRentItem(
   sql: Sql,
-  item: { key?: string; label: string; saved: boolean; pot_default?: boolean },
+  item: { key?: string; label: string; saved: boolean; pot_default?: boolean; delete?: boolean },
 ): Promise<Dict> {
   const data = await kvGet<Dict>(sql, "rent_data", defaultRentData());
   const items: Dict[] = (data.items ??= defaultRentData().items);
 
   const existing = item.key ? items.find((i) => i.key === item.key) : undefined;
-  if (existing) {
+  if (item.delete && existing) {
+    const key = existing.key;
+    const nextItems = items.filter((i) => i.key !== key);
+    data.items = nextItems;
+
+    for (const [month, entry] of Object.entries(data.months ?? {})) {
+      if (entry && key in entry) {
+        const { [key]: _removed, ...rest } = entry;
+        if (Object.keys(rest).length) data.months[month] = rest;
+        else delete data.months[month];
+      }
+    }
+
+    if (data.pots && key in data.pots) delete data.pots[key];
+    if (Object.keys(data.pots ?? {}).length === 0) delete data.pots;
+  } else if (existing) {
     existing.label = item.label || existing.label;
     existing.saved = item.saved;
     if (item.pot_default == null) delete existing.pot_default;
