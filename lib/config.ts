@@ -186,19 +186,20 @@ export async function upsertRentItem(
 
   const existing = item.key ? items.find((i) => i.key === item.key) : undefined;
   if (item.delete && existing) {
-    const key = existing.key;
+    const key = String(existing.key);
     const nextItems = items.filter((i) => i.key !== key);
     data.items = nextItems;
 
     for (const [month, entry] of Object.entries(data.months ?? {})) {
-      if (entry && key in entry) {
-        const { [key]: _removed, ...rest } = entry;
+      const monthEntry = entry as Record<string, unknown> | undefined;
+      if (monthEntry && Object.prototype.hasOwnProperty.call(monthEntry, key)) {
+        const { [key]: _removed, ...rest } = monthEntry;
         if (Object.keys(rest).length) data.months[month] = rest;
         else delete data.months[month];
       }
     }
 
-    if (data.pots && key in data.pots) delete data.pots[key];
+    if (data.pots && Object.prototype.hasOwnProperty.call(data.pots, key)) delete data.pots[key];
     if (Object.keys(data.pots ?? {}).length === 0) delete data.pots;
   } else if (existing) {
     existing.label = item.label || existing.label;
