@@ -163,12 +163,12 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
     <>
       {/* ── Desktop table ─────────────────────────────────────── */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[900px] table-fixed text-sm">
+        <table className="w-full min-w-[964px] table-fixed text-sm">
           <colgroup>
             <col className="w-24" />
             <col />
             <col className="w-28" />
-            <col className="w-20" />
+            <col className="w-36" />
             <col className="w-44" />
             <col className="w-40" />
             <col className="w-[88px]" />

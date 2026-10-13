@@ -247,12 +247,12 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
           </div>
           {/* Same columns as the main table, so a hidden row reads like the row it was. */}
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[760px] table-fixed text-sm">
+            <table className="w-full min-w-[808px] table-fixed text-sm">
               <colgroup>
                 <col className="w-24" />
                 <col />
                 <col className="w-28" />
-                <col className="w-24" />
+                <col className="w-36" />
                 <col className="w-44" />
                 <col className="w-32" />
               </colgroup>
