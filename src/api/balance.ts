@@ -6,24 +6,26 @@ export interface BalanceData {
   monzo: number;
   chase: number;
   amex: number;
-  hsbc: number;
+  santander: number;
+  nationwide: number;
   diff_in_bills: number;
   diff_in_bills_manual: boolean;
   monzo_manual: boolean;
   chase_manual: boolean;
-  hsbc_manual: boolean;
+  santander_manual: boolean;
+  nationwide_manual: boolean;
   amex_manual: boolean;
 }
 
 /**
- * Live account balances keyed by source (monzo/chase/hsbc/amex).
+ * Live account balances keyed by source (monzo/chase/santander/nationwide/amex).
  *
  * `amex` already has the pending charges folded in; `amex_pending` is that
  * adjustment on its own, so the card can explain why it differs from the
  * figure the AMEX app shows.
  */
 export type AccountBalances = Partial<
-  Record<"monzo" | "chase" | "hsbc" | "amex" | "amex_pending", number>
+  Record<"monzo" | "chase" | "santander" | "nationwide" | "amex" | "amex_pending", number>
 >;
 
 export const fetchAccountBalances = () => api.get<AccountBalances>("/account-balances");

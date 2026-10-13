@@ -67,13 +67,15 @@ const BALANCE_DEFAULTS = {
   savings: 0,
   monzo: 0,
   chase: 0,
-  hsbc: 0,
+  santander: 0,
+  nationwide: 0,
   amex: 0,
   diff_in_bills: 0,
   diff_in_bills_manual: false,
   monzo_manual: false,
   chase_manual: false,
-  hsbc_manual: false,
+  santander_manual: false,
+  nationwide_manual: false,
   amex_manual: false,
 };
 const MONTH_RE = /^\d{4}-\d{2}$/;
@@ -412,7 +414,15 @@ app.get("/account-balances", async (c) => c.json(await loadAccountBalances(sqlOf
 app.get("/balance/:month", async (c) => {
   const month = c.req.param("month");
   const all = await kvGet<Record<string, any>>(sqlOf(c), "balance_data", {});
-  return c.json({ month, ...BALANCE_DEFAULTS, ...(all[month] ?? {}) });
+  // Santander replaced HSBC. Months saved before the switch hold the figure as
+  // `hsbc`, so it is read as Santander's — dropping it would quietly lower
+  // those months' Total Balance. The next save writes it back as `santander`.
+  const { hsbc, hsbc_manual, ...saved } = all[month] ?? {};
+  if (hsbc !== undefined && saved.santander === undefined) {
+    saved.santander = hsbc;
+    saved.santander_manual = Boolean(hsbc_manual);
+  }
+  return c.json({ month, ...BALANCE_DEFAULTS, ...saved });
 });
 app.put("/balance/:month", async (c) => {
   const month = c.req.param("month");

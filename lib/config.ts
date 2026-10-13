@@ -284,13 +284,15 @@ export const BALANCE_KEYS = [
   "savings",
   "monzo",
   "chase",
-  "hsbc",
+  "santander",
+  "nationwide",
   "amex",
   "diff_in_bills",
   "diff_in_bills_manual",
   "monzo_manual",
   "chase_manual",
-  "hsbc_manual",
+  "santander_manual",
+  "nationwide_manual",
   "amex_manual",
 ];
 export async function saveBalance(sql: Sql, month: string, values: Dict) {

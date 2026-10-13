@@ -20,6 +20,8 @@ const SOURCE_COLORS: Record<string, string> = {
   chase: "#8b86b8",
   barclays: "#6f9fb8",
   hsbc: "#b3a089",
+  santander: "#c29a8f",
+  nationwide: "#93a97c",
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -29,6 +31,8 @@ const SOURCE_LABELS: Record<string, string> = {
   chase: "Chase",
   barclays: "Barclays",
   hsbc: "HSBC",
+  santander: "Santander",
+  nationwide: "Nationwide",
 };
 
 /** Bank name on a neutral chip with its dot — shared with the hidden-rows panel. */

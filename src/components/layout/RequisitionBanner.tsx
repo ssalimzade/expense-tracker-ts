@@ -6,7 +6,9 @@ const WARN_DAYS = 7;
 const LABELS: Record<string, string> = {
   amex: "Amex",
   chase: "Chase",
-  hsbc: "HSBC",
+  monzo: "Monzo",
+  santander: "Santander",
+  nationwide: "Nationwide",
 };
 
 /**

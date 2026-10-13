@@ -37,14 +37,16 @@ const MONTH_TABLES = [
   "monzo_transactions",
   "chase_transactions",
   "amex_transactions",
-  "hsbc_transactions",
+  "santander_transactions",
+  "nationwide_transactions",
 ];
 const ALL_TABLES = [
   "monzo_transactions",
   "flex_transactions",
   "chase_transactions",
   "amex_transactions",
-  "hsbc_transactions",
+  "santander_transactions",
+  "nationwide_transactions",
 ];
 
 /**

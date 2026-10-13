@@ -15,7 +15,7 @@ type Row = Record<string, any>;
 
 /** One bank row, as the fixtures describe it. */
 export interface TxFixture {
-  /** Which of the five transaction tables it lives in. */
+  /** Which transaction table it lives in. */
   table: string;
   /** `created`, second-precision, the shape the columns are formatted back to. */
   created: string;

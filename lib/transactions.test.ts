@@ -128,7 +128,7 @@ describe("picking between competing payments", () => {
 
   it("reconciles across all the bank tables, not just one", async () => {
     const out = await run([
-      { table: "hsbc_transactions", created: at("2026-03-01"), description: "rent", amount: -1900 },
+      { table: "santander_transactions", created: at("2026-03-01"), description: "rent", amount: -1900 },
       {
         table: "amex_transactions",
         created: at("2026-03-02"),

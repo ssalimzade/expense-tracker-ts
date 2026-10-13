@@ -8,17 +8,13 @@ import { Card, QueryState } from "../common";
 import TransactionTable, { SourceBadge } from "./TransactionTable";
 import Select, { type SelectOption } from "../Select";
 
-const SOURCES: Source[] = ["monzo", "amex", "chase", "hsbc"];
+const SOURCES: Source[] = ["monzo", "amex", "chase", "santander", "nationwide"];
 
 const CATEGORY_OPTIONS: SelectOption[] = [
   { value: "", label: "All categories" },
   ...MAIN_CATEGORIES.map((c) => ({ value: c, label: c })),
   { value: RENT_UTILITY_CATEGORY, label: RENT_UTILITY_CATEGORY },
   { value: "Uncategorized", label: "Uncategorized" },
-];
-const SOURCE_OPTIONS: SelectOption[] = [
-  { value: "", label: "All sources" },
-  ...SOURCES.map((s) => ({ value: s, label: s })),
 ];
 
 interface Props {
@@ -67,6 +63,25 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
     const validIds = new Set(txQuery.data.map((t) => t.flag_id));
     onPruneStale(validIds);
   }, [txQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The live accounts, plus any retired one (HSBC, Barclays) whose rows are in
+  // this month — otherwise those rows could be listed but never filtered to.
+  const sourceOptions = useMemo<SelectOption[]>(() => {
+    const extra = new Set<string>();
+    for (const t of txQuery.data ?? []) {
+      if (t.source && !(SOURCES as string[]).includes(t.source)) extra.add(t.source);
+    }
+    return [
+      { value: "", label: "All sources" },
+      ...[...SOURCES, ...[...extra].sort()].map((s) => ({ value: s, label: s })),
+    ];
+  }, [txQuery.data]);
+
+  // A retired source picked in one month may not exist in the next; drop the
+  // filter rather than leave an empty list behind a blank dropdown.
+  useEffect(() => {
+    if (source && txQuery.data && !sourceOptions.some((o) => o.value === source)) setSource("");
+  }, [sourceOptions, source, txQuery.data]);
 
   const filtered = useMemo(() => {
     const all = (txQuery.data ?? []).filter((t) => !hidden.has(t.flag_id));
@@ -159,7 +174,7 @@ export default function TransactionsTab({ month, hidden, onHide, onRestoreRow, o
           <Select
             value={source}
             onChange={setSource}
-            options={SOURCE_OPTIONS}
+            options={sourceOptions}
             capitalize
             className="flex-1 rounded-2xl border-0 bg-white px-3 py-2.5 text-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800 sm:flex-none sm:min-w-[140px]"
           />

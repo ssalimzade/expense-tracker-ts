@@ -1,4 +1,13 @@
-export type Source = "monzo" | "flex" | "amex" | "chase" | "hsbc";
+// "hsbc" and "barclays" are retired accounts; their rows still carry the name.
+export type Source =
+  | "monzo"
+  | "flex"
+  | "amex"
+  | "chase"
+  | "santander"
+  | "nationwide"
+  | "hsbc"
+  | "barclays";
 
 export interface Transaction {
   id: string;

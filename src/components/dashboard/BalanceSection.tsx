@@ -9,7 +9,7 @@ import { rentIsPaid, rentShare } from "../../lib/rent";
 import type { BalanceValues } from "../../api/balance";
 
 // Cards whose default value is the live account balance (updated daily).
-const AUTO_SOURCES = ["monzo", "chase", "hsbc", "amex"] as const;
+const AUTO_SOURCES = ["monzo", "chase", "santander", "nationwide", "amex"] as const;
 type AutoSource = (typeof AUTO_SOURCES)[number];
 const isAutoSource = (k: string): k is AutoSource =>
   (AUTO_SOURCES as readonly string[]).includes(k);
@@ -139,13 +139,21 @@ function DiffBreakdown({
   );
 }
 
-type BalanceCardKey = "savings" | "monzo" | "chase" | "hsbc" | "amex" | "diff_in_bills";
+type BalanceCardKey =
+  | "savings"
+  | "monzo"
+  | "chase"
+  | "santander"
+  | "nationwide"
+  | "amex"
+  | "diff_in_bills";
 
 const ITEMS: { key: BalanceCardKey; label: string }[] = [
   { key: "savings", label: "Savings" },
   { key: "monzo", label: "Monzo" },
   { key: "chase", label: "Chase" },
-  { key: "hsbc", label: "HSBC" },
+  { key: "santander", label: "Santander" },
+  { key: "nationwide", label: "Nationwide" },
   { key: "amex", label: "AMEX" },
   { key: "diff_in_bills", label: "Diff in bills" },
 ];
@@ -155,12 +163,14 @@ const DEFAULTS: BalanceValues = {
   monzo: 0,
   chase: 0,
   amex: 0,
-  hsbc: 0,
+  santander: 0,
+  nationwide: 0,
   diff_in_bills: 0,
   diff_in_bills_manual: false,
   monzo_manual: false,
   chase_manual: false,
-  hsbc_manual: false,
+  santander_manual: false,
+  nationwide_manual: false,
   amex_manual: false,
 };
 
@@ -378,7 +388,7 @@ export default function BalanceSection({ month }: { month: string }) {
               ? "How your bills landed against what you allocated. Reported only — it is not part of Total Balance."
               : undefined
         }
-        className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4`}
+        className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4 ${reports ? "lg:col-span-2" : ""}`}
       >
         {reports && (
           <DiffBreakdown parts={autoDiff.parts} total={autoDiffInBills} month={month} />
@@ -394,7 +404,9 @@ export default function BalanceSection({ month }: { month: string }) {
               readOnly={reports}
               allowNegative
               pound
-              className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${text}`}
+              // Accounts go one size down while six share a row at laptop
+              // widths, so a six-figure balance still fits its card.
+              className={`!w-full !text-base !font-bold !tracking-tight sm:!text-2xl ${reports ? "" : "lg:!text-xl xl:!text-2xl"} ${text}`}
             />
           </div>
         </div>
@@ -405,7 +417,9 @@ export default function BalanceSection({ month }: { month: string }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Balances</p>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-8">
+      {/* Three across until the six accounts fit on one row; the summary row —
+          Left to Pay, Diff in bills, Total Balance — always sits beneath them. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-6">
         {ITEMS.filter(({ key }) => key !== "diff_in_bills").map(renderCard)}
 
         {/* Derived: rent & utilities still outstanding (this month + last month). */}
@@ -417,7 +431,7 @@ export default function BalanceSection({ month }: { month: string }) {
           return (
             <div
               title={tip}
-              className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4`}
+              className={`relative rounded-2xl ring-1 ${border} ${bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4 lg:col-span-2`}
             >
               <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
                 Left to Pay
@@ -440,11 +454,11 @@ export default function BalanceSection({ month }: { month: string }) {
         {ITEMS.filter(({ key }) => key === "diff_in_bills").map(renderCard)}
 
         {/* Read-only sum of all balances above */}
-        <div className={`relative col-span-2 rounded-2xl ring-1 ${totalStyle.border} ${totalStyle.bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-3 py-2.5 text-center sm:col-span-1 sm:px-4 sm:py-4`}>
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className={`relative rounded-2xl ring-1 ${totalStyle.border} ${totalStyle.bg} before:absolute before:inset-x-5 before:top-0 before:h-1 before:rounded-b-full px-2 py-2 text-center sm:px-4 sm:py-4 lg:col-span-2`}>
+          <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
             Total Balance
           </p>
-          <p className={`mt-1.5 text-xl font-bold tracking-tight sm:text-2xl ${totalStyle.text}`}>
+          <p className={`mt-1.5 truncate py-1 text-base font-bold tracking-tight sm:text-2xl ${totalStyle.text}`}>
             {gbp0(totalBalance)}
           </p>
         </div>

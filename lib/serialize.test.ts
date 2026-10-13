@@ -55,12 +55,16 @@ describe("which rows come back", () => {
         tx({ table: "monzo_transactions", created: at("2026-03-02"), description: "A" }),
         tx({ table: "chase_transactions", created: at("2026-03-03"), description: "B" }),
         tx({ table: "amex_transactions", created: at("2026-03-04"), description: "C" }),
-        tx({ table: "hsbc_transactions", created: at("2026-03-05"), description: "D" }),
+        tx({ table: "santander_transactions", created: at("2026-03-05"), description: "D" }),
+        tx({ table: "nationwide_transactions", created: at("2026-03-05"), description: "F" }),
         tx({ table: "flex_transactions", created: at("2026-03-06"), description: "E" }),
+        // Retired: its rows were copied into santander_transactions, so reading
+        // it as well would list every one of them twice.
+        tx({ table: "hsbc_transactions", created: at("2026-03-05"), description: "G" }),
       ],
       "2026-03",
     );
-    expect(out.map((r) => r.description).sort()).toEqual(["A", "B", "C", "D"]);
+    expect(out.map((r) => r.description).sort()).toEqual(["A", "B", "C", "D", "F"]);
   });
 
   it("bounds a month at its own first and last day", async () => {
