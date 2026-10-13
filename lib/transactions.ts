@@ -50,6 +50,17 @@ const ALL_TABLES = [
 ];
 
 /**
+ * AMEX re-issues a pending charge under a new id once it books, so the pending
+ * row can outlive the charge. A pending row is live only while the newest pull
+ * still returns it — the rule `pendingAmex` uses for the balance. Rows from
+ * before `last_seen_at` was tracked are null there and stay as they were. AMEX
+ * only: Chase keeps reporting old rows as pending, and they are real spend.
+ */
+const LIVE_AMEX_ROWS =
+  ` AND NOT (status = 'pending' AND COALESCE(` +
+  `last_seen_at < (SELECT MAX(last_seen_at) FROM amex_transactions), false))`;
+
+/**
  * One month's rows. Always bounded: the list is rendered a month at a time, and
  * the unbounded variant this used to offer read all five tables and hashed
  * every row in them — 3k rows and climbing, for a page that shows 40. Nothing
@@ -63,8 +74,9 @@ async function fetchTxRows(sql: Sql, month: string): Promise<Row[]> {
 
   const out: Row[] = [];
   for (const t of MONTH_TABLES) {
+    const live = t === "amex_transactions" ? LIVE_AMEX_ROWS : "";
     const rows = await sql.query(
-      `SELECT ${TX_COLS} FROM ${t} WHERE created >= $1 AND created < $2`,
+      `SELECT ${TX_COLS} FROM ${t} WHERE created >= $1 AND created < $2${live}`,
       [start, end],
     );
     out.push(...rows);

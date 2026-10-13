@@ -158,17 +158,34 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
         !
       </span>
     ) : null;
+  // Outlined rather than filled: the charge is real but not settled yet. In the
+  // table the word only shows from xl — below that Description is too narrow to
+  // give it the room, and the clock carries it. Phones always have the room.
+  const pendingTag = (t: Transaction, word = "hidden xl:inline") =>
+    t.status === "pending" ? (
+      <span
+        title="Pending — not yet booked by the bank"
+        aria-label="Pending"
+        className="inline-flex shrink-0 items-center gap-1 rounded px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 ring-1 ring-inset ring-gray-300 dark:text-gray-400 dark:ring-gray-600"
+      >
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="h-3 w-3">
+          <circle cx="8" cy="8" r="6.2" />
+          <path d="M8 4.8V8l2.2 1.4" />
+        </svg>
+        <span className={word}>Pending</span>
+      </span>
+    ) : null;
 
   return (
     <>
       {/* ── Desktop table ─────────────────────────────────────── */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[964px] table-fixed text-sm">
+        <table className="w-full min-w-[948px] table-fixed text-sm">
           <colgroup>
             <col className="w-24" />
             <col />
             <col className="w-28" />
-            <col className="w-36" />
+            <col className="w-32" />
             <col className="w-44" />
             <col className="w-40" />
             <col className="w-[88px]" />
@@ -179,7 +196,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Date</th>
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Description</th>
               <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Source</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Source</th>
               <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Category</th>
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white">Notes</th>
               <th title={ONE_TIME_HINT} className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-white whitespace-nowrap">One-time</th>
@@ -200,9 +217,12 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
               <tr key={t.id} data-flag-id={t.flag_id} className={`group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40 ${highlightClass(t)}`}>
                 <td className="whitespace-nowrap px-6 py-3 text-gray-500 dark:text-gray-400">{shortDate(t.created)}</td>
                 <td className="px-6 py-3">
-                  <Tooltip label={t.description} className="block">
-                    <span className="block cursor-default truncate font-medium text-gray-800 dark:text-gray-200">{t.description}</span>
-                  </Tooltip>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Tooltip label={t.description} className="block min-w-0">
+                      <span className="block cursor-default truncate font-medium text-gray-800 dark:text-gray-200">{t.description}</span>
+                    </Tooltip>
+                    {pendingTag(t)}
+                  </div>
                 </td>
                 <td className="whitespace-nowrap px-6 py-3 text-center">
                   <div className="flex items-center justify-center gap-1.5">
@@ -210,7 +230,7 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
                     {amount(t)}
                   </div>
                 </td>
-                <td className="px-6 py-3">{sourceBadge(t.source)}</td>
+                <td className="px-4 py-3">{sourceBadge(t.source)}</td>
                 <td className="px-6 py-3">
                   <div className="flex items-center gap-1">
                     <div className="min-w-0 flex-1">
@@ -272,7 +292,10 @@ export default function TransactionTable({ transactions, month, onHide, anomalie
                   <li key={t.id} data-flag-id={t.flag_id} className={`px-4 py-3 transition-colors ${highlightClass(t)}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-gray-800 dark:text-gray-200">{t.description}</p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className="truncate font-medium text-gray-800 dark:text-gray-200">{t.description}</p>
+                          {pendingTag(t, "")}
+                        </div>
                         {t.notes && !open && <p className="mt-0.5 truncate text-xs text-gray-400">{t.notes}</p>}
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5">

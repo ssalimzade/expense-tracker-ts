@@ -182,6 +182,16 @@ export function fakeSql(db: FakeDb = {}): Sql {
     // fetchTxRows — whole table, or one month's window when given bounds.
     if (/AS created_iso/.test(text) && /currency/.test(text)) {
       let out = from(tableIn(text));
+      // The live-AMEX predicate: drop pending rows an older pull last saw.
+      if (/status = 'pending'/.test(text)) {
+        let newest: string | null = null;
+        for (const t of out) {
+          if (t.last_seen_at && (newest === null || t.last_seen_at > newest)) newest = t.last_seen_at;
+        }
+        out = out.filter(
+          (t) => !(t.status === "pending" && t.last_seen_at && newest !== null && t.last_seen_at < newest),
+        );
+      }
       if (params.length === 2) {
         const [start, end] = params as [string, string];
         out = out.filter((t) => t.created >= start && t.created < end);

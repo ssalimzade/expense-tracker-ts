@@ -101,6 +101,46 @@ describe("which rows come back", () => {
   });
 });
 
+describe("pending rows", () => {
+  const PULL = "2026-03-20T16:00:00";
+  const amex = (over: Partial<TxFixture> & { description: string }) =>
+    tx({ table: "amex_transactions", created: at("2026-03-10"), last_seen_at: PULL, ...over });
+
+  it("keeps AMEX pending rows the newest pull still returns", async () => {
+    const out = await run([
+      amex({ description: "LIVE", status: "pending" }),
+      amex({ description: "BOOKED" }),
+    ]);
+    expect(out.map((r) => r.description).sort()).toEqual(["BOOKED", "LIVE"]);
+    expect(out.find((r) => r.description === "LIVE")?.status).toBe("pending");
+  });
+
+  it("drops AMEX pending rows an older pull last saw — the charge has booked under a new id", async () => {
+    const out = await run([
+      amex({ description: "STALE", status: "pending", last_seen_at: "2026-03-18T16:00:00" }),
+      amex({ description: "BOOKED" }),
+    ]);
+    expect(out.map((r) => r.description)).toEqual(["BOOKED"]);
+  });
+
+  it("keeps an old booked AMEX row, and pending rows from before last_seen_at was tracked", async () => {
+    const out = await run([
+      amex({ description: "OLD BOOKED", last_seen_at: "2026-03-18T16:00:00" }),
+      amex({ description: "LEGACY", status: "pending", last_seen_at: null }),
+      amex({ description: "BOOKED" }),
+    ]);
+    expect(out.map((r) => r.description).sort()).toEqual(["BOOKED", "LEGACY", "OLD BOOKED"]);
+  });
+
+  it("leaves other banks' pending rows alone, however old the pull", async () => {
+    const out = await run([
+      tx({ table: "chase_transactions", created: at("2026-03-10"), description: "CHASE", status: "pending", last_seen_at: "2026-03-01T16:00:00" }),
+      tx({ table: "chase_transactions", created: at("2026-03-11"), description: "NEWER", last_seen_at: PULL }),
+    ]);
+    expect(out.map((r) => r.description).sort()).toEqual(["CHASE", "NEWER"]);
+  });
+});
+
 describe("flag ids", () => {
   it("hashes description and created for a row that stands alone", async () => {
     const row = tx({ created: at("2026-03-02"), description: "TESCO" });
