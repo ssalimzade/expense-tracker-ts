@@ -237,13 +237,20 @@ export async function upsertRentPot(sql: Sql, key: string, settlements: Dict[]) 
 const nowIso = () => new Date().toISOString();
 export async function upsertNote(sql: Sql, note: Dict): Promise<Dict[]> {
   const notes = await kvGet<Dict[]>(sql, "notes", []);
+  // Pinning or archiving isn't an edit — it keeps the note's date and place.
+  const flagsOnly = Object.keys(note).every((k) => ["id", "pinned", "archived"].includes(k));
   note = { ...note, updated_at: nowIso() };
   const nid = note.id;
   if (nid) {
     const i = notes.findIndex((n) => n.id === nid);
     if (i >= 0) {
+      if (flagsOnly) note.updated_at = notes[i].updated_at ?? note.updated_at;
       note.created_at = notes[i].created_at ?? nowIso();
       notes[i] = { ...notes[i], ...note };
+    } else if (flagsOnly) {
+      // Pin/archive for a note that's gone (deleted elsewhere, a late Undo):
+      // don't resurrect it as a blank card.
+      return notes;
     } else {
       note.created_at = note.created_at ?? nowIso();
       notes.push(note);

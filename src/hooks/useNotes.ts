@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchNotes, saveNote, deleteNote } from "../api/notes";
 import type { Note } from "../types/note";
+import { toast } from "../lib/toast";
 
 export function useNotes() {
   return useQuery({
@@ -18,6 +19,30 @@ export function useSaveNote() {
     meta: { success: "Note saved", error: "Couldn't save note" },
     onSuccess: (notes) => qc.setQueryData(["notes"], notes),
   });
+}
+
+type ArchiveVars = { id: string; archived: boolean; undo?: boolean };
+
+/**
+ * Archives or restores a note, then offers an Undo. The toast is raised here,
+ * not per call, so archiving several notes in quick succession gives each one
+ * its own Undo.
+ */
+export function useArchiveNote() {
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: ({ id, archived }: ArchiveVars) => saveNote({ id, archived }),
+    scope: { id: "notes" },
+    meta: { error: "Couldn't archive note" },
+    onSuccess: (notes, { id, archived, undo }) => {
+      qc.setQueryData(["notes"], notes);
+      if (undo) return;
+      toast.undo(archived ? "Note archived" : "Note restored", () =>
+        mutation.mutate({ id, archived: !archived, undo: true }),
+      );
+    },
+  });
+  return mutation;
 }
 
 export function useDeleteNote() {

@@ -5,6 +5,7 @@ interface Props {
   note: Note;
   onEdit: (note: Note) => void;
   onTogglePin: (note: Note) => void;
+  onToggleArchive: (note: Note) => void;
   onDelete: (note: Note) => void;
 }
 
@@ -68,7 +69,12 @@ export function NoteBody({ body }: { body: string }) {
   );
 }
 
-export default function NoteCard({ note, onEdit, onTogglePin, onDelete }: Props) {
+export const ARCHIVE_PATHS = [
+  "M2 3a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2Z",
+  "M2 7.5h16l-.811 7.71a2 2 0 0 1-1.99 1.79H4.802a2 2 0 0 1-1.99-1.79L2 7.5ZM7 11a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1Z",
+];
+
+export default function NoteCard({ note, onEdit, onTogglePin, onToggleArchive, onDelete }: Props) {
   const c = NOTE_COLORS[note.color] ?? NOTE_COLORS.yellow;
   const long = (note.body ?? "").split("\n").length > CLAMP_LINES;
 
@@ -91,16 +97,26 @@ export default function NoteCard({ note, onEdit, onTogglePin, onDelete }: Props)
             <span className="text-[11px] text-gray-400 dark:text-gray-500">{editedLabel(note.updated_at)}</span>
           </div>
           <div className="-mr-1.5 -mt-1 flex shrink-0 items-center">
+            {!note.archived && (
+              <IconButton
+                label={note.pinned ? "Unpin" : "Pin to top"}
+                onClick={() => onTogglePin(note)}
+                className={
+                  note.pinned
+                    ? "text-indigo-500 dark:text-indigo-400"
+                    : "text-gray-400 max-md:hidden md:opacity-0 md:group-hover:opacity-100"
+                }
+              >
+                <path d={PIN_PATH} />
+              </IconButton>
+            )}
             <IconButton
-              label={note.pinned ? "Unpin" : "Pin to top"}
-              onClick={() => onTogglePin(note)}
-              className={
-                note.pinned
-                  ? "text-indigo-500 dark:text-indigo-400"
-                  : "text-gray-400 max-md:hidden md:opacity-0 md:group-hover:opacity-100"
-              }
+              label={note.archived ? "Unarchive" : "Archive"}
+              onClick={() => onToggleArchive(note)}
+              className="text-gray-400 max-md:hidden md:opacity-0 md:group-hover:opacity-100"
             >
-              <path d={PIN_PATH} />
+              <path d={ARCHIVE_PATHS[0]} />
+              <path fillRule="evenodd" d={ARCHIVE_PATHS[1]} clipRule="evenodd" />
             </IconButton>
             <IconButton
               label="Delete"

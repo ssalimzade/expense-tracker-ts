@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Note, NoteColor } from "../../types/note";
 import { NOTE_COLORS, COLOR_KEYS } from "./noteColors";
-import { editedLabel } from "./NoteCard";
+import { editedLabel, ARCHIVE_PATHS } from "./NoteCard";
 
 interface Props {
   note: Partial<Note>; // {} = new note
@@ -10,6 +10,8 @@ interface Props {
   /** Resolves once saved; rejects if it didn't (the editor then stays open). */
   onSave: (note: Partial<Note>) => Promise<void>;
   onDelete?: (note: Note) => void;
+  /** Called after the editor has saved any pending edits and closed. */
+  onToggleArchive?: (note: Note) => void;
   onClose: () => void;
 }
 
@@ -18,7 +20,7 @@ interface Props {
  * Done, ✕, Escape, a tap outside — keeps what was typed: changes are saved
  * first, and it only closes once they're in.
  */
-export default function NoteEditor({ note, knownTypes, onSave, onDelete, onClose }: Props) {
+export default function NoteEditor({ note, knownTypes, onSave, onDelete, onToggleArchive, onClose }: Props) {
   const [title, setTitle] = useState(note.title ?? "");
   const [body, setBody] = useState(note.body ?? "");
   const [type, setType] = useState(note.type ?? "");
@@ -36,18 +38,29 @@ export default function NoteEditor({ note, knownTypes, onSave, onDelete, onClose
     pinned !== (note.pinned ?? false);
   const empty = !title.trim() && !body.trim();
 
-  const close = async () => {
-    if (saving) return;
+  /** Saves what was typed (if anything); false if that failed and we should stay open. */
+  const flush = async () => {
     // Nothing to keep: untouched, or a new note left blank.
-    if (!dirty || (empty && !isEdit)) return onClose();
+    if (!dirty || (empty && !isEdit)) return true;
     setSaving(true);
     try {
       await onSave({ ...(note.id ? { id: note.id } : {}), title: title.trim(), body, type: type.trim(), color, pinned });
     } catch {
       setSaving(false); // Stay open with everything as typed; the toast says why.
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const close = async () => {
+    if (saving) return;
+    if (await flush()) onClose();
+  };
+
+  const toggleArchive = async () => {
+    if (saving || !(await flush())) return;
     onClose();
+    onToggleArchive?.(note as Note);
   };
   const closeRef = useRef(close);
   closeRef.current = close;
@@ -91,21 +104,37 @@ export default function NoteEditor({ note, knownTypes, onSave, onDelete, onClose
             {isEdit ? `Edited ${editedLabel(note.updated_at)}` : "New note"}
           </p>
           {saving && <span className="text-xs text-gray-400">Saving…</span>}
-          <button
-            type="button"
-            onClick={() => setPinned((p) => !p)}
-            aria-pressed={pinned}
-            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition ${
-              pinned
-                ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300"
-                : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-            }`}
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-              <path d="M9.5 1.5a1 1 0 0 1 1 0l.5.288a3 3 0 0 1 1.45 2.063l.34 1.7 2.1 2.099a1.5 1.5 0 0 1 .35 1.57l-.2.55a1 1 0 0 1-1.6.39L11.5 11.6V16a.5.5 0 0 1-1 0v-4.4l-1.39 1.39a1 1 0 0 1-1.6-.39l-.2-.55a1.5 1.5 0 0 1 .35-1.57l2.1-2.1.34-1.7A3 3 0 0 1 9 4.79V2.36a1 1 0 0 1 .5-.86Z" />
-            </svg>
-            {pinned ? "Pinned" : "Pin"}
-          </button>
+          {isEdit && onToggleArchive && (
+            <button
+              type="button"
+              onClick={toggleArchive}
+              disabled={saving}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-gray-400 transition hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                <path d={ARCHIVE_PATHS[0]} />
+                <path fillRule="evenodd" d={ARCHIVE_PATHS[1]} clipRule="evenodd" />
+              </svg>
+              {note.archived ? "Unarchive" : "Archive"}
+            </button>
+          )}
+          {!note.archived && (
+            <button
+              type="button"
+              onClick={() => setPinned((p) => !p)}
+              aria-pressed={pinned}
+              className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                pinned
+                  ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300"
+                  : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M9.5 1.5a1 1 0 0 1 1 0l.5.288a3 3 0 0 1 1.45 2.063l.34 1.7 2.1 2.099a1.5 1.5 0 0 1 .35 1.57l-.2.55a1 1 0 0 1-1.6.39L11.5 11.6V16a.5.5 0 0 1-1 0v-4.4l-1.39 1.39a1 1 0 0 1-1.6-.39l-.2-.55a1.5 1.5 0 0 1 .35-1.57l2.1-2.1.34-1.7A3 3 0 0 1 9 4.79V2.36a1 1 0 0 1 .5-.86Z" />
+              </svg>
+              {pinned ? "Pinned" : "Pin"}
+            </button>
+          )}
           <button
             type="button"
             onClick={close}

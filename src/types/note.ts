@@ -7,6 +7,7 @@ export interface Note {
   type: string; // free-form label, e.g. "Idea", "To-do", "Tax", "Reference"
   color: NoteColor;
   pinned: boolean;
+  archived?: boolean; // hidden from the main list, kept under "Archived"
   created_at: string;
   updated_at: string;
 }

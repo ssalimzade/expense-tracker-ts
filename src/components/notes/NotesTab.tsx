@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from "react";
-import { useNotes, useSaveNote, useDeleteNote } from "../../hooks/useNotes";
+import { useNotes, useSaveNote, useDeleteNote, useArchiveNote } from "../../hooks/useNotes";
 import { toast } from "../../lib/toast";
 import { QueryState } from "../common";
 import type { Note } from "../../types/note";
-import NoteCard from "./NoteCard";
+import NoteCard, { ARCHIVE_PATHS } from "./NoteCard";
 import NoteEditor from "./NoteEditor";
 import Worksheet from "./Worksheet";
 
@@ -24,10 +24,12 @@ export default function NotesTab() {
   const notesQuery = useNotes();
   const saveNote = useSaveNote();
   const deleteNote = useDeleteNote();
+  const archiveNote = useArchiveNote();
 
   const [view, setView] = useState<View>(readView);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState<Partial<Note> | null>(null);
 
   const changeView = (v: View) => {
@@ -39,13 +41,25 @@ export default function NotesTab() {
     }
   };
 
-  const notes = notesQuery.data ?? [];
+  const allNotes = notesQuery.data ?? [];
+  const archivedCount = allNotes.filter((n) => n.archived).length;
+  // Everything below works on one shelf at a time: the live notes or the archive.
+  const notes = useMemo(
+    () => allNotes.filter((n) => !!n.archived === showArchived),
+    [allNotes, showArchived],
+  );
 
   const kinds = useMemo(() => {
     const counts = new Map<string, number>();
     for (const n of notes) if (n.type) counts.set(n.type, (counts.get(n.type) ?? 0) + 1);
     return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [notes]);
+
+  // Kind suggestions in the editor draw on both shelves.
+  const allKinds = useMemo(
+    () => [...new Set(allNotes.map((n) => n.type).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [allNotes],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -58,8 +72,9 @@ export default function NotesTab() {
       .sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? ""));
   }, [notes, search, typeFilter]);
 
-  const pinned = filtered.filter((n) => n.pinned);
-  const others = filtered.filter((n) => !n.pinned);
+  // Pins only matter on the live shelf.
+  const pinned = showArchived ? [] : filtered.filter((n) => n.pinned);
+  const others = showArchived ? filtered : filtered.filter((n) => !n.pinned);
   const pinnedCount = notes.filter((n) => n.pinned).length;
 
   function handleDelete(note: Note) {
@@ -70,12 +85,22 @@ export default function NotesTab() {
     });
   }
 
+  const handleToggleArchive = (note: Note) => archiveNote.mutate({ id: note.id, archived: !note.archived });
+
+  const toggleShelf = () => {
+    setShowArchived((v) => !v);
+    setTypeFilter("");
+  };
+
   // New notes get their id up front, so saving the same draft twice (a double
   // tap, a retry after a dropped connection) updates it rather than duplicating.
   const draftId = useRef(newNoteId());
   const openNew = () => {
     draftId.current = newNoteId();
-    setEditing({ type: typeFilter || undefined });
+    // A new note is live, so show the shelf it will land on (and don't carry
+    // over a kind picked among archived notes).
+    setEditing({ type: (!showArchived && typeFilter) || undefined });
+    if (showArchived) toggleShelf();
   };
   const handleSave = async (note: Partial<Note>) => {
     await saveNote.mutateAsync(note.id ? note : { ...note, id: draftId.current });
@@ -87,6 +112,7 @@ export default function NotesTab() {
       note={note}
       onEdit={setEditing}
       onTogglePin={(n) => saveNote.mutate({ id: n.id, pinned: !n.pinned })}
+      onToggleArchive={handleToggleArchive}
       onDelete={handleDelete}
     />
   );
@@ -104,7 +130,9 @@ export default function NotesTab() {
           </h1>
           <p className="mt-0.5 text-sm text-gray-400">
             {view === "notes"
-              ? `${notes.length} note${notes.length === 1 ? "" : "s"}${pinnedCount ? ` · ${pinnedCount} pinned` : ""}`
+              ? showArchived
+                ? `${notes.length} archived`
+                : `${notes.length} note${notes.length === 1 ? "" : "s"}${pinnedCount ? ` · ${pinnedCount} pinned` : ""}`
               : "Saves as you type"}
           </p>
         </div>
@@ -159,30 +187,54 @@ export default function NotesTab() {
             </button>
           </div>
 
-          {kinds.length > 0 && (
+          {(kinds.length > 0 || archivedCount > 0 || showArchived) && (
             <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0 [&::-webkit-scrollbar]:hidden">
+              {showArchived && (
+                <button
+                  onClick={toggleShelf}
+                  className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+                >
+                  <span aria-hidden>←</span> Notes
+                </button>
+              )}
               <FilterPill active={typeFilter === ""} onClick={() => setTypeFilter("")} count={notes.length}>
-                All
+                {showArchived ? "All archived" : "All"}
               </FilterPill>
               {kinds.map(([t, n]) => (
                 <FilterPill key={t} active={typeFilter === t} onClick={() => setTypeFilter(typeFilter === t ? "" : t)} count={n}>
                   {t}
                 </FilterPill>
               ))}
+              {!showArchived && archivedCount > 0 && (
+                <>
+                  <span className="mx-1 w-px shrink-0 self-stretch bg-gray-200 dark:bg-gray-800" />
+                  <FilterPill active={false} onClick={toggleShelf} count={archivedCount}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 opacity-70">
+                      <path d={ARCHIVE_PATHS[0]} />
+                      <path fillRule="evenodd" d={ARCHIVE_PATHS[1]} clipRule="evenodd" />
+                    </svg>
+                    Archived
+                  </FilterPill>
+                </>
+              )}
             </div>
           )}
 
           <QueryState isLoading={notesQuery.isLoading} error={notesQuery.error}>
             {filtered.length === 0 ? (
               <div className="rounded-3xl border-2 border-dashed border-gray-200 px-6 py-16 text-center dark:border-gray-800">
-                <p className="text-3xl">🗒️</p>
-                <p className="mt-3 font-semibold">{notes.length === 0 ? "No notes yet" : "Nothing matches"}</p>
-                <p className="mx-auto mt-1 max-w-xs text-sm text-gray-400">
-                  {notes.length === 0
-                    ? "Jot down balances, reminders, or anything you want to keep handy."
-                    : "Try a different search or kind."}
+                <p className="text-3xl">{showArchived ? "🗄️" : "🗒️"}</p>
+                <p className="mt-3 font-semibold">
+                  {notes.length > 0 ? "Nothing matches" : showArchived ? "Nothing archived" : "No notes yet"}
                 </p>
-                {notes.length === 0 && (
+                <p className="mx-auto mt-1 max-w-xs text-sm text-gray-400">
+                  {notes.length > 0
+                    ? "Try a different search or kind."
+                    : showArchived
+                      ? "Archived notes land here, out of the way but kept."
+                      : "Jot down balances, reminders, or anything you want to keep handy."}
+                </p>
+                {notes.length === 0 && !showArchived && (
                   <button
                     onClick={openNew}
                     className="mt-4 rounded-2xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-gray-900"
@@ -215,9 +267,10 @@ export default function NotesTab() {
         <NoteEditor
           key={editing.id ?? "new"}
           note={editing}
-          knownTypes={kinds.map(([t]) => t)}
+          knownTypes={allKinds}
           onSave={handleSave}
           onDelete={handleDelete}
+          onToggleArchive={handleToggleArchive}
           onClose={() => setEditing(null)}
         />
       )}
