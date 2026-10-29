@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import DatePicker from "react-datepicker";
+import DatePicker, { type DatePickerProps } from "react-datepicker";
 import type { Repayment, RepaymentUpdate } from "../../types/repayment";
 import {
   useSaveRepayment,
@@ -22,6 +22,20 @@ const ALL_CATEGORIES = "__all__";
 const UNCATEGORISED = "__none__";
 
 type SplitNum = 1 | 2 | 3;
+
+// The date picker centres its calendar under the field and never nudges it
+// back on screen, so on a phone the Part 1 / Part 3 calendars spill off the
+// left / right edge. Clamp it horizontally inside the viewport.
+const VIEWPORT_GUTTER = 8;
+const keepInViewport: NonNullable<DatePickerProps["popperModifiers"]> = [
+  {
+    name: "keepInViewport",
+    fn: ({ x, y, rects }) => {
+      const maxX = document.documentElement.clientWidth - rects.floating.width - VIEWPORT_GUTTER;
+      return { x: Math.max(VIEWPORT_GUTTER, Math.min(x, maxX)), y };
+    },
+  },
+];
 
 function parseLocal(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
@@ -292,6 +306,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
                           dateFormat="d MMM yy"
                           placeholderText="—"
                           popperProps={{ strategy: "fixed" }}
+                          popperModifiers={keepInViewport}
                           wrapperClassName="w-24"
                           className={`w-24 rounded-lg border border-gray-200 bg-transparent px-1.5 py-1.5 text-center text-xs dark:border-gray-700 cursor-pointer ${isPast ? "line-through" : ""}`}
                         />
@@ -394,6 +409,7 @@ export default function RepaymentTable({ repayments, onDelete }: Props) {
                       dateFormat="d MMM"
                       placeholderText="—"
                       popperProps={{ strategy: "fixed" }}
+                      popperModifiers={keepInViewport}
                       wrapperClassName="w-full"
                       className="w-full rounded-lg border-0 bg-transparent px-1 py-0.5 text-center text-xs font-medium text-gray-700 dark:text-gray-200"
                     />
