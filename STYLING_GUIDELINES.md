@@ -157,9 +157,9 @@ Below `lg`, a tab shows its hero and then one section at a time, picked with
 `PhoneSectionTabs` (same look as Travel's Journal / Plan / Summary). Use
 `usePhoneSection("<tab>-section", SECTIONS)` and put `section.show("<value>")`
 on each block. It only adds `max-lg:hidden`, so wide screens are unchanged and
-hidden components stay mounted (their effects and saves keep working). Phone
-month lists (Projections, Rent) open at the current month with a "Show N
-earlier months" button.
+hidden components stay mounted (their effects and saves keep working). Month
+lists (Savings, Rent, and Projections on phones) open with the current month and
+the two before it (`openingMonth`), plus a "Show N earlier months" button.
 
 ## Chart style
 

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { CHART } from "../../lib/chart";
 import type { SavingsRow } from "../../types/savings";
 import { useSaveSavingsRow } from "../../hooks/useSavings";
-import { gbp0 } from "../../lib/format";
+import { gbp0, openingMonth } from "../../lib/format";
 import { commitOnEnter } from "../../lib/keys";
 
 /** Number input that shows comma-formatted integer on blur, raw on focus. */
@@ -104,10 +104,10 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
   };
 
   const monthNow = rows.find((r) => monthKey(r.start_date) === currentKey)?.start_date;
-  // Open at this month; the months already behind you are one tap away.
+  // Open with this month and the last couple; anything older is one tap away.
   const [showEarlier, setShowEarlier] = useState(false);
   const hasCurrent = rows.some((r) => monthKey(r.start_date) === currentKey);
-  const shownRows = showEarlier || !hasCurrent ? rows : rows.filter((r) => monthKey(r.start_date) >= currentKey);
+  const shownRows = showEarlier || !hasCurrent ? rows : rows.filter((r) => monthKey(r.start_date) >= openingMonth(currentKey));
   const hiddenEarlier = rows.length - shownRows.length;
   const earlierButton = (
     <button

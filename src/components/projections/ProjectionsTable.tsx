@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ProjectionView, ProjectionInput, AllocationField } from "../../types/projections";
-import { gbp0 } from "../../lib/format";
+import { gbp0, openingMonth } from "../../lib/format";
 import { commitOnEnter } from "../../lib/keys";
 import { Card } from "../common";
 import MoneyInput from "../MoneyInput";
@@ -55,10 +55,10 @@ interface Line {
 }
 
 export default function ProjectionsTable({ rows, onProjectionField, onNotes, onAllocation }: Props) {
-  // Phones open at this month; the months already behind you are one tap away.
+  // Phones open with this month and the last couple; anything older is one tap away.
   const [showEarlier, setShowEarlier] = useState(false);
   const hasCurrent = rows.some((r) => r.month === currentMonth);
-  const phoneRows = showEarlier || !hasCurrent ? rows : rows.filter((r) => r.month >= currentMonth);
+  const phoneRows = showEarlier || !hasCurrent ? rows : rows.filter((r) => r.month >= openingMonth(currentMonth));
   const hiddenEarlier = rows.length - phoneRows.length;
 
   const field = (label: string, key: ProjectionInput, pick: (r: ProjectionView) => number): Line => ({

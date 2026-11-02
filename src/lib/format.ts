@@ -30,6 +30,15 @@ export const shortDate = (iso: string | null) => {
 export const toMonthKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
+// How many past months a month table keeps on screen before "Show earlier".
+const PAST_MONTHS_SHOWN = 2;
+
+// The first month a table opens with when `current` is this month ("YYYY-MM").
+export const openingMonth = (current: string) => {
+  const [year, month] = current.split("-").map(Number);
+  return toMonthKey(new Date(year, month - 1 - PAST_MONTHS_SHOWN, 1));
+};
+
 // Builds a list of recent month keys, newest first. Stops at 2025-05 (earliest data).
 export function recentMonths(count = 18): string[] {
   const months: string[] = [];

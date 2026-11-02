@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useSaveRentMonth } from "../../hooks/useRent";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import type { RentData, RentItemDef, RentLineItem, RentMonthEntry, RentMatch } from "../../types/rent";
-import { gbp0 } from "../../lib/format";
+import { gbp0, openingMonth } from "../../lib/format";
 import { goesToPot, potViews } from "../../lib/pots";
 import { rentBill, rentCell, rentContribution, rentIsPaid, rentMatch, rentShare } from "../../lib/rent";
 import { Card } from "../common";
@@ -475,10 +475,10 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
 
   const [pop, setPop] = useState<Pop | null>(null);
 
-  // The table opens at this month; the months already behind you are one tap away.
+  // The table opens with this month and the last couple; anything older is one tap away.
   const [showEarlier, setShowEarlier] = useState(false);
   const hasCurrent = months.includes(currentMonth);
-  const shownMonths = showEarlier || !hasCurrent ? months : months.filter((m) => m >= currentMonth);
+  const shownMonths = showEarlier || !hasCurrent ? months : months.filter((m) => m >= openingMonth(currentMonth));
   const hiddenEarlier = months.length - shownMonths.length;
 
   // Ticking asks what actually left the account; unticking drops that figure so
