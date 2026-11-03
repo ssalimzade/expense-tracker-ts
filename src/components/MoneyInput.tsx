@@ -11,6 +11,8 @@ interface Props {
   /** Render as read-only derived text (not an input). */
   readOnly?: boolean;
   className?: string;
+  /** Accessible name, for an input with no visible label of its own. */
+  ariaLabel?: string;
 }
 
 /**
@@ -26,6 +28,7 @@ export default function MoneyInput({
   pound = true,
   readOnly = false,
   className = "",
+  ariaLabel,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [raw, setRaw] = useState("");
@@ -51,6 +54,7 @@ export default function MoneyInput({
   return (
     <input
       type="text"
+      aria-label={ariaLabel}
       // Negative-capable fields need the full keyboard: the mobile "decimal"
       // keypad has no minus key, so "-" can't be typed there.
       inputMode={allowNegative ? "text" : "decimal"}
@@ -75,6 +79,8 @@ export default function MoneyInput({
       onKeyDown={(e) => {
         if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         if (e.key === "Escape") {
+          // Drop what was typed, so the blur that follows doesn't commit it.
+          touched.current = false;
           setEditing(false);
           (e.target as HTMLInputElement).blur();
         }

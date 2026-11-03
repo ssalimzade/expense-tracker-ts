@@ -157,7 +157,9 @@ Below `lg`, a tab shows its hero and then one section at a time, picked with
 `PhoneSectionTabs` (same look as Travel's Journal / Plan / Summary). Use
 `usePhoneSection("<tab>-section", SECTIONS)` and put `section.show("<value>")`
 on each block. It only adds `max-lg:hidden`, so wide screens are unchanged and
-hidden components stay mounted (their effects and saves keep working). Month
+hidden components stay mounted (their effects and saves keep working). When
+each section is a full page of its own (Savings: Months / Goals), pass
+`allWidths` to both so the switch shows on desktop too. Month
 lists (Savings, Rent, and Projections on phones) open with the current month and
 the two before it (`openingMonth`), plus a "Show N earlier months" button.
 

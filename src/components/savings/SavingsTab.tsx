@@ -1,11 +1,19 @@
-import { useState } from "react";
-import { useSavings } from "../../hooks/useSavings";
+import { useState, type ReactNode } from "react";
+import { useSavings, useSavingsGoals } from "../../hooks/useSavings";
 import { QueryState } from "../common";
 import SavingsTable from "./SavingsTable";
 import { HeroChartHeader, HeroLineChart } from "../HeroCharts";
-import { gbp0 } from "../../lib/format";
+import { gbp0, toMonthKey } from "../../lib/format";
+import { balanceNow } from "../../lib/savingsGoal";
 import type { SavingsRow } from "../../types/savings";
 import { PiggyBankArt, IN_COLUMN } from "../HeroArt";
+import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
+import SavingsGoals, { GOALS_ANCHOR, HeroGoal, useSelectedGoal } from "./SavingsGoals";
+
+const SECTIONS = [
+  { value: "months", label: "Months" },
+  { value: "goal", label: "Goals" },
+] as const;
 
 const currentKey = (() => {
   const d = new Date();
@@ -23,6 +31,19 @@ export default function SavingsTab() {
   const years = [...new Set(allRows.map((r) => r.start_date.slice(0, 4)))].sort();
   const rows = allRows.filter((r) => r.start_date.startsWith(year));
   const showInvestments = year === "2026";
+  // Months and goals are each a full page of their own, so they switch at every width.
+  const section = usePhoneSection("savings-section", SECTIONS, true);
+  const goals = useSavingsGoals().data ?? [];
+  const [goalId, selectGoal] = useSelectedGoal();
+  const goal = goals.find((g) => g.id === goalId) ?? goals[0];
+  // Worked out each render, the same way the planner does, so the two agree.
+  const thisMonth = toMonthKey(new Date());
+
+  // The planner may be the hidden section, so show it before scrolling to it.
+  const openGoal = () => {
+    section.change("goal");
+    requestAnimationFrame(() => document.getElementById(GOALS_ANCHOR)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
 
   return (
     <QueryState isLoading={savingsQuery.isLoading} error={savingsQuery.error}>
@@ -49,19 +70,56 @@ export default function SavingsTab() {
           </span>
         </div>
 
-        {rows.length > 0 && <VaultHero rows={rows} year={year} showInvestments={showInvestments} />}
+        {rows.length > 0 && (
+          <VaultHero
+            rows={rows}
+            year={year}
+            showInvestments={showInvestments}
+            goal={
+              goal && (
+                <HeroGoal
+                  goal={goal}
+                  saved={goal.saved ?? balanceNow(allRows, thisMonth)}
+                  current={thisMonth}
+                  position={goals.indexOf(goal) + 1}
+                  count={goals.length}
+                  onOpen={openGoal}
+                />
+              )
+            }
+          />
+        )}
 
-        <SavingsTable
-          rows={rows}
-          showInvestments={showInvestments}
-          seedDate={allRows.reduce((min, r) => (!min || r.start_date < min ? r.start_date : min), "")}
-        />
+        <PhoneSectionTabs sections={SECTIONS} value={section.value} onChange={section.change} allWidths />
+
+        <div className={section.show("months")}>
+          <SavingsTable
+            rows={rows}
+            showInvestments={showInvestments}
+            seedDate={allRows.reduce((min, r) => (!min || r.start_date < min ? r.start_date : min), "")}
+          />
+        </div>
+
+        <div className={section.show("goal")}>
+          <SavingsGoals rows={allRows} selectedId={goalId} onSelect={selectGoal} />
+        </div>
       </div>
     </QueryState>
   );
 }
 
-function VaultHero({ rows, year, showInvestments }: { rows: SavingsRow[]; year: string; showInvestments: boolean }) {
+function VaultHero({
+  rows,
+  year,
+  showInvestments,
+  goal,
+}: {
+  rows: SavingsRow[];
+  year: string;
+  showInvestments: boolean;
+  /** The goal strip along the bottom, once a goal is set. */
+  goal?: ReactNode;
+}) {
   // Year stats only count months that have actually happened.
   const elapsed = rows.filter((r) => r.start_date.slice(0, 7) <= currentKey);
   const latest = elapsed[elapsed.length - 1];
@@ -134,6 +192,7 @@ function VaultHero({ rows, year, showInvestments }: { rows: SavingsRow[]; year: 
         <div className="hidden border-dashed border-white/25 lg:block lg:border-l lg:pl-7">
           <div className="w-[26rem] xl:w-[32rem]">{balanceChart("h-32")}</div>
         </div>
+        {goal && <div className="lg:col-span-2">{goal}</div>}
       </div>
     </section>
   );
