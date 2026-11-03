@@ -61,7 +61,9 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // Local date, not toISOString() (UTC) — otherwise "today" lags a day after midnight in BST.
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   // Stats
   let bankHolCount = 0;
@@ -135,14 +137,14 @@ export default function PlannerCalendar({ month, daysOff, onToggleDay, onStats }
       </div>
 
       {holidays.length > 0 && (
-        <ul className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-xs dark:border-gray-800">
+        <ul className="mt-3 space-y-1.5 border-t border-gray-100 pt-3 text-xs dark:border-gray-800">
           {holidays.map(([date, title]) => (
             <li key={date} className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#b39767]" />
               <span className="w-20 shrink-0 whitespace-nowrap tabular-nums text-gray-400">
                 {new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
               </span>
-              <span className="min-w-0 truncate text-gray-600 dark:text-gray-300">{title}</span>
+              <span title={title} className="min-w-0 truncate text-gray-600 dark:text-gray-300">{title}</span>
             </li>
           ))}
         </ul>
