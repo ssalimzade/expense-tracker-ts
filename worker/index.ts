@@ -9,6 +9,8 @@ import {
   getFlagsForMonth,
   setFlagsForMonth,
   upsertSavingsRow,
+  upsertSavingsGoal,
+  deleteSavingsGoal,
   upsertProjectionRow,
   upsertRemunerationRow,
   deleteRemunerationRow,
@@ -259,6 +261,17 @@ app.post("/savings", async (c) => {
   };
   return c.json(await upsertSavingsRow(sqlOf(c), row));
 });
+app.get("/savings/goals", async (c) => c.json(await kvGet(sqlOf(c), "savings_goals", [])));
+app.post("/savings/goals", async (c) => {
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== "object" || Array.isArray(b)) return c.json({ detail: "expected a goal" }, 400);
+  const goals = await upsertSavingsGoal(sqlOf(c), b);
+  if (typeof goals === "string") return c.json({ detail: goals }, 400);
+  return c.json(goals);
+});
+app.delete("/savings/goals/:id", async (c) =>
+  c.json(await deleteSavingsGoal(sqlOf(c), c.req.param("id"))),
+);
 
 // ── Projections ─────────────────────────────────────────────────────────────
 app.get("/projections", async (c) => c.json(await kvGet(sqlOf(c), "projections_data", [])));

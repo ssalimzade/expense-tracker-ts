@@ -5,6 +5,9 @@ import {
   loadAccountBalances,
   loadRentData,
   upsertRentItem,
+  cleanSavingsGoal,
+  upsertSavingsGoal,
+  deleteSavingsGoal,
 } from "./config";
 
 type Item = { key: string; label: string; saved: boolean; pot_default?: boolean };
@@ -173,5 +176,84 @@ describe("loadAccountBalances — pending AMEX charges", () => {
   it("reports the issuer balance untouched when nothing is pending", async () => {
     const out = await load([amex({ amount: -73.6, status: "booked" })]);
     expect(out.amex).toBe(-635.64);
+  });
+});
+
+describe("savings goals", () => {
+  const goal = { name: "House deposit", target: 50_000, deadline: "2027-12", saved: null, monthly: null };
+  const at = (month: string) => `2026-${month}-01T00:00:00.000Z`;
+
+  it("cleans a goal: trims, rounds, and reads a £0 plan as no plan", () => {
+    const g = cleanSavingsGoal({ ...goal, id: "g1", name: "  House deposit  ", target: "50000.4", saved: 1999.6, monthly: 0 });
+    expect(g).toMatchObject({ id: "g1", name: "House deposit", target: 50_000, saved: 2_000, monthly: null, deadline: "2027-12" });
+  });
+
+  it("rejects what it can't save", () => {
+    expect(cleanSavingsGoal({ ...goal, id: "g1", name: " " })).toBe("name is required");
+    expect(cleanSavingsGoal({ ...goal, id: "g1", target: 0 })).toMatch(/target/);
+    expect(cleanSavingsGoal({ ...goal, id: "g1", target: 1e12 })).toMatch(/target/);
+    expect(cleanSavingsGoal({ ...goal, id: "g1", deadline: "2027-13" })).toMatch(/deadline/);
+    expect(cleanSavingsGoal({ ...goal, id: "g1", saved: "lots" })).toMatch(/saved/);
+    expect(cleanSavingsGoal({ ...goal, id: "g1", monthly: -5 })).toMatch(/monthly/);
+    expect(cleanSavingsGoal({ ...goal, id: "../x" })).toMatch(/id/);
+    expect(cleanSavingsGoal({ ...goal, id: "g1", start: "2027-1" })).toMatch(/start/);
+    expect(cleanSavingsGoal({ ...goal, id: "g1", start: "2028-01", deadline: "2027-12" })).toMatch(/before the start/);
+  });
+
+  it("keeps a start month, and none means saving starts next month", () => {
+    expect(cleanSavingsGoal({ ...goal, id: "g1", start: "2027-01" })).toMatchObject({ start: "2027-01" });
+    expect(cleanSavingsGoal({ ...goal, id: "g1" })).toMatchObject({ start: null });
+  });
+
+  it("treats a blank saved amount as tracking the balance", () => {
+    expect(cleanSavingsGoal({ ...goal, id: "g1", saved: "" })).toMatchObject({ saved: null });
+  });
+
+  it("gives a new goal its id", async () => {
+    const sql = fakeSql({ config: {} });
+    const goals = (await upsertSavingsGoal(sql, goal)) as any[];
+    expect(goals).toHaveLength(1);
+    expect(goals[0].id).toMatch(/^[0-9a-f]{12}$/);
+  });
+
+  it("edits a goal in place, keeping when it was made", async () => {
+    const sql = fakeSql({ config: {} });
+    await upsertSavingsGoal(sql, { id: "g1", ...goal, created_at: at("01") });
+    await upsertSavingsGoal(sql, { id: "g2", ...goal, name: "Car", created_at: at("02") });
+    const goals = (await upsertSavingsGoal(sql, { id: "g1", ...goal, target: 60_000, created_at: at("09") })) as any[];
+    expect(goals.map((g) => g.id)).toEqual(["g1", "g2"]);
+    expect(goals[0]).toMatchObject({ target: 60_000, created_at: at("01") });
+  });
+
+  it("keeps the fields a save leaves out", async () => {
+    const sql = fakeSql({ config: {} });
+    await upsertSavingsGoal(sql, { id: "g1", ...goal });
+    // A plan saved from the planner, then an edit that doesn't know about it.
+    await upsertSavingsGoal(sql, { id: "g1", monthly: 1_500 });
+    const { monthly: _, ...edit } = { ...goal, name: "Flat deposit" };
+    const goals = (await upsertSavingsGoal(sql, { id: "g1", ...edit })) as any[];
+    expect(goals[0]).toMatchObject({ name: "Flat deposit", monthly: 1_500, target: 50_000 });
+  });
+
+  it("won't bring back a deleted goal from a plan save", async () => {
+    const sql = fakeSql({ config: {} });
+    expect(await upsertSavingsGoal(sql, { id: "gone", monthly: 500 })).toBe("name is required");
+  });
+
+  it("puts a goal restored by Undo back in its old place", async () => {
+    const sql = fakeSql({ config: {} });
+    await upsertSavingsGoal(sql, { id: "g1", ...goal, created_at: at("01") });
+    const [, g2] = (await upsertSavingsGoal(sql, { id: "g2", ...goal, created_at: at("02") })) as any[];
+    await upsertSavingsGoal(sql, { id: "g3", ...goal, created_at: at("03") });
+    await deleteSavingsGoal(sql, "g2");
+    const goals = (await upsertSavingsGoal(sql, g2)) as any[];
+    expect(goals.map((g) => g.id)).toEqual(["g1", "g2", "g3"]);
+  });
+
+  it("deletes only the goal asked for", async () => {
+    const sql = fakeSql({ config: {} });
+    await upsertSavingsGoal(sql, { id: "g1", ...goal });
+    await upsertSavingsGoal(sql, { id: "g2", ...goal });
+    expect((await deleteSavingsGoal(sql, "g1")).map((g) => g.id)).toEqual(["g2"]);
   });
 });

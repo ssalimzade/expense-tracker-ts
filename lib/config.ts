@@ -77,6 +77,86 @@ export async function upsertSavingsRow(sql: Sql, row: Dict): Promise<Dict[]> {
   return rows;
 }
 
+// ── savings goals (list, oldest first) ─────────────────────────────────────
+export const MAX_GOAL_NAME = 40;
+const MAX_GOAL_AMOUNT = 100_000_000;
+const GOAL_ID_RE = /^[A-Za-z0-9_-]{1,40}$/;
+
+/** Whole pounds; null when blank; undefined when it isn't an amount at all. */
+const optionalAmount = (v: unknown): number | null | undefined => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 && n <= MAX_GOAL_AMOUNT ? Math.round(n) : undefined;
+};
+
+/**
+ * Checks a whole goal, or returns why it can't be saved. Amounts are whole
+ * pounds, like every table, and a plan of £0 a month is no plan.
+ */
+export function cleanSavingsGoal(b: Dict): Dict | string {
+  const id = String(b.id ?? "");
+  if (!GOAL_ID_RE.test(id)) return "id must be 1-40 letters, digits, - or _";
+  const name = String(b.name ?? "").trim().slice(0, MAX_GOAL_NAME);
+  if (!name) return "name is required";
+  const target = Number(b.target);
+  if (!Number.isFinite(target) || target < 1 || target > MAX_GOAL_AMOUNT) {
+    return "target must be between £1 and £100,000,000";
+  }
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/;
+  const start = b.start ? String(b.start) : null;
+  if (start && !month.test(start)) return "start must be YYYY-MM";
+  const deadline = b.deadline ? String(b.deadline) : null;
+  if (deadline && !month.test(deadline)) return "deadline must be YYYY-MM";
+  if (start && deadline && deadline < start) return "deadline can't be before the start";
+  const saved = optionalAmount(b.saved);
+  if (saved === undefined) return "saved must be an amount in pounds";
+  const monthly = optionalAmount(b.monthly);
+  if (monthly === undefined) return "monthly must be an amount in pounds";
+  const created = typeof b.created_at === "string" && !Number.isNaN(Date.parse(b.created_at));
+  return {
+    id,
+    name,
+    target: Math.round(target),
+    start,
+    deadline,
+    saved,
+    monthly: monthly || null,
+    created_at: created ? b.created_at : nowIso(),
+  };
+}
+
+/**
+ * Saves a goal, or returns why it can't be saved. For a goal that exists, the
+ * fields sent are laid over the stored ones: saving a plan (`{ id, monthly }`)
+ * can't undo an edit it never saw, and an edit that leaves `monthly` out keeps
+ * the plan. A new goal gets its id here unless it brings one (an Undo does).
+ */
+export async function upsertSavingsGoal(sql: Sql, body: Dict): Promise<Dict[] | string> {
+  const goals = await kvGet<Dict[]>(sql, "savings_goals", []);
+  const i = body.id ? goals.findIndex((g) => g.id === body.id) : -1;
+  if (i >= 0) {
+    // An edit keeps the goal's place in the list and the day it was made.
+    const goal = cleanSavingsGoal({ ...goals[i], ...body, created_at: goals[i].created_at });
+    if (typeof goal === "string") return goal;
+    goals[i] = goal;
+  } else {
+    const goal = cleanSavingsGoal({ ...body, id: body.id ?? crypto.randomUUID().replace(/-/g, "").slice(0, 12) });
+    if (typeof goal === "string") return goal;
+    // Oldest first, so a goal put back by Undo returns to where it was.
+    const at = goals.findIndex((g) => String(g.created_at ?? "") > goal.created_at);
+    goals.splice(at < 0 ? goals.length : at, 0, goal);
+  }
+  await kvSet(sql, "savings_goals", goals);
+  return goals;
+}
+
+export async function deleteSavingsGoal(sql: Sql, id: string): Promise<Dict[]> {
+  const goals = await kvGet<Dict[]>(sql, "savings_goals", []);
+  const kept = goals.filter((g) => g.id !== id);
+  if (kept.length < goals.length) await kvSet(sql, "savings_goals", kept);
+  return kept;
+}
+
 // ── projections (keyed by month, sorted) ────────────────────────────────────
 export async function upsertProjectionRow(sql: Sql, row: Dict): Promise<Dict[]> {
   const rows = await kvGet<Dict[]>(sql, "projections_data", []);
