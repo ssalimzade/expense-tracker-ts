@@ -350,6 +350,9 @@ app.post("/rent/pot", async (c) => {
       // Paid in part, the rest stays in the pot. Absent means a full settlement,
       // which is what every entry written before this existed was.
       ...(s.partial === true && { partial: true }),
+      // What it moved to or from savings, frozen when recorded. Entries without
+      // one predate it and are worked out from the months instead.
+      ...(typeof s.diff === "number" && Number.isFinite(s.diff) && { diff: round2(s.diff) }),
     }));
   return c.json(await upsertRentPot(sqlOf(c), String(b.key), settlements));
 });

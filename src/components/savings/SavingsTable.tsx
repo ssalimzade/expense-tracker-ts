@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { CHART } from "../../lib/chart";
 import type { SavingsRow } from "../../types/savings";
 import { useSaveSavingsRow } from "../../hooks/useSavings";
-import { gbp0, openingMonth } from "../../lib/format";
+import { gbp0 } from "../../lib/format";
+import { EarlierMonthsButton, useEarlierMonths } from "../EarlierMonths";
 import { commitOnEnter } from "../../lib/keys";
 
 /** Number input that shows comma-formatted integer on blur, raw on focus. */
@@ -105,22 +106,8 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
 
   const monthNow = rows.find((r) => monthKey(r.start_date) === currentKey)?.start_date;
   // Open with this month and the last couple; anything older is one tap away.
-  const [showEarlier, setShowEarlier] = useState(false);
-  const hasCurrent = rows.some((r) => monthKey(r.start_date) === currentKey);
-  const shownRows = showEarlier || !hasCurrent ? rows : rows.filter((r) => monthKey(r.start_date) >= openingMonth(currentKey));
-  const hiddenEarlier = rows.length - shownRows.length;
-  const earlierButton = (
-    <button
-      type="button"
-      onClick={() => setShowEarlier(true)}
-      className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-500 ring-1 ring-gray-100 transition hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-400 dark:ring-gray-800 dark:hover:bg-gray-800/40"
-    >
-      <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
-        <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
-      </svg>
-      Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
-    </button>
-  );
+  const earlierMonths = useEarlierMonths(rows, (r) => monthKey(r.start_date), currentKey);
+  const shownRows = earlierMonths.shown;
   // Scale for the little "what went in" bars: the biggest month's total inflow.
   const inflow = (r: SavingsRow) =>
     Math.max(0, r.home_contributions) + Math.max(0, r.savings) + Math.max(0, r.adjustments) + (showInvestments ? Math.max(0, r.investments ?? 0) : 0);
@@ -169,7 +156,12 @@ export default function SavingsTable({ rows, showInvestments, seedDate }: Props)
         </div>
       </div>
 
-      {hiddenEarlier > 0 && <div className="mb-2">{earlierButton}</div>}
+      <EarlierMonthsButton
+        earlier={earlierMonths.earlier}
+        expanded={earlierMonths.expanded}
+        onToggle={earlierMonths.toggle}
+        className="mb-2 rounded-2xl bg-white px-4 py-2.5 ring-1 ring-gray-100 transition hover:bg-gray-50 dark:bg-gray-900 dark:ring-gray-800 dark:hover:bg-gray-800/40"
+      />
 
       {/* Desktop ledger */}
       <div className="hidden overflow-hidden rounded-3xl bg-white ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800 md:block">

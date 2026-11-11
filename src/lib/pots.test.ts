@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { RentData, RentLineItem, RentPotSettlement } from "../types/rent";
-import { goesToPot, isRetired, potInflow, potsTotal, potViews, settlementsIn } from "./pots";
+import {
+  frozenEntries,
+  goesToPot,
+  isRetired,
+  payableMonths,
+  potEntry,
+  potInflow,
+  potPending,
+  potsTotal,
+  potTrueUp,
+  potViews,
+  rentMonthCost,
+  settlementsIn,
+} from "./pots";
 
 const POT = "hot_water";
 
@@ -367,3 +380,195 @@ describe("goesToPot", () => {
     expect(potInflow(data, BILL, "2026-01")).toBe(0);
   });
 });
+
+describe("frozen results", () => {
+  const months = { "2026-01": paid(50), "2026-02": paid(50), "2026-03": paid(50) };
+
+  it("keeps a settlement's result when an earlier month is edited afterwards", () => {
+    // Settled at 150 with a 120 bill: 30 went back. Then January is corrected to 47.
+    const settled = { month: "2026-03", bill: 120, diff: 30 };
+    const data = build({ ...months, "2026-01": paid(47) }, [settled]);
+    const v = view(data, "2026-03");
+    expect(v.settlements[0]).toMatchObject({ accrued: 147, diff: 30 });
+    // The 3 that was never there shows up in the pot, rather than rewriting March.
+    expect(v.balance).toBe(-3);
+    expect(v.closed).toBe(false);
+  });
+
+  it("reads exactly as before when nothing has been edited", () => {
+    const data = build(months, [{ month: "2026-03", bill: 120, diff: 30 }]);
+    expect(view(data, "2026-03")).toMatchObject({ balance: 0, closed: true });
+  });
+
+  it("still works out entries that predate the frozen figure", () => {
+    const data = build({ ...months, "2026-01": paid(47) }, [{ month: "2026-03", bill: 120 }]);
+    expect(view(data, "2026-03").settlements[0]).toMatchObject({ diff: 27, remaining: 0 });
+  });
+
+  it("keeps a part-payment's shortfall when an earlier month is edited", () => {
+    const data = build({ ...months, "2026-01": paid(60) }, [
+      { month: "2026-03", bill: 200, partial: true, diff: -50 },
+    ]);
+    const v = view(data, "2026-03");
+    expect(v.settlements[0].diff).toBe(-50);
+    expect(v.balance).toBe(10); // 160 in − 200 bill + 50 from savings
+  });
+
+  it("lets any entry be removed without disturbing the others", () => {
+    const entries = [
+      { month: "2026-01", bill: 20, partial: true, diff: 0 },
+      { month: "2026-02", bill: 30, partial: true, diff: 0 },
+    ];
+    const without = build(months, [entries[1]]);
+    expect(view(without, "2026-03").settlements[0]).toMatchObject({ diff: 0, remaining: 70 });
+    expect(view(without, "2026-03").balance).toBe(120);
+  });
+});
+
+describe("potEntry", () => {
+  const data = build({ "2026-01": paid(50), "2026-02": paid(25) });
+
+  it("freezes a part-payment covered by the pot as moving nothing", () => {
+    expect(potEntry(data, POT, "2026-02", 53, true)).toEqual({
+      month: "2026-02",
+      bill: 53,
+      diff: 0,
+      partial: true,
+    });
+  });
+
+  it("freezes a part-payment's shortfall", () => {
+    expect(potEntry(data, POT, "2026-02", 90, true).diff).toBe(-15);
+  });
+
+  it("freezes what a settlement sends back", () => {
+    expect(potEntry(data, POT, "2026-02", 53, false)).toEqual({ month: "2026-02", bill: 53, diff: 22 });
+  });
+
+  it("works from the balance in the month it is dated, not today's", () => {
+    expect(potEntry(data, POT, "2026-01", 20, false).diff).toBe(30);
+  });
+});
+
+describe("payableMonths", () => {
+  it("runs from the first month money went in up to now, newest first", () => {
+    const data = build({ "2026-01": unpaid(50), "2026-02": paid(50), "2026-03": paid(50) });
+    expect(payableMonths(data, POT, "2026-04")).toEqual(["2026-04", "2026-03", "2026-02"]);
+  });
+
+  it("starts at the last settlement, so a closed pot can't be paid from", () => {
+    const data = build(
+      { "2026-01": paid(50), "2026-02": paid(50), "2026-03": paid(50) },
+      [{ month: "2026-02", bill: 90 }],
+    );
+    expect(payableMonths(data, POT, "2026-03")).toEqual(["2026-03", "2026-02"]);
+  });
+
+  it("caps how far back it goes", () => {
+    const months = Object.fromEntries(
+      Array.from({ length: 20 }, (_, i) => [`2025-${String((i % 12) + 1).padStart(2, "0")}`, paid(10)]),
+    );
+    expect(payableMonths(build(months), POT, "2026-06", 3)).toEqual(["2026-06", "2026-05", "2026-04"]);
+  });
+
+  it("offers just this month for a pot nothing has gone into", () => {
+    expect(payableMonths(build({}), POT, "2026-04")).toEqual(["2026-04"]);
+  });
+
+  it("crosses a year boundary", () => {
+    const data = build({ "2025-11": paid(10), "2026-01": paid(10) });
+    expect(payableMonths(data, POT, "2026-01")).toEqual(["2026-01", "2025-12", "2025-11"]);
+  });
+});
+
+describe("what bills really cost", () => {
+  // Hot Water's year: 83 set aside a month, a 304 bill in month 4, 28 back.
+  const data = build(
+    { "2026-01": paid(83), "2026-02": paid(83), "2026-03": paid(83), "2026-04": paid(83) },
+    [{ month: "2026-04", bill: 304, diff: 28 }],
+  );
+
+  it("counts set-asides as spent in the months they go in", () => {
+    expect(rentMonthCost(data, "2026-02")).toBe(83);
+  });
+
+  it("takes off what a settled pot sends back, in the month it does", () => {
+    expect(potTrueUp(data, "2026-04")).toBe(-28);
+    expect(rentMonthCost(data, "2026-04")).toBe(55);
+  });
+
+  it("adds up to the bill over the pot's life", () => {
+    const year = ["2026-01", "2026-02", "2026-03", "2026-04"].reduce((s, m) => s + rentMonthCost(data, m), 0);
+    expect(year).toBe(304);
+  });
+
+  it("adds a shortfall that savings covered", () => {
+    const short = build({ "2026-01": paid(50) }, [{ month: "2026-01", bill: 80, partial: true, diff: -30 }]);
+    expect(rentMonthCost(short, "2026-01")).toBe(80);
+  });
+
+  it("leaves a part-payment the pot covered alone", () => {
+    const covered = build({ "2026-01": paid(50) }, [{ month: "2026-01", bill: 30, partial: true, diff: 0 }]);
+    expect(rentMonthCost(covered, "2026-01")).toBe(50);
+  });
+});
+
+describe("review fixes", () => {
+  it("always offers this month, even when the only money in is dated later", () => {
+    const data = build({ "2026-12": paid(45) });
+    expect(payableMonths(data, POT, "2026-11")).toEqual(["2026-11"]);
+  });
+
+  it("never offers a month before the latest entry, part-payments included", () => {
+    const data = build(
+      { "2026-09": paid(100), "2026-10": paid(0), "2026-11": paid(0) },
+      [{ month: "2026-11", bill: 80, partial: true, diff: 0 }],
+    );
+    expect(payableMonths(data, POT, "2026-11")).toEqual(["2026-11"]);
+  });
+
+  it("freezes entries recorded before results were stored, and leaves frozen ones alone", () => {
+    const data = build(
+      { "2026-01": paid(50), "2026-02": paid(50) },
+      [
+        { month: "2026-01", bill: 20, partial: true },
+        { month: "2026-02", bill: 10, diff: 99 },
+        { month: "2026-05", bill: 5 }, // after upTo: nothing to freeze it against
+      ],
+    );
+    expect(frozenEntries(data, POT, "2026-02")).toEqual([
+      { month: "2026-01", bill: 20, partial: true, diff: 0 },
+      { month: "2026-02", bill: 10, diff: 99 },
+      { month: "2026-05", bill: 5 },
+    ]);
+  });
+
+  it("does not count a bill twice for a pot attached to it", () => {
+    // Water: 40 set aside in Jan and Feb, the 70 bill paid out (and recorded) in Mar,
+    // and the pot settled against it: 10 back to savings.
+    const data: RentData = {
+      items: [{ key: "water", label: "Water", saved: true, pot_default: false }],
+      months: {
+        "2026-01": { water: { amount: 40, paid: true, to_pot: true } },
+        "2026-02": { water: { amount: 40, paid: true, to_pot: true } },
+        "2026-03": { water: { amount: 70, paid: true } },
+      },
+      pots: { water: { settlements: [{ month: "2026-03", bill: 70, diff: 10 }] } },
+    };
+    const year = ["2026-01", "2026-02", "2026-03"].reduce((sum, m) => sum + rentMonthCost(data, m), 0);
+    expect(year).toBe(70); // the bill, once
+  });
+
+  it("keeps a detached pot's history in the figures", () => {
+    const data = build({ "2026-01": paid(50) }, [{ month: "2026-01", bill: 30, diff: 20 }]);
+    data.items = data.items.map((it) => (it.key === POT ? { ...it, saved: false } : it));
+    expect(settlementsIn(data, "2026-01")).toHaveLength(1);
+    expect(potTrueUp(data, "2026-01")).toBe(-20);
+  });
+
+  it("flags a set-aside that is allocated but not ticked", () => {
+    expect(potPending(build({ "2026-01": unpaid(45) }), POT, "2026-01")).toBe(45);
+    expect(potPending(build({ "2026-01": paid(45) }), POT, "2026-01")).toBe(0);
+  });
+});
+

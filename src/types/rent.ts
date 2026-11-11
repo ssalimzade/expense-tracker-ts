@@ -92,6 +92,16 @@ export interface RentPotSettlement {
   note?: string;
   /** Pay `bill` and keep the rest in the pot, rather than closing it off. */
   partial?: boolean;
+  /**
+   * What moved between the pot and savings, frozen when the entry was made:
+   * positive went back to savings, negative came out of savings to cover a
+   * shortfall. Frozen so that editing an earlier month can't rewrite a result
+   * that already happened — the correction lands in the pot's balance instead.
+   *
+   * Absent on entries made before it existed; those are worked out from the
+   * months as they read now.
+   */
+  diff?: number;
 }
 
 export type RentPots = Record<string, { settlements: RentPotSettlement[] }>;

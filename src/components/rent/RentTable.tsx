@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { useSaveRentMonth } from "../../hooks/useRent";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import type { RentData, RentItemDef, RentLineItem, RentMonthEntry, RentMatch } from "../../types/rent";
-import { gbp0, openingMonth } from "../../lib/format";
+import { gbp0 } from "../../lib/format";
+import { EarlierMonthsButton, useEarlierMonths } from "../EarlierMonths";
 import { goesToPot, potViews } from "../../lib/pots";
 import {
   rentBill,
@@ -487,10 +488,8 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   const [pop, setPop] = useState<Pop | null>(null);
 
   // The table opens with this month and the last couple; anything older is one tap away.
-  const [showEarlier, setShowEarlier] = useState(false);
-  const hasCurrent = months.includes(currentMonth);
-  const shownMonths = showEarlier || !hasCurrent ? months : months.filter((m) => m >= openingMonth(currentMonth));
-  const hiddenEarlier = months.length - shownMonths.length;
+  const earlierMonths = useEarlierMonths(months, (m) => m, currentMonth);
+  const shownMonths = earlierMonths.shown;
   // A column is dropped when it is blank for every month on screen — so a pot
   // settled back in July disappears from the recent months and comes back
   // with the earlier ones it actually funded.
@@ -691,18 +690,12 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
           </span>
         </div>
       </div>
-      {hiddenEarlier > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowEarlier(true)}
-          className="flex w-full items-center justify-center gap-1.5 border-b border-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/40"
-        >
-          <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
-            <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
-          </svg>
-          Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
-        </button>
-      )}
+      <EarlierMonthsButton
+        earlier={earlierMonths.earlier}
+        expanded={earlierMonths.expanded}
+        onToggle={earlierMonths.toggle}
+        className="border-b border-gray-100 px-4 py-3 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/40"
+      />
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[860px] text-sm">
           <thead>

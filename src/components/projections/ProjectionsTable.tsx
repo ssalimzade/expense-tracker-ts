@@ -1,6 +1,6 @@
-import { useState } from "react";
 import type { ProjectionView, ProjectionInput, AllocationField } from "../../types/projections";
-import { gbp0, openingMonth } from "../../lib/format";
+import { gbp0 } from "../../lib/format";
+import { EarlierMonthsButton, useEarlierMonths } from "../EarlierMonths";
 import { commitOnEnter } from "../../lib/keys";
 import { Card } from "../common";
 import MoneyInput from "../MoneyInput";
@@ -56,10 +56,8 @@ interface Line {
 
 export default function ProjectionsTable({ rows, onProjectionField, onNotes, onAllocation }: Props) {
   // Phones open with this month and the last couple; anything older is one tap away.
-  const [showEarlier, setShowEarlier] = useState(false);
-  const hasCurrent = rows.some((r) => r.month === currentMonth);
-  const phoneRows = showEarlier || !hasCurrent ? rows : rows.filter((r) => r.month >= openingMonth(currentMonth));
-  const hiddenEarlier = rows.length - phoneRows.length;
+  const earlierMonths = useEarlierMonths(rows, (r) => r.month, currentMonth);
+  const phoneRows = earlierMonths.shown;
 
   const field = (label: string, key: ProjectionInput, pick: (r: ProjectionView) => number): Line => ({
     label,
@@ -183,18 +181,12 @@ export default function ProjectionsTable({ rows, onProjectionField, onNotes, onA
       </div>
 
       {/* Mobile cards — one per month */}
-      {hiddenEarlier > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowEarlier(true)}
-          className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-gray-500 ring-1 ring-gray-100 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-400 dark:ring-gray-800 dark:hover:bg-gray-800/60 md:hidden"
-        >
-          <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
-            <path fillRule="evenodd" d="M11.78 9.78a.75.75 0 0 1-1.06 0L8 7.06 5.28 9.78a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd" />
-          </svg>
-          Show {hiddenEarlier} earlier month{hiddenEarlier === 1 ? "" : "s"}
-        </button>
-      )}
+      <EarlierMonthsButton
+        earlier={earlierMonths.earlier}
+        expanded={earlierMonths.expanded}
+        onToggle={earlierMonths.toggle}
+        className="mb-2 rounded-2xl bg-white px-4 py-3 ring-1 ring-gray-100 hover:bg-gray-50 dark:bg-gray-900 dark:ring-gray-800 dark:hover:bg-gray-800/60 md:hidden"
+      />
       <ul className="space-y-2 md:hidden">
         {phoneRows.map((row) => {
           const field = (label: string, value: number, onCommit: (n: number) => void, color?: string) => (

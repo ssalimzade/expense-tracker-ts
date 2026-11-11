@@ -10,7 +10,7 @@ import { currentNetMonthly } from "../../lib/remuneration";
 import { rentIsPaid, rentShare } from "../../lib/rent";
 import RentTable from "./RentTable";
 import RentPots from "./RentPots";
-import { potViews, potsTotal } from "../../lib/pots";
+import { potViews, potsTotal, rentMonthCost } from "../../lib/pots";
 import { BillsHeroChart } from "./RentCharts";
 import { HouseArt, IN_COLUMN } from "../HeroArt";
 import PhoneSectionTabs, { usePhoneSection } from "../PhoneSections";
@@ -54,13 +54,14 @@ export default function RentTab({ onOpenTransactions }: Props) {
         // Year-to-date only: months up to and including the current month.
         const ytdMonths = months.filter((m) => m <= currentMonth);
 
+        // Set-asides count as spent when they go into a pot; whatever a settled
+        // pot sends back to savings comes off again in the month it does.
         let costYtd = 0;
         let outstanding = 0; // unpaid amounts to date
         for (const m of ytdMonths) {
+          costYtd += rentMonthCost(data, m);
           for (const it of data.items) {
-            const amount = cost(m, it.key);
-            costYtd += amount;
-            if (!isPaid(m, it.key)) outstanding += amount;
+            if (!isPaid(m, it.key)) outstanding += cost(m, it.key);
           }
         }
 

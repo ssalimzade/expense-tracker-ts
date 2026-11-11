@@ -1,6 +1,6 @@
 import type { RentData } from "../../types/rent";
 import { gbp0 } from "../../lib/format";
-import { rentShare } from "../../lib/rent";
+import { rentMonthCost } from "../../lib/pots";
 import { HeroBarChart, HeroChartHeader } from "../HeroCharts";
 
 const currentMonth = (() => {
@@ -8,9 +8,12 @@ const currentMonth = (() => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 })();
 
-/** The Rent header's minimal chart: what each month costs you, rent included. */
+/**
+ * The Rent header's minimal chart: what each month costs you, rent included —
+ * trued up for pots, so it adds up to the headline beside it.
+ */
 export function BillsHeroChart({ data, months, className }: { data: RentData; months: string[]; className?: string }) {
-  const monthTotal = (m: string) => data.items.reduce((s, it) => s + rentShare(data, m, it.key), 0);
+  const monthTotal = (m: string) => rentMonthCost(data, m);
   // The figure beside the chart is already the average, so name this month instead.
   const thisMonth = months.includes(currentMonth) ? monthTotal(currentMonth) : 0;
   return (
