@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useBalance, useSaveBalance, useAccountBalances } from "../../hooks/useBalance";
 import { useRent } from "../../hooks/useRent";
 import MoneyInput from "../MoneyInput";
@@ -23,6 +24,9 @@ function prevMonthKey(m: string): string {
 
 type DiffPart = { label: string; allocated: number; paid: number; diff: number };
 
+/** Gap kept between the Diff-in-bills panel and the edges of the viewport. */
+const PANEL_MARGIN = 8;
+
 /** Hover/tap "ⓘ" that reveals how the auto Diff in bills was calculated. */
 function DiffBreakdown({
   parts,
@@ -34,6 +38,9 @@ function DiffBreakdown({
   month: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const timer = useRef<number | null>(null);
   const cancel = () => {
     if (timer.current) {
@@ -45,32 +52,83 @@ function DiffBreakdown({
     cancel();
     setOpen(true);
   };
+  const close = () => {
+    cancel();
+    setOpen(false);
+  };
   const closeSoon = () => {
     cancel();
     timer.current = window.setTimeout(() => setOpen(false), 160);
   };
 
+  // The panel is rendered in a portal with fixed coordinates, measured from the
+  // "ⓘ" button and clamped to the viewport. The card is only a third of a phone
+  // screen wide, so anchoring the panel to the card's own edges pushed it off
+  // the left of the screen; clamping here keeps it fully visible at any width
+  // and stops the card's rounded overflow from clipping it.
+  const place = useCallback(() => {
+    const btn = btnRef.current;
+    const panel = panelRef.current;
+    if (!btn || !panel) return;
+    const b = btn.getBoundingClientRect();
+    const p = panel.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+
+    // Centre on the button, then pull back inside whichever edge it crosses.
+    let left = b.left + b.width / 2 - p.width / 2;
+    left = Math.max(PANEL_MARGIN, Math.min(left, vw - PANEL_MARGIN - p.width));
+
+    // Below the button by default; flip above when it would run off the bottom.
+    let top = b.bottom + 6;
+    if (top + p.height > vh - PANEL_MARGIN) {
+      const above = b.top - 6 - p.height;
+      top =
+        above >= PANEL_MARGIN
+          ? above
+          : Math.max(PANEL_MARGIN, vh - PANEL_MARGIN - p.height);
+    }
+    setCoords((prev) =>
+      prev && prev.top === top && prev.left === left ? prev : { top, left },
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+    place();
+  }, [open, place, parts, total, month]);
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    const onMove = () => place();
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+    window.addEventListener("resize", onMove);
+    window.addEventListener("scroll", onMove, true);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onMove);
+      window.removeEventListener("scroll", onMove, true);
+    };
+  }, [open, place]);
   useEffect(() => cancel, []);
 
   const neg = STATUS.over;
   const pos = STATUS.under;
 
-  // The wrapper spans the card (pointer-events-none) so the panel can anchor to
-  // the card's right edge on mobile and stay on-screen; the button sits at the
-  // top-left corner.
+  // The wrapper spans the card (pointer-events-none) so the button can sit at
+  // the top-left corner without covering the value underneath.
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0">
       <button
+        ref={btnRef}
         type="button"
         onMouseEnter={openNow}
         onMouseLeave={closeSoon}
-        onClick={() => (open ? setOpen(false) : openNow())}
+        onClick={() => (open ? close() : openNow())}
         title="How this is calculated"
         className="pointer-events-auto absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-200"
       >
@@ -78,63 +136,71 @@ function DiffBreakdown({
           <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm0 3.25a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8ZM7.1 7.2h1.4a.4.4 0 0 1 .4.4v3.4h.5a.4.4 0 0 1 0 .8H6.6a.4.4 0 0 1 0-.8h.5V8H7.1a.4.4 0 0 1 0-.8Z" />
         </svg>
       </button>
-      {open && (
-        <>
-          {/* Outside-tap catcher (mobile) — desktop relies on hover-out. */}
-          <span
-            onClick={() => setOpen(false)}
-            className="pointer-events-auto fixed inset-0 z-40 sm:hidden"
-          />
-          <div
-            onMouseEnter={cancel}
-            onMouseLeave={closeSoon}
-            className="pointer-events-auto absolute right-1 top-9 z-50 w-max min-w-[13rem] max-w-[calc(100vw-1.5rem)] cursor-default rounded-xl border border-gray-200 bg-white p-3 text-left shadow-2xl dark:border-gray-700 dark:bg-gray-800 sm:left-1 sm:right-auto"
-          >
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-              Bills paid in {formatMonthLabel(month)}
-            </p>
-            {parts.length === 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                No bill differences this month.
+      {open &&
+        createPortal(
+          <>
+            {/* Outside-tap catcher (mobile) — desktop relies on hover-out. */}
+            <span onClick={close} className="fixed inset-0 z-[9998] sm:hidden" />
+            <div
+              ref={panelRef}
+              onMouseEnter={cancel}
+              onMouseLeave={closeSoon}
+              style={{
+                position: "fixed",
+                top: coords?.top ?? 0,
+                left: coords?.left ?? 0,
+                maxWidth: `calc(100vw - ${PANEL_MARGIN * 2}px)`,
+                maxHeight: `calc(100vh - ${PANEL_MARGIN * 2}px)`,
+                visibility: coords ? "visible" : "hidden",
+              }}
+              className="z-[9999] w-max min-w-[13rem] cursor-default overflow-auto rounded-xl border border-gray-200 bg-white p-3 text-left shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+            >
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                Bills paid in {formatMonthLabel(month)}
               </p>
-            ) : (
-              <table className="w-full border-collapse text-xs tabular-nums">
-                <thead>
-                  <tr className="text-[10px] uppercase tracking-wide text-gray-400">
-                    <th className="pb-1.5 pr-4 text-left font-medium">Bill</th>
-                    <th className="px-2 pb-1.5 text-right font-medium">Allocated</th>
-                    <th className="px-2 pb-1.5 text-right font-medium">Paid</th>
-                    <th className="pl-3 pb-1.5 text-right font-medium">Diff</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parts.map((p) => (
-                    <tr key={p.label}>
-                      <td className="py-[3px] pr-4 text-left font-medium text-gray-700 dark:text-gray-200">{p.label}</td>
-                      <td className="px-2 py-[3px] text-right text-gray-500 dark:text-gray-400">{gbp(p.allocated)}</td>
-                      <td className="px-2 py-[3px] text-right text-gray-500 dark:text-gray-400">{gbp(p.paid)}</td>
-                      <td className={`py-[3px] pl-3 text-right font-semibold ${p.diff < 0 ? neg : pos}`}>{gbp(p.diff)}</td>
+              {parts.length === 0 ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  No bill differences this month.
+                </p>
+              ) : (
+                <table className="w-full border-collapse text-xs tabular-nums">
+                  <thead>
+                    <tr className="text-[10px] uppercase tracking-wide text-gray-400">
+                      <th className="pb-1.5 pr-4 text-left font-medium">Bill</th>
+                      <th className="px-2 pb-1.5 text-right font-medium">Allocated</th>
+                      <th className="px-2 pb-1.5 text-right font-medium">Paid</th>
+                      <th className="pl-3 pb-1.5 text-right font-medium">Diff</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={3} className="border-t border-gray-200 pt-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-300">
-                      Total
-                    </td>
-                    <td className={`border-t border-gray-200 pl-3 pt-2 text-right text-sm font-bold dark:border-gray-600 ${total < 0 ? neg : pos}`}>
-                      {gbp0(total)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            )}
-            <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] leading-snug text-gray-500 dark:border-gray-700/60 dark:text-gray-400">
-              Reported only — already reflected in Total Balance through Left to Pay.
-            </p>
-          </div>
-        </>
-      )}
+                  </thead>
+                  <tbody>
+                    {parts.map((p) => (
+                      <tr key={p.label}>
+                        <td className="py-[3px] pr-4 text-left font-medium text-gray-700 dark:text-gray-200">{p.label}</td>
+                        <td className="px-2 py-[3px] text-right text-gray-500 dark:text-gray-400">{gbp(p.allocated)}</td>
+                        <td className="px-2 py-[3px] text-right text-gray-500 dark:text-gray-400">{gbp(p.paid)}</td>
+                        <td className={`py-[3px] pl-3 text-right font-semibold ${p.diff < 0 ? neg : pos}`}>{gbp(p.diff)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={3} className="border-t border-gray-200 pt-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-600 dark:text-gray-300">
+                        Total
+                      </td>
+                      <td className={`border-t border-gray-200 pl-3 pt-2 text-right text-sm font-bold dark:border-gray-600 ${total < 0 ? neg : pos}`}>
+                        {gbp0(total)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
+              <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] leading-snug text-gray-500 dark:border-gray-700/60 dark:text-gray-400">
+                Reported only — already reflected in Total Balance through Left to Pay.
+              </p>
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   );
 }
