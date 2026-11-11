@@ -49,7 +49,8 @@ export default function Hero({
       className={`relative overflow-hidden rounded-3xl bg-gradient-to-br text-white shadow-lg shadow-black/5 dark:shadow-none ${gradient}`}
     >
       <div
-        className={`relative grid gap-6 p-5 sm:p-7 ${
+        // A bounded column on phones too, so no single long line can widen the card.
+        className={`relative grid grid-cols-[minmax(0,1fr)] gap-6 p-5 sm:p-7 ${
           !aside ? "" : asideFrom === "lg" ? "lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch" : "md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
         }`}
       >

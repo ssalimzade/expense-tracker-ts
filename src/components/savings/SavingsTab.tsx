@@ -161,7 +161,9 @@ function VaultHero({
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6f8a58] via-[#526a44] to-[#34472f] text-white shadow-lg shadow-black/10 dark:shadow-none">
-      <div className="relative grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+      {/* minmax(0,1fr), not the implicit auto track: the goal strip's one-line
+          outlook would otherwise size the column and push the card off-screen. */}
+      <div className="relative grid grid-cols-[minmax(0,1fr)] gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
         <div className="relative min-w-0">
         <PiggyBankArt className={IN_COLUMN} />
         <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
@@ -192,7 +194,7 @@ function VaultHero({
         <div className="hidden border-dashed border-white/25 lg:block lg:border-l lg:pl-7">
           <div className="w-[26rem] xl:w-[32rem]">{balanceChart("h-32")}</div>
         </div>
-        {goal && <div className="lg:col-span-2">{goal}</div>}
+        {goal && <div className="min-w-0 lg:col-span-2">{goal}</div>}
       </div>
     </section>
   );
