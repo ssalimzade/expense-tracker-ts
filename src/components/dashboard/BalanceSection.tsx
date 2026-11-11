@@ -281,11 +281,12 @@ export default function BalanceSection({ month }: { month: string }) {
       add(key, allocated, item.paid_amount ?? allocated);
     }
 
-    // Settling a bills pot is the same shape: the balance that had built up is
-    // what was allocated, the bill is what was actually paid. A surplus stays in
-    // savings, a shortfall comes out of it.
+    // Paying a bill from a pot is the same shape: what the pot put towards it is
+    // what was allocated, the bill is what was actually paid. Settled, the pot
+    // puts in its whole balance and a surplus goes back to savings; paid in
+    // part, it puts in at most the bill, so only a shortfall shows.
     for (const s of settlementsIn(data, month)) {
-      add(s.key, s.accrued, s.bill, `${s.label} (pot)`);
+      add(s.key, s.bill + s.diff, s.bill, `${s.label} (pot)`);
     }
 
     parts.sort((a, b) => a.label.localeCompare(b.label));

@@ -342,8 +342,12 @@ app.post("/rent/pot", async (c) => {
     .filter((s: any) => MONTH_RE.test(String(s?.month ?? "")))
     .map((s: any) => ({
       month: String(s.month),
-      bill: round2(Number(s.bill) || 0),
+      // Never negative: a negative part-payment would quietly add to the pot.
+      bill: Math.max(0, round2(Number(s.bill) || 0)),
       note: String(s.note ?? ""),
+      // Paid in part, the rest stays in the pot. Absent means a full settlement,
+      // which is what every entry written before this existed was.
+      ...(s.partial === true && { partial: true }),
     }));
   return c.json(await upsertRentPot(sqlOf(c), String(b.key), settlements));
 });

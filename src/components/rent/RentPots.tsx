@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSaveRentItem, useSaveRentPot } from "../../hooks/useRent";
 import type { RentData, RentItemDef, RentPotSettlement } from "../../types/rent";
-import { potViews, type PotView } from "../../lib/pots";
+import { potViews, type PotSettlementView, type PotView } from "../../lib/pots";
 import { gbp0, formatMonthLabel } from "../../lib/format";
 import { Card } from "../common";
 import Select from "../Select";
@@ -13,9 +13,36 @@ interface Props {
 }
 
 /**
- * The pots that fund the quarterly bills. Each month's allocation goes in;
- * settling a pot records what the bill actually came to and empties it, leaving
- * the surplus (or shortfall) to show up in Diff in bills.
+ * Under 50p either way reads as "exact": the pots carry pennies but every figure
+ * here shows whole pounds, so anything smaller would print as "£0 from savings".
+ */
+const EPS = 0.5;
+
+/** The pot's most recent bill, in a line. */
+function lastLine(s: PotSettlementView): string {
+  const when = formatMonthLabel(s.month);
+  if (s.partial) {
+    const short = s.diff < -EPS ? `, ${gbp0(-s.diff)} of it from savings` : "";
+    return `Paid ${gbp0(s.bill)} from the pot in ${when}${short}`;
+  }
+  return `Settled ${when} — bill ${gbp0(s.bill)}, ${
+    s.diff > -EPS ? `${gbp0(Math.max(0, s.diff))} back to savings` : `${gbp0(-s.diff)} taken from savings`
+  }`;
+}
+
+/** Segmented-control button, shared by both dialogs. */
+const tab = (active: boolean) =>
+  `flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+    active
+      ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
+      : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+  }`;
+
+/**
+ * The pots that fund the quarterly bills. Each month's allocation goes in. A
+ * bill can be paid from a pot in part, keeping the rest earmarked, or the pot
+ * can be settled — closed off, with the surplus (or shortfall) showing up in
+ * Diff in bills.
  */
 export default function RentPots({ data, upTo }: Props) {
   const save = useSaveRentPot();
@@ -31,16 +58,16 @@ export default function RentPots({ data, upTo }: Props) {
     saveItem.mutate({ key: pot.key, label: pot.label, saved: false, delete: true });
   };
 
-  const settle = (pot: PotView, bill: number) => {
-    const kept = (data.pots?.[pot.key]?.settlements ?? []).filter((s) => s.month !== upTo);
-    const next: RentPotSettlement[] = [...kept, { month: upTo, bill }];
-    save.mutate({ key: pot.key, settlements: next });
+  // Every payment is its own entry, so two bills in one month both count and
+  // Undo only ever takes back the latest.
+  const pay = (pot: PotView, bill: number, partial: boolean) => {
+    const entry: RentPotSettlement = { month: upTo, bill, ...(partial && { partial: true }) };
+    save.mutate({ key: pot.key, settlements: [...(data.pots?.[pot.key]?.settlements ?? []), entry] });
     setSettling(null);
   };
 
-  const reopen = (pot: PotView) => {
-    if (!pot.lastSettled) return;
-    const next = (data.pots?.[pot.key]?.settlements ?? []).filter((s) => s.month !== pot.lastSettled);
+  const undo = (pot: PotView, entry: PotSettlementView) => {
+    const next = (data.pots?.[pot.key]?.settlements ?? []).filter((_, i) => i !== entry.index);
     save.mutate({ key: pot.key, settlements: next });
   };
 
@@ -52,8 +79,9 @@ export default function RentPots({ data, upTo }: Props) {
             Bills Pots
           </h2>
           <p className="mt-1 text-xs text-gray-400">
-            Monthly set-aside builds up here. Settle a pot when its bill lands — what's left over
-            stays in savings, a shortfall comes out of it.
+            Monthly set-aside builds up here. When a bill lands, pay it from the pot and keep the
+            rest in it, or settle the pot — what's left over goes back to savings, a shortfall
+            comes out of it.
           </p>
         </div>
         <button
@@ -73,6 +101,12 @@ export default function RentPots({ data, upTo }: Props) {
       <ul className="divide-y divide-gray-50 dark:divide-gray-800/60">
         {pots.map((pot) => {
           const last = pot.settlements[pot.settlements.length - 1];
+          // Only this month's latest entry can be taken back — older ones have
+          // had later months build on them.
+          const undoable = last?.month === upTo ? last : undefined;
+          // A pot settled this month has nothing left to pay from, so its main
+          // button becomes Undo; otherwise Undo sits beside the line it reverses.
+          const undoInPlace = undoable && pot.closed;
           return (
             <li key={pot.key} className="px-4 py-3 sm:px-6">
               <div className="flex items-center gap-3">
@@ -82,29 +116,39 @@ export default function RentPots({ data, upTo }: Props) {
                     {pot.closed && <span className="ml-2 text-[10px] uppercase tracking-wider text-gray-400">closed</span>}
                   </p>
                   <p className="mt-0.5 text-xs text-gray-400">
-                    {last
-                      ? `Settled ${formatMonthLabel(last.month)} — bill ${gbp0(last.bill)}, ${
-                          last.diff >= 0 ? `${gbp0(last.diff)} left in savings` : `${gbp0(-last.diff)} taken from savings`
-                        }`
-                      : "Never settled"}
+                    {last ? lastLine(last) : "Nothing paid from it yet"}
+                    {undoable && !undoInPlace && (
+                      <>
+                        {" · "}
+                        <button
+                          onClick={() => undo(pot, undoable)}
+                          disabled={save.isPending}
+                          className="font-medium text-[#7d6540] hover:underline disabled:opacity-40 dark:text-[#d2bc92]"
+                        >
+                          Undo
+                        </button>
+                      </>
+                    )}
                   </p>
                 </div>
                 <p className={`shrink-0 text-lg font-bold tabular-nums ${pot.balance > 0 ? "text-[#96794a] dark:text-[#d2bc92]" : "text-gray-400"}`}>
                   {gbp0(pot.balance)}
                 </p>
-                {pot.closed && pot.lastSettled === upTo ? (
+                {undoInPlace ? (
                   <button
-                    onClick={() => reopen(pot)}
-                    className="shrink-0 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
+                    onClick={() => undo(pot, undoable)}
+                    disabled={save.isPending}
+                    className="shrink-0 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200 disabled:opacity-40 dark:bg-gray-700 dark:text-gray-300"
                   >
                     Undo
                   </button>
                 ) : (
                   <button
                     onClick={() => setSettling(pot)}
-                    className="shrink-0 rounded-lg bg-[#c8b58f]/20 px-2.5 py-1 text-xs font-medium text-[#7d6540] hover:bg-[#c8b58f]/30 dark:bg-[#c8b58f]/10 dark:text-[#d2bc92]"
+                    disabled={save.isPending}
+                    className="shrink-0 rounded-lg bg-[#c8b58f]/20 px-2.5 py-1 text-xs font-medium text-[#7d6540] hover:bg-[#c8b58f]/30 disabled:opacity-40 dark:bg-[#c8b58f]/10 dark:text-[#d2bc92]"
                   >
-                    Settle
+                    Pay bill
                   </button>
                 )}
                 <button
@@ -124,7 +168,7 @@ export default function RentPots({ data, upTo }: Props) {
       </ul>
 
       {settling && (
-        <SettleDialog pot={settling} month={upTo} onCancel={() => setSettling(null)} onSettle={settle} />
+        <SettleDialog pot={settling} month={upTo} onCancel={() => setSettling(null)} onPay={pay} />
       )}
       {creating && (
         <NewPotDialog
@@ -175,13 +219,6 @@ function NewPotDialog({
       onCreate({ label: label.trim(), saved: true, pot_default: true });
     }
   };
-
-  const tab = (active: boolean) =>
-    `flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-      active
-        ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white"
-        : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
-    }`;
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
@@ -269,21 +306,44 @@ function NewPotDialog({
   );
 }
 
-/** Asks what the bill came to, and previews what that does to savings. */
+/**
+ * Asks what the bill came to and whether the pot stays open, previewing what
+ * that leaves in the pot and does to savings.
+ *
+ * Keeping the rest is the default: it is the reversible-feeling choice, and
+ * settling — which sends everything left over back to savings — is one tap away.
+ */
 function SettleDialog({
   pot,
   month,
   onCancel,
-  onSettle,
+  onPay,
 }: {
   pot: PotView;
   month: string;
   onCancel: () => void;
-  onSettle: (pot: PotView, bill: number) => void;
+  onPay: (pot: PotView, bill: number, partial: boolean) => void;
 }) {
-  const [raw, setRaw] = useState(String(Math.round(pot.balance)));
+  const [raw, setRaw] = useState(String(Math.round(pot.balance * 100) / 100));
+  const [partial, setPartial] = useState(true);
   const bill = parseFloat(raw.replace(/[^0-9.]/g, "")) || 0;
   const diff = pot.balance - bill;
+  // Paying nothing and keeping everything changes nothing, so don't record it.
+  // Settling for £0 is still meaningful: no bill, the whole pot goes to savings.
+  const valid = !partial || bill > 0;
+  const submit = () => valid && onPay(pot, bill, partial);
+
+  const preview = partial
+    ? diff > EPS
+      ? { text: `${gbp0(diff)} stays in the pot`, tone: "text-[#96794a] dark:text-[#d2bc92]" }
+      : diff < -EPS
+      ? { text: `Empties the pot, ${gbp0(-diff)} comes out of savings`, tone: "text-red-500 dark:text-red-400" }
+      : { text: "Pot covers it exactly and stays open", tone: "text-gray-400" }
+    : diff > EPS
+    ? { text: `${gbp0(diff)} goes back to savings and the pot closes`, tone: "text-emerald-600 dark:text-emerald-400" }
+    : diff < -EPS
+    ? { text: `${gbp0(-diff)} comes out of savings and the pot closes`, tone: "text-red-500 dark:text-red-400" }
+    : { text: "Pot covers it exactly and closes", tone: "text-gray-400" };
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
@@ -291,13 +351,13 @@ function SettleDialog({
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-xs rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
       >
-        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Settle {pot.label}</p>
+        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Pay from {pot.label}</p>
         <p className="mt-1 text-xs text-gray-400">
           {gbp0(pot.balance)} in the pot as of {formatMonthLabel(month)}
         </p>
 
         <label className="mt-3 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-          What did the bill come to?
+          What did you pay?
         </label>
         <input
           autoFocus
@@ -306,19 +366,22 @@ function SettleDialog({
           onChange={(e) => setRaw(e.target.value)}
           onFocus={(e) => e.currentTarget.select()}
           onKeyDown={(e) => {
-            if (e.key === "Enter") onSettle(pot, bill);
+            if (e.key === "Enter") submit();
             if (e.key === "Escape") onCancel();
           }}
           className="mt-1 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-center text-lg font-semibold tabular-nums focus:border-[#c8b58f] focus:outline-none dark:border-gray-600"
         />
 
-        <p className={`mt-2 text-center text-xs font-medium ${diff > 0 ? "text-emerald-600 dark:text-emerald-400" : diff < 0 ? "text-red-500 dark:text-red-400" : "text-gray-400"}`}>
-          {diff > 0
-            ? `${gbp0(diff)} stays in savings`
-            : diff < 0
-            ? `${gbp0(-diff)} comes out of savings`
-            : "Pot covers it exactly"}
-        </p>
+        <div className="mt-3 flex gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-900/50">
+          <button onClick={() => setPartial(true)} className={tab(partial)}>
+            Keep the rest
+          </button>
+          <button onClick={() => setPartial(false)} className={tab(!partial)}>
+            Settle fully
+          </button>
+        </div>
+
+        <p className={`mt-2 text-center text-xs font-medium ${preview.tone}`}>{preview.text}</p>
 
         <div className="mt-4 flex gap-2">
           <button
@@ -328,10 +391,11 @@ function SettleDialog({
             Cancel
           </button>
           <button
-            onClick={() => onSettle(pot, bill)}
-            className="flex-1 rounded-lg bg-[#b39767] px-3 py-2 text-sm font-semibold text-white hover:bg-[#9c8257]"
+            onClick={submit}
+            disabled={!valid}
+            className="flex-1 rounded-lg bg-[#b39767] px-3 py-2 text-sm font-semibold text-white hover:bg-[#9c8257] disabled:opacity-40"
           >
-            Settle
+            {partial ? "Pay" : "Settle"}
           </button>
         </div>
       </div>

@@ -70,15 +70,22 @@ export interface RentMatch {
 export type RentReconciled = Record<string, Record<string, RentMatch>>; // month -> key -> match
 
 /**
- * Closing off a pot: the quarterly bill landed, so whatever had accrued is
- * spent. `bill` under the accrued balance leaves a surplus that stays in
- * savings; over it, the shortfall comes out of savings. Either way the pot
- * restarts from zero the following month.
+ * A bill paid from a pot. Two kinds:
+ *
+ *   settlement (default) — closes the pot off: whatever had accrued is spent.
+ *     `bill` under the accrued balance leaves a surplus that goes back to
+ *     savings; over it, the shortfall comes out of savings. Either way the pot
+ *     restarts from zero.
+ *   partial — only `bill` leaves the pot and the rest stays in it, still
+ *     earmarked. A bill bigger than the pot empties it and the shortfall comes
+ *     out of savings, but the pot stays open.
  */
 export interface RentPotSettlement {
   month: string; // "YYYY-MM" — when the bill landed
   bill: number; // what the bill actually came to (0 = nothing to pay)
   note?: string;
+  /** Pay `bill` and keep the rest in the pot, rather than closing it off. */
+  partial?: boolean;
 }
 
 export type RentPots = Record<string, { settlements: RentPotSettlement[] }>;

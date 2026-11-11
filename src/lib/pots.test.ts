@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RentData, RentLineItem, RentPotSettlement } from "../types/rent";
-import { goesToPot, isRetired, potInflow, potsTotal, potViews } from "./pots";
+import { goesToPot, isRetired, potInflow, potsTotal, potViews, settlementsIn } from "./pots";
 
 const POT = "hot_water";
 
@@ -80,7 +80,7 @@ describe("potViews — settlement", () => {
     );
     const v = view(data, "2026-03");
     expect(v.settlements).toEqual([
-      { month: "2026-03", bill: 120, accrued: 150, diff: 30 },
+      { month: "2026-03", bill: 120, index: 0, accrued: 150, diff: 30, remaining: 0 },
     ]);
     expect(v.balance).toBe(0);
     expect(v.closed).toBe(true);
@@ -121,8 +121,8 @@ describe("potViews — settlement", () => {
     );
     const v = view(data, "2026-04");
     expect(v.settlements).toEqual([
-      { month: "2026-02", bill: 90, accrued: 100, diff: 10 },
-      { month: "2026-04", bill: 80, accrued: 100, diff: 20 },
+      { month: "2026-02", bill: 90, index: 0, accrued: 100, diff: 10, remaining: 0 },
+      { month: "2026-04", bill: 80, index: 1, accrued: 100, diff: 20, remaining: 0 },
     ]);
     expect(v.balance).toBe(0);
   });
@@ -159,7 +159,7 @@ describe("potViews — settlement", () => {
     const data = build({ "2026-01": paid(50) }, [{ month: "2026-02", bill: 40 }]);
     const v = view(data, "2026-03");
     expect(v.settlements).toEqual([
-      { month: "2026-02", bill: 40, accrued: 50, diff: 10 },
+      { month: "2026-02", bill: 40, index: 0, accrued: 50, diff: 10, remaining: 0 },
     ]);
     expect(v.balance).toBe(0);
     expect(v.closed).toBe(true);
@@ -171,6 +171,88 @@ describe("potViews — settlement", () => {
     expect(v.settlements).toEqual([]);
     expect(v.balance).toBe(50);
     expect(v.closed).toBe(false);
+  });
+});
+
+describe("potViews — paying in part", () => {
+  const months = { "2026-01": paid(50), "2026-02": paid(25) };
+  const part = (month: string, bill: number): RentPotSettlement => ({ month, bill, partial: true });
+
+  it("takes only the bill out and keeps the rest in the pot", () => {
+    const v = view(build(months, [part("2026-02", 53)]), "2026-02");
+    expect(v.settlements).toEqual([
+      { month: "2026-02", bill: 53, partial: true, index: 0, accrued: 75, diff: 0, remaining: 22 },
+    ]);
+    expect(v.balance).toBe(22);
+  });
+
+  it("leaves the pot open, so the table keeps the column", () => {
+    const data = build(months, [part("2026-02", 75)]);
+    const v = view(data, "2026-02");
+    expect(v).toMatchObject({ balance: 0, closed: false, lastSettled: undefined });
+    expect(isRetired(data, POT, "2026-03", "2026-03")).toBe(false);
+  });
+
+  it("keeps accruing on top of what was kept", () => {
+    const data = build({ ...months, "2026-03": paid(30) }, [part("2026-02", 53)]);
+    expect(view(data, "2026-03").balance).toBe(52); // 22 kept + 30
+  });
+
+  it("empties the pot and reports the shortfall when the bill is bigger", () => {
+    const v = view(build(months, [part("2026-02", 90)]), "2026-02");
+    expect(v.settlements[0]).toMatchObject({ accrued: 75, diff: -15, remaining: 0 });
+    expect(v.balance).toBe(0);
+  });
+
+  it("does not leave floating-point dust in the balance", () => {
+    const v = view(build(months, [part("2026-02", 53.4)]), "2026-02");
+    expect(v.balance).toBe(21.6);
+  });
+
+  it("settles whatever is left after earlier part-payments", () => {
+    const data = build(months, [part("2026-01", 20), { month: "2026-02", bill: 40 }]);
+    const v = view(data, "2026-02");
+    expect(v.settlements[0]).toMatchObject({ accrued: 50, remaining: 30 });
+    expect(v.settlements[1]).toMatchObject({ accrued: 55, diff: 15, remaining: 0 });
+    expect(v).toMatchObject({ balance: 0, closed: true, lastSettled: "2026-02" });
+  });
+
+  it("reopens a settled pot without moving lastSettled", () => {
+    const data = build(
+      { ...months, "2026-03": paid(40) },
+      [{ month: "2026-01", bill: 50 }, part("2026-03", 10)],
+    );
+    expect(view(data, "2026-03")).toMatchObject({ balance: 55, closed: false, lastSettled: "2026-01" });
+  });
+
+  it("applies two payments in one month in the order they were recorded", () => {
+    const data = build(months, [part("2026-02", 30), part("2026-02", 20)]);
+    const v = view(data, "2026-02");
+    expect(v.settlements.map((s) => s.remaining)).toEqual([45, 25]);
+  });
+
+  it("carries each entry's stored position through the sort, for Undo", () => {
+    const data = build(months, [part("2026-02", 10), part("2026-01", 5), part("2026-02", 1)]);
+    expect(view(data, "2026-02").settlements.map((s) => s.index)).toEqual([1, 0, 2]);
+  });
+});
+
+describe("settlementsIn", () => {
+  it("lists part-payments too, with what the pot put towards each bill", () => {
+    const data = build({ "2026-01": paid(50) }, [
+      { month: "2026-01", bill: 30, partial: true },
+      { month: "2026-01", bill: 40, partial: true },
+    ]);
+    const rows = settlementsIn(data, "2026-01");
+    // Pot covered the first in full; the second only had 20 left, so 20 short.
+    expect(rows.map((r) => r.bill + r.diff)).toEqual([30, 20]);
+    expect(rows.map((r) => r.diff)).toEqual([0, -20]);
+  });
+
+  it("puts the whole balance towards a full settlement, as before", () => {
+    const data = build({ "2026-01": paid(50) }, [{ month: "2026-01", bill: 30 }]);
+    const [row] = settlementsIn(data, "2026-01");
+    expect(row.bill + row.diff).toBe(50);
   });
 });
 
