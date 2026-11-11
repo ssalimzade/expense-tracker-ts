@@ -256,10 +256,20 @@ const rentItemKey = (label: string) =>
  * Never rewrites `months`: a pot added to a bill with history takes
  * `pot_default: false`, so every month already recorded keeps reading as a
  * payment and only the months explicitly marked from here on accrue.
+ *
+ * A brand-new item records `since`, so the months before it existed read blank
+ * rather than £0. An existing item keeps whatever it had: it has history.
  */
 export async function upsertRentItem(
   sql: Sql,
-  item: { key?: string; label: string; saved: boolean; pot_default?: boolean; delete?: boolean },
+  item: {
+    key?: string;
+    label: string;
+    saved: boolean;
+    pot_default?: boolean;
+    since?: string;
+    delete?: boolean;
+  },
 ): Promise<Dict> {
   const data = await kvGet<Dict>(sql, "rent_data", defaultRentData());
   const items: Dict[] = (data.items ??= defaultRentData().items);
@@ -297,6 +307,7 @@ export async function upsertRentItem(
       label: item.label,
       saved: item.saved,
       ...(item.pot_default != null && { pot_default: item.pot_default }),
+      ...(item.since && { since: item.since }),
     });
   }
 

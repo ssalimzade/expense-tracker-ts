@@ -173,6 +173,7 @@ export default function RentPots({ data, upTo }: Props) {
       {creating && (
         <NewPotDialog
           potless={potless}
+          month={upTo}
           onCancel={() => setCreating(false)}
           onCreate={(item) => {
             saveItem.mutate(item);
@@ -192,16 +193,25 @@ export default function RentPots({ data, upTo }: Props) {
  *     others, so months stay payments unless the tick says otherwise, and the
  *     bill's history is left exactly as it reads today;
  *   as a new item — a set-aside with no bill of its own, so every month it is
- *     ticked accrues.
+ *     ticked accrues. It starts this month: the months before it stay blank.
  */
 function NewPotDialog({
   potless,
+  month,
   onCancel,
   onCreate,
 }: {
   potless: RentItemDef[];
+  /** The month a new item starts in. */
+  month: string;
   onCancel: () => void;
-  onCreate: (item: { key?: string; label: string; saved: boolean; pot_default?: boolean }) => void;
+  onCreate: (item: {
+    key?: string;
+    label: string;
+    saved: boolean;
+    pot_default?: boolean;
+    since?: string;
+  }) => void;
 }) {
   // Default to attaching, unless every bill already has a pot.
   const [mode, setMode] = useState<"existing" | "new">(potless.length ? "existing" : "new");
@@ -216,7 +226,7 @@ function NewPotDialog({
     if (mode === "existing" && chosen) {
       onCreate({ key: chosen.key, label: chosen.label, saved: true, pot_default: false });
     } else {
-      onCreate({ label: label.trim(), saved: true, pot_default: true });
+      onCreate({ label: label.trim(), saved: true, pot_default: true, since: month });
     }
   };
 
@@ -280,8 +290,9 @@ function NewPotDialog({
               className="mt-1 w-full rounded-lg border border-gray-200 bg-transparent px-3 py-2 text-sm font-medium focus:border-[#c8b58f] focus:outline-none dark:border-gray-600"
             />
             <p className="mt-2 text-xs text-gray-400">
-              Adds a column to the table with a pot of its own. Every month you tick it, that
-              month's amount accrues — nothing goes out to a biller.
+              Adds a column to the table from {formatMonthLabel(month)} on, with a pot of its
+              own. Every month you tick it, that month's amount accrues — nothing goes out to a
+              biller.
             </p>
           </>
         )}

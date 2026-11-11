@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { RentData } from "../types/rent";
-import { rentBill, rentCell, rentContribution, rentIsPaid, rentMatch, rentShare } from "./rent";
+import {
+  rentBill,
+  rentCell,
+  rentContribution,
+  rentIsPaid,
+  rentItemStarted,
+  rentMatch,
+  rentShare,
+} from "./rent";
 
 // Only `months` and `reconciled` reach this module, so the rest stays empty.
 const data = (
@@ -166,5 +174,18 @@ describe("rentIsPaid", () => {
 
   it("is false with neither", () => {
     expect(rentIsPaid(data({}), "2026-08", "flat")).toBe(false);
+  });
+});
+
+describe("rentItemStarted", () => {
+  it("applies to every month when the item predates `since`", () => {
+    expect(rentItemStarted({}, "2020-01")).toBe(true);
+  });
+
+  it("starts in the month it was added, not before", () => {
+    const item = { since: "2026-11" };
+    expect(rentItemStarted(item, "2026-10")).toBe(false);
+    expect(rentItemStarted(item, "2026-11")).toBe(true);
+    expect(rentItemStarted(item, "2027-01")).toBe(true);
   });
 });

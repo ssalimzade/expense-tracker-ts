@@ -112,6 +112,18 @@ describe("upsertRentItem — a brand new pot", () => {
     expect(itemsOf(data).map((i) => i.key)).toEqual(["water", "water_2"]);
   });
 
+  it("records the month a new item starts in", async () => {
+    const sql = sqlWith({ items: [], months: {} });
+    const data = await upsertRentItem(sql, { label: "Hot Water", saved: true, pot_default: true, since: "2026-11" });
+    expect(itemsOf(data)[0]).toMatchObject({ key: "hot_water", since: "2026-11" });
+  });
+
+  it("never gives an existing item a start month — it has history", async () => {
+    const sql = sqlWith({ items: [{ key: "water", label: "Water", saved: false }], months: {} });
+    const data = await upsertRentItem(sql, { key: "water", label: "Water", saved: true, pot_default: false, since: "2026-11" });
+    expect(find(data, "water")).not.toHaveProperty("since");
+  });
+
   it("falls back to a usable key when the label has nothing to slug", async () => {
     const sql = sqlWith({ items: [], months: {} });
     const data = await upsertRentItem(sql, { label: "£££", saved: true });

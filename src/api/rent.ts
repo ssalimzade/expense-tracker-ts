@@ -15,5 +15,7 @@ export const saveRentItem = (item: {
   label: string;
   saved: boolean;
   pot_default?: boolean;
+  /** First month a brand-new item applies to; ignored for an existing one. */
+  since?: string;
   delete?: boolean;
 }) => api.post<RentData>("/rent/item", item);

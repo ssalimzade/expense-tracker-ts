@@ -331,6 +331,8 @@ app.post("/rent/item", async (c) => {
       label,
       saved: Boolean(b.saved),
       pot_default: b.pot_default == null ? undefined : Boolean(b.pot_default),
+      // The client's month, not the Worker's: it's the user's calendar that counts.
+      since: MONTH_RE.test(String(b.since ?? "")) ? String(b.since) : undefined,
       delete: Boolean(b.delete),
     }),
   );

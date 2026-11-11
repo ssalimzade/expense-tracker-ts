@@ -1,4 +1,4 @@
-import type { RentData, RentLineItem, RentMatch } from "../types/rent";
+import type { RentData, RentItemDef, RentLineItem, RentMatch } from "../types/rent";
 
 /**
  * How a rent line item resolves to money.
@@ -47,6 +47,10 @@ export function rentContribution(data: RentData, month: string, key: string): nu
 /** What the bill actually cost you — the number the rent tab reports throughout. */
 export const rentShare = (data: RentData, month: string, key: string): number =>
   rentBill(data, month, key) - rentContribution(data, month, key);
+
+/** Whether the item existed yet in `month` — a pot added in November has no October. */
+export const rentItemStarted = (item: Pick<RentItemDef, "since">, month: string): boolean =>
+  !item.since || month >= item.since;
 
 /** Effective paid = ticked by hand, or a matching transaction exists. */
 export const rentIsPaid = (data: RentData, month: string, key: string): boolean =>

@@ -5,7 +5,15 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import type { RentData, RentItemDef, RentLineItem, RentMonthEntry, RentMatch } from "../../types/rent";
 import { gbp0, openingMonth } from "../../lib/format";
 import { goesToPot, potViews } from "../../lib/pots";
-import { rentBill, rentCell, rentContribution, rentIsPaid, rentMatch, rentShare } from "../../lib/rent";
+import {
+  rentBill,
+  rentCell,
+  rentContribution,
+  rentIsPaid,
+  rentItemStarted,
+  rentMatch,
+  rentShare,
+} from "../../lib/rent";
 import { Card } from "../common";
 import MoneyInput from "../MoneyInput";
 
@@ -390,12 +398,15 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
       .filter((p) => p.lastSettled)
       .map((p) => [p.key, p.lastSettled as string]),
   );
-  const isRetired = (month: string, key: string) => {
+  // Likewise a pot added part-way through never had the months before it, so
+  // they stay blank rather than reading £0 all the way back.
+  const itemOf = new Map(items.map((it) => [it.key, it]));
+  const isBlank = (month: string, key: string) => {
+    const item = itemOf.get(key);
+    if (item && !rentItemStarted(item, month)) return true;
     const settled = settledAt.get(key);
     return settled != null && month > settled && (get(month)[key]?.amount ?? 0) === 0;
   };
-  // A column can only be dropped when it is retired for every month on screen.
-  const visibleItems = items.filter((it) => months.some((m) => !isRetired(m, it.key)));
 
   const match = (month: string, key: string) => rentMatch(data, month, key);
   /** A match this month has rejected — kept so it can be put back. */
@@ -480,6 +491,10 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   const hasCurrent = months.includes(currentMonth);
   const shownMonths = showEarlier || !hasCurrent ? months : months.filter((m) => m >= openingMonth(currentMonth));
   const hiddenEarlier = months.length - shownMonths.length;
+  // A column is dropped when it is blank for every month on screen — so a pot
+  // settled back in July disappears from the recent months and comes back
+  // with the earlier ones it actually funded.
+  const visibleItems = items.filter((it) => shownMonths.some((m) => !isBlank(m, it.key)));
 
   // Ticking asks what actually left the account; unticking drops that figure so
   // it can't linger as a stale diff. A matched row opens the link menu instead.
@@ -560,7 +575,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
    * retired pot doesn't leave one side short.
    */
   const cardColumns = (month: string) => {
-    const visible = orderedItems.filter((it) => !isRetired(month, it.key));
+    const visible = orderedItems.filter((it) => !isBlank(month, it.key));
     const split = Math.ceil(visible.length / 2);
     return [visible.slice(0, split), visible.slice(split)];
   };
@@ -610,7 +625,7 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
   // One category row in a mobile card: paid/linked toggle on the left, then the
   // label (tap to split), then the amount aligned right.
   const renderRow = (month: string, it: RentItemDef) => {
-    if (isRetired(month, it.key)) return null;
+    if (isBlank(month, it.key)) return null;
     const c = cell(month, it.key);
     const covered = contribution(month, it.key);
     const drop = dropped(month, it.key);
@@ -733,8 +748,8 @@ export default function RentTable({ data, months, onOpenMatch }: Props) {
                     const c = cell(month, it.key);
                     const potTint = it.saved ? "bg-[#c8b58f]/[0.06]" : "";
                     // Keep the column aligned, but leave the cell blank for
-                    // months after this pot was settled.
-                    if (isRetired(month, it.key)) {
+                    // months after this pot was settled, or before it existed.
+                    if (isBlank(month, it.key)) {
                       return (
                         <td key={it.key} className={`px-3 py-2 text-center text-gray-300 dark:text-gray-700 ${potTint}`}>
                           —

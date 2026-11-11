@@ -16,6 +16,12 @@ export interface RentItemDef {
    * relied on before a month could choose, so their history reads unchanged.
    */
   pot_default?: boolean;
+  /**
+   * "YYYY-MM" the item was added in. Months before it never had the item, so
+   * the table leaves them blank instead of showing £0 all the way back. Absent
+   * on every item that predates this, which therefore applies to all months.
+   */
+  since?: string;
 }
 
 export interface RentLineItem {
