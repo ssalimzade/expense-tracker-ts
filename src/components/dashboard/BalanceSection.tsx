@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useBalance, useSaveBalance, useAccountBalances } from "../../hooks/useBalance";
 import { useRent } from "../../hooks/useRent";
@@ -27,6 +35,9 @@ type DiffPart = { label: string; allocated: number; paid: number; diff: number }
 /** Gap kept between the Diff-in-bills panel and the edges of the viewport. */
 const PANEL_MARGIN = 8;
 
+/** Where the panel sits, and how big it may get — all in viewport pixels. */
+type Box = { top: number; left: number; maxW: number; maxH: number };
+
 /** Hover/tap "ⓘ" that reveals how the auto Diff in bills was calculated. */
 function DiffBreakdown({
   parts,
@@ -38,7 +49,8 @@ function DiffBreakdown({
   month: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [box, setBox] = useState<Box | null>(null);
+  const panelId = useId();
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const timer = useRef<number | null>(null);
@@ -60,20 +72,45 @@ function DiffBreakdown({
     cancel();
     timer.current = window.setTimeout(() => setOpen(false), 160);
   };
+  // Hover is a mouse affordance only. A tap also emits pointerenter, and the
+  // open it triggered would make the click that follows read as "already open"
+  // and shut the panel again — so on touch the click alone does the toggling.
+  const hoverOpen = (e: { pointerType: string }) => e.pointerType === "mouse" && openNow();
+  const hoverClose = (e: { pointerType: string }) => e.pointerType === "mouse" && closeSoon();
 
   // The panel is rendered in a portal with fixed coordinates, measured from the
   // "ⓘ" button and clamped to the viewport. The card is only a third of a phone
   // screen wide, so anchoring the panel to the card's own edges pushed it off
   // the left of the screen; clamping here keeps it fully visible at any width
   // and stops the card's rounded overflow from clipping it.
-  const place = useCallback(() => {
+  // `closeIfAdrift` is set only when the viewport itself moved. A re-measure
+  // after the panel's own content changed must never close it: data landing
+  // above the card can shove it past the fold for a frame, and a panel that
+  // vanished the instant it was clicked would read as a dead button.
+  const place = useCallback((closeIfAdrift = false) => {
     const btn = btnRef.current;
     const panel = panelRef.current;
     if (!btn || !panel) return;
-    const b = btn.getBoundingClientRect();
-    const p = panel.getBoundingClientRect();
     const vw = document.documentElement.clientWidth;
     const vh = document.documentElement.clientHeight;
+    const maxW = Math.max(0, vw - PANEL_MARGIN * 2);
+    const maxH = Math.max(0, vh - PANEL_MARGIN * 2);
+
+    // Cap the panel against the live layout viewport *before* measuring it. A
+    // `100vh` cap would track the large viewport instead — on a phone that is
+    // the height with the URL bar hidden, so the panel could end up taller than
+    // the screen with no scrollbar of its own and its last rows out of reach.
+    panel.style.maxWidth = `${maxW}px`;
+    panel.style.maxHeight = `${maxH}px`;
+
+    const b = btn.getBoundingClientRect();
+    // Scrolled clear of the card there is nothing left to point at, and a
+    // clamped panel would just hang detached at the edge, so close instead.
+    if (closeIfAdrift && (b.bottom <= 0 || b.top >= vh || b.right <= 0 || b.left >= vw)) {
+      setOpen(false);
+      return;
+    }
+    const p = panel.getBoundingClientRect();
 
     // Centre on the button, then pull back inside whichever edge it crosses.
     let left = b.left + b.width / 2 - p.width / 2;
@@ -83,19 +120,21 @@ function DiffBreakdown({
     let top = b.bottom + 6;
     if (top + p.height > vh - PANEL_MARGIN) {
       const above = b.top - 6 - p.height;
-      top =
-        above >= PANEL_MARGIN
-          ? above
-          : Math.max(PANEL_MARGIN, vh - PANEL_MARGIN - p.height);
+      top = above >= PANEL_MARGIN ? above : vh - PANEL_MARGIN - p.height;
     }
-    setCoords((prev) =>
-      prev && prev.top === top && prev.left === left ? prev : { top, left },
+    // The card can scroll up past the top of the screen under an open panel.
+    top = Math.max(PANEL_MARGIN, top);
+
+    setBox((prev) =>
+      prev && prev.top === top && prev.left === left && prev.maxW === maxW && prev.maxH === maxH
+        ? prev
+        : { top, left, maxW, maxH },
     );
   }, []);
 
   useLayoutEffect(() => {
     if (!open) {
-      setCoords(null);
+      setBox(null);
       return;
     }
     place();
@@ -104,12 +143,23 @@ function DiffBreakdown({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-    const onMove = () => place();
+    const onMove = () => place(true);
+    // Dismiss on a press outside. A full-screen catcher element would do this
+    // too, but it lies over the "ⓘ" itself and steals its hover, which had the
+    // panel flickering open and shut under a stationary pointer on any window
+    // narrower than the catcher's breakpoint.
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node | null;
+      if (btnRef.current?.contains(t ?? null) || panelRef.current?.contains(t ?? null)) return;
+      close();
+    };
     document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown, true);
     window.addEventListener("resize", onMove);
     window.addEventListener("scroll", onMove, true);
     return () => {
       document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown, true);
       window.removeEventListener("resize", onMove);
       window.removeEventListener("scroll", onMove, true);
     };
@@ -126,10 +176,14 @@ function DiffBreakdown({
       <button
         ref={btnRef}
         type="button"
-        onMouseEnter={openNow}
-        onMouseLeave={closeSoon}
+        onPointerEnter={hoverOpen}
+        onPointerLeave={hoverClose}
         onClick={() => (open ? close() : openNow())}
         title="How this is calculated"
+        aria-label="How this is calculated"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        aria-describedby={open ? panelId : undefined}
         className="pointer-events-auto absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-200"
       >
         <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
@@ -138,22 +192,23 @@ function DiffBreakdown({
       </button>
       {open &&
         createPortal(
-          <>
-            {/* Outside-tap catcher (mobile) — desktop relies on hover-out. */}
-            <span onClick={close} className="fixed inset-0 z-[9998] sm:hidden" />
-            <div
+          <div
               ref={panelRef}
-              onMouseEnter={cancel}
-              onMouseLeave={closeSoon}
+              id={panelId}
+              role="tooltip"
+              onPointerEnter={(e) => e.pointerType === "mouse" && cancel()}
+              onPointerLeave={hoverClose}
               style={{
                 position: "fixed",
-                top: coords?.top ?? 0,
-                left: coords?.left ?? 0,
-                maxWidth: `calc(100vw - ${PANEL_MARGIN * 2}px)`,
-                maxHeight: `calc(100vh - ${PANEL_MARGIN * 2}px)`,
-                visibility: coords ? "visible" : "hidden",
+                top: box?.top ?? 0,
+                left: box?.left ?? 0,
+                // Set from the measured viewport in `place()`; mirrored here so
+                // React's own styles stay in step with what it wrote.
+                maxWidth: box?.maxW,
+                maxHeight: box?.maxH,
+                visibility: box ? "visible" : "hidden",
               }}
-              className="z-[9999] w-max min-w-[13rem] cursor-default overflow-auto rounded-xl border border-gray-200 bg-white p-3 text-left shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+              className="z-[9999] w-max min-w-[13rem] cursor-default overflow-auto rounded-xl border border-gray-200 bg-white p-3 text-left shadow-2xl [scrollbar-gutter:stable] dark:border-gray-700 dark:bg-gray-800"
             >
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 Bills paid in {formatMonthLabel(month)}
@@ -197,8 +252,7 @@ function DiffBreakdown({
               <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] leading-snug text-gray-500 dark:border-gray-700/60 dark:text-gray-400">
                 Reported only — already reflected in Total Balance through Left to Pay.
               </p>
-            </div>
-          </>,
+          </div>,
           document.body,
         )}
     </div>
